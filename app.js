@@ -193,14 +193,7 @@ function humanDelay() {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// We ignore 'chess_active_mode' on a fresh load to respect the 'Default Mode' setting
-let currentMode;
-if (defaultMode === "ranked") {
-    currentMode = "rated";
-} else if (defaultMode === "puzzles") {
-    currentMode = "puzzles";
-} else {
-    currentMode = "unrated";
+
 }
 
 let gameToken = 0;
