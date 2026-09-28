@@ -1064,441 +1064,358 @@ function assignNextColor() {
 // PAST GAME REPLAY
 // ============================================================
 
+let replayGame = null;
+let replayMoves = [];
+let replayIndex = 0;
+let inReplayMode = false;
+let replayReturnGame = null;
+let replayControlsEl = null;
+
+
+// ------------------------------------------------------------
+// Open a saved game
+// ------------------------------------------------------------
+
 function openPastGame(entry) {
   if (!entry || !entry.pgn) {
     console.error("Past game has no PGN.");
     return;
   }
 
-  if (replayAnalyzing) return;
+  // Save the current real game so we can return to it.
+  replayReturnGame = game;
 
+  // Create a completely separate game for replay.
   replayGame = new Chess();
 
   try {
-    if (typeof replayGame.loadPgn === "function") {
-      replayGame.loadPgn(entry.pgn);
+    if (typeof replayGame.load_pgn === "function") {
+      if (!replayGame.load_pgn(entry.pgn)) {
+        throw new Error("Chess.js could not load the PGN.");
+      }
+    } else if (typeof replayGame.loadPgn === "function") {
+      if (!replayGame.loadPgn(entry.pgn)) {
+        throw new Error("Chess.js could not load the PGN.");
+      }
     } else {
-      replayGame.load_pgn(entry.pgn);
+      throw new Error("This Chess.js version has no PGN loader.");
     }
   } catch (err) {
     console.error("Could not load saved game:", err);
+    replayGame = null;
+    replayReturnGame = null;
     return;
   }
 
+  // Save every move.
   replayMoves = replayGame.history({
     verbose: true
   });
 
+  // Start replay at the beginning.
   replayGame.reset();
-
   replayIndex = 0;
-  replayAnalysis = [];
 
-  openReplayUI();
-  renderReplayPosition();
+  // Enter replay mode.
+  inReplayMode = true;
 
-  analyzeEntireReplay(entry);
+  selectedSquare = null;
+  lastMoveFrom = null;
+  lastMoveTo = null;
+
+  // Show replay controls.
+  createReplayControls();
+
+  // Render the saved game directly on the EXISTING board.
+  renderBoard();
+  renderMoveList();
+
+  console.log(
+    "Loaded past game:",
+    replayMoves.length,
+    "moves"
+  );
 }
 
 
-// ============================================================
-// REPLAY NAVIGATION
-// ============================================================
+// ------------------------------------------------------------
+// Replay controls
+// ------------------------------------------------------------
+
+function createReplayControls() {
+  if (replayControlsEl) {
+    replayControlsEl.remove();
+  }
+
+  replayControlsEl = document.createElement("div");
+
+  replayControlsEl.id = "replay-controls";
+
+  replayControlsEl.style.display = "flex";
+  replayControlsEl.style.justifyContent = "center";
+  replayControlsEl.style.alignItems = "center";
+  replayControlsEl.style.gap = "8px";
+  replayControlsEl.style.marginTop = "10px";
+  replayControlsEl.style.marginBottom = "10px";
+  replayControlsEl.style.flexWrap = "wrap";
+
+  replayControlsEl.innerHTML = `
+    <button type="button" id="replay-exit">
+      Exit Replay
+    </button>
+
+    <button type="button" id="replay-start">
+      ⏮
+    </button>
+
+    <button type="button" id="replay-previous">
+      ◀
+    </button>
+
+    <span id="replay-position">
+      0 / 0
+    </span>
+
+    <button type="button" id="replay-next">
+      ▶
+    </button>
+
+    <button type="button" id="replay-end">
+      ⏭
+    </button>
+  `;
+
+  // Put the replay controls above the move list.
+  if (moveListEl && moveListEl.parentElement) {
+    moveListEl.parentElement.insertBefore(
+      replayControlsEl,
+      moveListEl
+    );
+  } else if (gameControlsEl) {
+    gameControlsEl.parentElement.appendChild(
+      replayControlsEl
+    );
+  } else {
+    document.body.appendChild(replayControlsEl);
+  }
+
+  document
+    .getElementById("replay-exit")
+    .addEventListener("click", exitReplay);
+
+  document
+    .getElementById("replay-start")
+    .addEventListener("click", replayStart);
+
+  document
+    .getElementById("replay-previous")
+    .addEventListener("click", replayPrevious);
+
+  document
+    .getElementById("replay-next")
+    .addEventListener("click", replayNext);
+
+  document
+    .getElementById("replay-end")
+    .addEventListener("click", replayEnd);
+
+  updateReplayControls();
+}
+
+
+// ------------------------------------------------------------
+// Update replay counter
+// ------------------------------------------------------------
+
+function updateReplayControls() {
+  const position =
+    document.getElementById("replay-position");
+
+  if (!position) return;
+
+  position.textContent =
+    replayIndex + " / " + replayMoves.length;
+}
+
+
+// ------------------------------------------------------------
+// Go to beginning
+// ------------------------------------------------------------
 
 function replayStart() {
   if (!replayGame) return;
 
   replayGame.reset();
+
   replayIndex = 0;
 
-  renderReplayPosition();
+  lastMoveFrom = null;
+  lastMoveTo = null;
+  selectedSquare = null;
+
+  renderBoard();
+  renderMoveList();
+  updateReplayControls();
 }
 
+
+// ------------------------------------------------------------
+// Previous move
+// ------------------------------------------------------------
+
 function replayPrevious() {
-  if (!replayGame || replayIndex <= 0) return;
+  if (!replayGame) return;
+
+  if (replayIndex <= 0) {
+    return;
+  }
 
   replayGame.reset();
 
-  for (let i = 0; i < replayIndex - 1; i++) {
+  for (
+    let i = 0;
+    i < replayIndex - 1;
+    i++
+  ) {
     replayGame.move(replayMoves[i]);
   }
 
   replayIndex--;
 
-  renderReplayPosition();
+  const last =
+    replayIndex > 0
+      ? replayMoves[replayIndex - 1]
+      : null;
+
+  lastMoveFrom =
+    last ? last.from : null;
+
+  lastMoveTo =
+    last ? last.to : null;
+
+  selectedSquare = null;
+
+  renderBoard();
+  renderMoveList();
+  updateReplayControls();
 }
+
+
+// ------------------------------------------------------------
+// Next move
+// ------------------------------------------------------------
 
 function replayNext() {
-  if (!replayGame || replayIndex >= replayMoves.length) return;
+  if (!replayGame) return;
 
-  replayGame.move(replayMoves[replayIndex]);
+  if (
+    replayIndex >= replayMoves.length
+  ) {
+    return;
+  }
+
+  const move =
+    replayGame.move(
+      replayMoves[replayIndex]
+    );
+
   replayIndex++;
 
-  renderReplayPosition();
+  lastMoveFrom =
+    move ? move.from : null;
+
+  lastMoveTo =
+    move ? move.to : null;
+
+  selectedSquare = null;
+
+  renderBoard();
+  renderMoveList();
+  updateReplayControls();
 }
+
+
+// ------------------------------------------------------------
+// Go to end
+// ------------------------------------------------------------
 
 function replayEnd() {
   if (!replayGame) return;
 
   replayGame.reset();
 
-  for (const move of replayMoves) {
+  for (
+    const move of replayMoves
+  ) {
     replayGame.move(move);
   }
 
-  replayIndex = replayMoves.length;
+  replayIndex =
+    replayMoves.length;
 
-  renderReplayPosition();
+  const last =
+    replayMoves.length > 0
+      ? replayMoves[replayMoves.length - 1]
+      : null;
+
+  lastMoveFrom =
+    last ? last.from : null;
+
+  lastMoveTo =
+    last ? last.to : null;
+
+  selectedSquare = null;
+
+  renderBoard();
+  renderMoveList();
+  updateReplayControls();
 }
 
-// ============================================================
-// ANALYZE ENTIRE PAST GAME
-// ============================================================
 
-async function analyzeEntireReplay(entry) {
-  if (!engine || !maiaReady) {
-    console.warn("Maia is not ready yet.");
-    return;
-  }
+// ------------------------------------------------------------
+// Exit replay
+// ------------------------------------------------------------
 
-  replayAnalyzing = true;
+function exitReplay() {
+  inReplayMode = false;
 
-  const currentElo = myRating;
-
-  console.log(
-    "Analyzing past game at CURRENT Elo:",
-    currentElo
-  );
-
-  const analysisGame = new Chess();
-
-  replayAnalysis = [];
-
-  for (let i = 0; i < replayMoves.length; i++) {
-    const move = replayMoves[i];
-
-    const preValueResult = await engine.evaluate(
-      analysisGame,
-      MAIA_ELO,
-      currentElo
-    );
-
-    const preValue = preValueResult.value;
-
-    const topMove =
-      Object.keys(preValueResult.policy || {})[0] || null;
-
-    const preMoveProb =
-      topMove
-        ? preValueResult.policy[topMove] || 0
-        : 0;
-
-    analysisGame.move(move);
-
-    const postValueResult = await engine.evaluate(
-      analysisGame,
-      MAIA_ELO,
-      currentElo
-    );
-
-    const postValue = postValueResult.value;
-
-    const moverColor = move.color;
-
-    const label = classifyMoveGeneric({
-      preValue,
-      postValue,
-      moveUci:
-        move.from +
-        move.to +
-        (move.promotion || ""),
-      preTopMove: topMove,
-      preMoveProb,
-      moverColor,
-      wasMate: analysisGame.in_checkmate(),
-      moveNumber: i + 1,
-      skipTopMatch: false
-    });
-
-    replayAnalysis.push({
-      index: i,
-      move,
-      label,
-      preValue,
-      postValue
-    });
-
-    renderReplayAnalysis();
-  }
-
-  replayAnalyzing = false;
-
-  console.log(
-    "Finished replay analysis:",
-    replayAnalysis
-  );
-
-  renderReplayAnalysis();
-}
-
-// ============================================================
-// REPLAY UI
-// ============================================================
-
-function openReplayUI() {
-  let overlay = document.getElementById("replay-overlay");
-
-  if (!overlay) {
-    overlay = document.createElement("div");
-
-    overlay.id = "replay-overlay";
-
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.background = "rgba(0,0,0,.85)";
-    overlay.style.zIndex = "9999";
-    overlay.style.display = "flex";
-    overlay.style.flexDirection = "column";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.padding = "20px";
-    overlay.style.boxSizing = "border-box";
-
-    overlay.innerHTML = `
-      <div style="
-        background:#181818;
-        color:white;
-        width:min(1000px,95vw);
-        max-height:95vh;
-        overflow:auto;
-        border-radius:12px;
-        padding:20px;
-      ">
-
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-        ">
-          <h2>Past Game Replay</h2>
-
-          <button id="replay-close">
-            ✕
-          </button>
-        </div>
-
-        <div id="replay-board-container"></div>
-
-        <div style="
-          display:flex;
-          justify-content:center;
-          gap:10px;
-          margin-top:15px;
-        ">
-          <button id="replay-start">⏮</button>
-          <button id="replay-prev">◀</button>
-          <button id="replay-next">▶</button>
-          <button id="replay-end">⏭</button>
-        </div>
-
-        <div id="replay-moves"
-             style="margin-top:15px;">
-        </div>
-
-        <div id="replay-analysis"
-             style="margin-top:15px;">
-        </div>
-
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    document
-      .getElementById("replay-close")
-      .onclick = closeReplayUI;
-
-    document
-      .getElementById("replay-start")
-      .onclick = replayStart;
-
-    document
-      .getElementById("replay-prev")
-      .onclick = replayPrevious;
-
-    document
-      .getElementById("replay-next")
-      .onclick = replayNext;
-
-    document
-      .getElementById("replay-end")
-      .onclick = replayEnd;
-  }
-
-  overlay.style.display = "flex";
-}
-
-function closeReplayUI() {
-  const overlay =
-    document.getElementById("replay-overlay");
-
-  if (overlay) {
-    overlay.style.display = "none";
+  // Restore the real game.
+  if (replayReturnGame) {
+    game = replayReturnGame;
   }
 
   replayGame = null;
   replayMoves = [];
   replayIndex = 0;
-  replayAnalysis = [];
-  replayAnalyzing = false;
+  replayReturnGame = null;
+
+  selectedSquare = null;
+
+  lastMoveFrom = null;
+  lastMoveTo = null;
+
+  if (replayControlsEl) {
+    replayControlsEl.remove();
+    replayControlsEl = null;
+  }
+
+  renderBoard();
+  renderMoveList();
+
+  console.log("Exited replay mode.");
 }
 
-function renderReplayPosition() {
-  const container =
-    document.getElementById(
-      "replay-board-container"
-    );
 
-  if (!container || !replayGame) return;
+// ------------------------------------------------------------
+// Make functions available globally
+// ------------------------------------------------------------
 
-  container.innerHTML = "";
-
-  const board = document.createElement("div");
-
-  board.style.display = "grid";
-  board.style.gridTemplateColumns =
-    "repeat(8, 1fr)";
-  board.style.width =
-    "min(70vw, 600px)";
-  board.style.aspectRatio = "1";
-
-  const boardData =
-    replayGame.board();
-
-  for (let rank = 8; rank >= 1; rank--) {
-    for (let file = 0; file < 8; file++) {
-
-      const square =
-        document.createElement("div");
-
-      square.style.display = "flex";
-      square.style.alignItems = "center";
-      square.style.justifyContent = "center";
-
-      square.style.background =
-        ((file + rank) % 2 === 0)
-          ? "#b58863"
-          : "#f0d9b5";
-
-      const piece =
-        boardData[8 - rank][file];
-
-      if (piece) {
-        const img =
-          document.createElement("img");
-
-        img.src = pieceImage(piece);
-
-        img.style.width = "90%";
-        img.style.height = "90%";
-
-        square.appendChild(img);
-      }
-
-      board.appendChild(square);
-    }
-  }
-
-  container.appendChild(board);
-
-  renderReplayMoves();
-  renderReplayAnalysis();
-}
-
-function renderReplayMoves() {
-  const el =
-    document.getElementById("replay-moves");
-
-  if (!el) return;
-
-  let html = "<b>Moves</b><br>";
-
-  for (let i = 0; i < replayMoves.length; i++) {
-
-    const move =
-      replayMoves[i];
-
-    const active =
-      i === replayIndex - 1;
-
-    html += `
-      <span style="
-        margin-right:8px;
-        font-weight:${active ? "bold" : "normal"};
-      ">
-        ${Math.floor(i / 2) + 1}${i % 2 === 0 ? "." : "..."}
-        ${move.san}
-      </span>
-    `;
-  }
-
-  el.innerHTML = html;
-}
-
-function renderReplayAnalysis() {
-  const el =
-    document.getElementById(
-      "replay-analysis"
-    );
-
-  if (!el) return;
-
-  if (replayAnalyzing) {
-    el.innerHTML =
-      "<b>Analyzing game with Maia...</b>";
-    return;
-  }
-
-  if (!replayAnalysis.length) {
-    el.innerHTML =
-      "<b>No analysis yet.</b>";
-    return;
-  }
-
-  let html =
-    "<b>Move Analysis</b><br><br>";
-
-  for (const item of replayAnalysis) {
-
-    const icon =
-      MOVE_ICONS[item.label];
-
-    html += `
-      <div style="
-        display:flex;
-        align-items:center;
-        gap:8px;
-        margin-bottom:5px;
-      ">
-        ${
-          icon
-            ? `<img src="${icon}"
-                    style="width:24px;height:24px;">`
-            : ""
-        }
-
-        <span>
-          ${item.index + 1}.
-          ${item.move.san}
-          —
-          ${item.label}
-        </span>
-      </div>
-    `;
-  }
-
-  el.innerHTML = html;
-}
+window.openPastGame = openPastGame;
+window.replayStart = replayStart;
+window.replayPrevious = replayPrevious;
+window.replayNext = replayNext;
+window.replayEnd = replayEnd;
+window.exitReplay = exitReplay;
 
 // ---------- Save / load ----------
 function saveKey(mode) {
@@ -1657,7 +1574,18 @@ function pieceImage(piece) {
 let draggingSquare = null;
 
 function renderBoard() {
-  const activeGame = inPuzzleMode ? puzzleGame : (inDrillMode ? drillGame : game);
+  const activeGame =
+    inReplayMode && replayGame
+      ? replayGame
+      : (
+          inPuzzleMode
+            ? puzzleGame
+            : (
+                inDrillMode
+                  ? drillGame
+                  : game
+              )
+        );
   boardEl.innerHTML = "";
   const boardData = activeGame.board();
 
@@ -1848,7 +1776,18 @@ document.addEventListener("pointercancel", (e) => {
 
 // ---------- Real move list ----------
 function renderMoveList() {
-  const activeGame = inPuzzleMode ? puzzleGame : (inDrillMode ? drillGame : game);
+  const activeGame =
+    inReplayMode && replayGame
+      ? replayGame
+      : (
+          inPuzzleMode
+            ? puzzleGame
+            : (
+                inDrillMode
+                  ? drillGame
+                  : game
+              )
+        );
   const hist = activeGame ? activeGame.history() : [];
   let html = "";
   for (let i = 0; i < hist.length; i += 2) {
