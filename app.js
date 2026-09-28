@@ -17,6 +17,29 @@ let hintMovesUsed = 0;
 let currentHintMoveIndex = 0;
 let currentSolution = [];
 
+// ============================================================
+// PAST GAME REPLAY
+// ============================================================
+
+let replayGame = null;
+let replayMoves = [];
+let replayIndex = 0;
+let replayAnalysis = [];
+let replayAnalyzing = false;
+
+const MOVE_ICONS = {
+  brilliant: "./images/brilliant.png",
+  great: "./images/great.png",
+  book: "./images/book.png",
+  best: "./images/best.png",
+  excellent: "./images/excellent.png",
+  good: "./images/good.png",
+  inaccuracy: "./images/inaccuracy.png",
+  mistake: "./images/mistake.png",
+  miss: "./images/miss.png",
+  blunder: "./images/blunder.png"
+};
+
 let MAIA_ELO = localStorage.getItem("chess_my_rating") || "250" // Maia's own play strength — tied to your outcomes
 
 let myRating = parseInt(localStorage.getItem("chess_my_rating") || "250", 10);
@@ -1035,6 +1058,446 @@ function assignNextColor() {
   const color = n % 2 === 0 ? "w" : "b";
   localStorage.setItem("chess_games_started", String(n + 1));
   return color;
+}
+
+// ============================================================
+// PAST GAME REPLAY
+// ============================================================
+
+function openPastGame(entry) {
+  if (!entry || !entry.pgn) {
+    console.error("Past game has no PGN.");
+    return;
+  }
+
+  if (replayAnalyzing) return;
+
+  replayGame = new Chess();
+
+  try {
+    if (typeof replayGame.loadPgn === "function") {
+      replayGame.loadPgn(entry.pgn);
+    } else {
+      replayGame.load_pgn(entry.pgn);
+    }
+  } catch (err) {
+    console.error("Could not load saved game:", err);
+    return;
+  }
+
+  replayMoves = replayGame.history({
+    verbose: true
+  });
+
+  replayGame.reset();
+
+  replayIndex = 0;
+  replayAnalysis = [];
+
+  openReplayUI();
+  renderReplayPosition();
+
+  analyzeEntireReplay(entry);
+}
+
+
+// ============================================================
+// REPLAY NAVIGATION
+// ============================================================
+
+function replayStart() {
+  if (!replayGame) return;
+
+  replayGame.reset();
+  replayIndex = 0;
+
+  renderReplayPosition();
+}
+
+function replayPrevious() {
+  if (!replayGame || replayIndex <= 0) return;
+
+  replayGame.reset();
+
+  for (let i = 0; i < replayIndex - 1; i++) {
+    replayGame.move(replayMoves[i]);
+  }
+
+  replayIndex--;
+
+  renderReplayPosition();
+}
+
+function replayNext() {
+  if (!replayGame || replayIndex >= replayMoves.length) return;
+
+  replayGame.move(replayMoves[replayIndex]);
+  replayIndex++;
+
+  renderReplayPosition();
+}
+
+function replayEnd() {
+  if (!replayGame) return;
+
+  replayGame.reset();
+
+  for (const move of replayMoves) {
+    replayGame.move(move);
+  }
+
+  replayIndex = replayMoves.length;
+
+  renderReplayPosition();
+}
+
+// ============================================================
+// ANALYZE ENTIRE PAST GAME
+// ============================================================
+
+async function analyzeEntireReplay(entry) {
+  if (!engine || !maiaReady) {
+    console.warn("Maia is not ready yet.");
+    return;
+  }
+
+  replayAnalyzing = true;
+
+  const currentElo = myRating;
+
+  console.log(
+    "Analyzing past game at CURRENT Elo:",
+    currentElo
+  );
+
+  const analysisGame = new Chess();
+
+  replayAnalysis = [];
+
+  for (let i = 0; i < replayMoves.length; i++) {
+    const move = replayMoves[i];
+
+    const preValueResult = await engine.evaluate(
+      analysisGame,
+      MAIA_ELO,
+      currentElo
+    );
+
+    const preValue = preValueResult.value;
+
+    const topMove =
+      Object.keys(preValueResult.policy || {})[0] || null;
+
+    const preMoveProb =
+      topMove
+        ? preValueResult.policy[topMove] || 0
+        : 0;
+
+    analysisGame.move(move);
+
+    const postValueResult = await engine.evaluate(
+      analysisGame,
+      MAIA_ELO,
+      currentElo
+    );
+
+    const postValue = postValueResult.value;
+
+    const moverColor = move.color;
+
+    const label = classifyMoveGeneric({
+      preValue,
+      postValue,
+      moveUci:
+        move.from +
+        move.to +
+        (move.promotion || ""),
+      preTopMove: topMove,
+      preMoveProb,
+      moverColor,
+      wasMate: analysisGame.in_checkmate(),
+      moveNumber: i + 1,
+      skipTopMatch: false
+    });
+
+    replayAnalysis.push({
+      index: i,
+      move,
+      label,
+      preValue,
+      postValue
+    });
+
+    renderReplayAnalysis();
+  }
+
+  replayAnalyzing = false;
+
+  console.log(
+    "Finished replay analysis:",
+    replayAnalysis
+  );
+
+  renderReplayAnalysis();
+}
+
+// ============================================================
+// REPLAY UI
+// ============================================================
+
+function openReplayUI() {
+  let overlay = document.getElementById("replay-overlay");
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+
+    overlay.id = "replay-overlay";
+
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.background = "rgba(0,0,0,.85)";
+    overlay.style.zIndex = "9999";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "20px";
+    overlay.style.boxSizing = "border-box";
+
+    overlay.innerHTML = `
+      <div style="
+        background:#181818;
+        color:white;
+        width:min(1000px,95vw);
+        max-height:95vh;
+        overflow:auto;
+        border-radius:12px;
+        padding:20px;
+      ">
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+        ">
+          <h2>Past Game Replay</h2>
+
+          <button id="replay-close">
+            ✕
+          </button>
+        </div>
+
+        <div id="replay-board-container"></div>
+
+        <div style="
+          display:flex;
+          justify-content:center;
+          gap:10px;
+          margin-top:15px;
+        ">
+          <button id="replay-start">⏮</button>
+          <button id="replay-prev">◀</button>
+          <button id="replay-next">▶</button>
+          <button id="replay-end">⏭</button>
+        </div>
+
+        <div id="replay-moves"
+             style="margin-top:15px;">
+        </div>
+
+        <div id="replay-analysis"
+             style="margin-top:15px;">
+        </div>
+
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document
+      .getElementById("replay-close")
+      .onclick = closeReplayUI;
+
+    document
+      .getElementById("replay-start")
+      .onclick = replayStart;
+
+    document
+      .getElementById("replay-prev")
+      .onclick = replayPrevious;
+
+    document
+      .getElementById("replay-next")
+      .onclick = replayNext;
+
+    document
+      .getElementById("replay-end")
+      .onclick = replayEnd;
+  }
+
+  overlay.style.display = "flex";
+}
+
+function closeReplayUI() {
+  const overlay =
+    document.getElementById("replay-overlay");
+
+  if (overlay) {
+    overlay.style.display = "none";
+  }
+
+  replayGame = null;
+  replayMoves = [];
+  replayIndex = 0;
+  replayAnalysis = [];
+  replayAnalyzing = false;
+}
+
+function renderReplayPosition() {
+  const container =
+    document.getElementById(
+      "replay-board-container"
+    );
+
+  if (!container || !replayGame) return;
+
+  container.innerHTML = "";
+
+  const board = document.createElement("div");
+
+  board.style.display = "grid";
+  board.style.gridTemplateColumns =
+    "repeat(8, 1fr)";
+  board.style.width =
+    "min(70vw, 600px)";
+  board.style.aspectRatio = "1";
+
+  const boardData =
+    replayGame.board();
+
+  for (let rank = 8; rank >= 1; rank--) {
+    for (let file = 0; file < 8; file++) {
+
+      const square =
+        document.createElement("div");
+
+      square.style.display = "flex";
+      square.style.alignItems = "center";
+      square.style.justifyContent = "center";
+
+      square.style.background =
+        ((file + rank) % 2 === 0)
+          ? "#b58863"
+          : "#f0d9b5";
+
+      const piece =
+        boardData[8 - rank][file];
+
+      if (piece) {
+        const img =
+          document.createElement("img");
+
+        img.src = pieceImage(piece);
+
+        img.style.width = "90%";
+        img.style.height = "90%";
+
+        square.appendChild(img);
+      }
+
+      board.appendChild(square);
+    }
+  }
+
+  container.appendChild(board);
+
+  renderReplayMoves();
+  renderReplayAnalysis();
+}
+
+function renderReplayMoves() {
+  const el =
+    document.getElementById("replay-moves");
+
+  if (!el) return;
+
+  let html = "<b>Moves</b><br>";
+
+  for (let i = 0; i < replayMoves.length; i++) {
+
+    const move =
+      replayMoves[i];
+
+    const active =
+      i === replayIndex - 1;
+
+    html += `
+      <span style="
+        margin-right:8px;
+        font-weight:${active ? "bold" : "normal"};
+      ">
+        ${Math.floor(i / 2) + 1}${i % 2 === 0 ? "." : "..."}
+        ${move.san}
+      </span>
+    `;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderReplayAnalysis() {
+  const el =
+    document.getElementById(
+      "replay-analysis"
+    );
+
+  if (!el) return;
+
+  if (replayAnalyzing) {
+    el.innerHTML =
+      "<b>Analyzing game with Maia...</b>";
+    return;
+  }
+
+  if (!replayAnalysis.length) {
+    el.innerHTML =
+      "<b>No analysis yet.</b>";
+    return;
+  }
+
+  let html =
+    "<b>Move Analysis</b><br><br>";
+
+  for (const item of replayAnalysis) {
+
+    const icon =
+      MOVE_ICONS[item.label];
+
+    html += `
+      <div style="
+        display:flex;
+        align-items:center;
+        gap:8px;
+        margin-bottom:5px;
+      ">
+        ${
+          icon
+            ? `<img src="${icon}"
+                    style="width:24px;height:24px;">`
+            : ""
+        }
+
+        <span>
+          ${item.index + 1}.
+          ${item.move.san}
+          —
+          ${item.label}
+        </span>
+      </div>
+    `;
+  }
+
+  el.innerHTML = html;
 }
 
 // ---------- Save / load ----------
@@ -2503,5 +2966,11 @@ async function init() {
   }
 }
 
-init();
+window.openPastGame = openPastGame;
+window.replayStart = replayStart;
+window.replayPrevious = replayPrevious;
+window.replayNext = replayNext;
+window.replayEnd = replayEnd;
+window.closeReplayUI = closeReplayUI;
 
+init();
