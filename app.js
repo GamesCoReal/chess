@@ -193,9 +193,6 @@ function humanDelay() {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-
-}
-
 let gameToken = 0;
 
 const boardEl = document.getElementById("board");
