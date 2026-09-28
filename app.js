@@ -2632,6 +2632,8 @@ function pushHistoryEntry() {
   const maiaBest = POSITIVE_KEYS.reduce((sum, key) => sum + maiaMoveStatsObj[key], 0);
 
   const entry = {
+    pgn: game.pgn(),
+    
     result: resultLabel,
     rated: currentMode === "rated",
     mode: currentMode,
@@ -2710,6 +2712,11 @@ function renderHistory() {
       </div>
       <div class="hc-moves">${entry.moveline}</div>
     `;
+
+    card.addEventListener("click", () => {
+      openPastGame(entry);
+    });
+
     historyEl.appendChild(card);
   }
 }
