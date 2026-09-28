@@ -891,7 +891,6 @@ async function onDrillSquareClick(sq) {
 }
 
 // ---------- Status / turn tags ----------
-
 function updateStatusForTurn() {
   if (inPuzzleMode || isGameLocked()) return;
   if (game.turn() === playerColor) {
@@ -926,8 +925,12 @@ function formatClock(totalSeconds) {
 }
 
 function updateClockDisplays() {
-  const yourTime = playerColor === "w" ? whiteTime : blackTime;
-  const maiaTime = playerColor === "w" ? blackTime : whiteTime;
+  const yourTime =
+    playerColor === "w" ? whiteTime : blackTime;
+
+  const maiaTime =
+    playerColor === "w" ? blackTime : whiteTime;
+
   yourClockEl.textContent = formatClock(yourTime);
   maiaClockEl.textContent = formatClock(maiaTime);
 }
@@ -935,40 +938,83 @@ function updateClockDisplays() {
 function resetClocks() {
   whiteTime = STARTING_CLOCK_SECONDS;
   blackTime = STARTING_CLOCK_SECONDS;
-  whiteClockStarted = false;
+
+  // White starts the game, so White's clock starts immediately.
+  whiteClockStarted = true;
   blackClockStarted = false;
+
   updateClockDisplays();
 }
 
 function updateClockUnlocks() {
   const len = game.history().length;
-  if (len >= 2) whiteClockStarted = true;
-  if (len >= 3) blackClockStarted = true;
+
+  // White's clock starts immediately.
+  whiteClockStarted = true;
+
+  // Black's clock starts AFTER White's second move.
+  if (len >= 3) {
+    blackClockStarted = true;
+  }
 }
 
 const LOWTIME_THRESHOLDS = [60, 10, 3];
 
 function tickClock() {
-  if (inPuzzleMode || inDrillMode || isGameLocked()) return;
-  const turn = game.turn();
-  if (turn === "w") {
-    if (!whiteClockStarted) return;
-    whiteTime = Math.max(0, whiteTime - 1);
-    if (whiteTime === 0) return handleTimeout("w");
-  } else {
-    if (!blackClockStarted) return;
-    blackTime = Math.max(0, blackTime - 1);
-    if (blackTime === 0) return handleTimeout("b");
+
+  // Clocks exist only in normal games.
+  if (inPuzzleMode || inDrillMode || isGameLocked()) {
+    return;
   }
 
+  const turn = game.turn();
+
+  if (turn === "w") {
+
+    if (!whiteClockStarted) {
+      return;
+    }
+
+    whiteTime = Math.max(0, whiteTime - 1);
+
+    if (whiteTime === 0) {
+      handleTimeout("w");
+      return;
+    }
+
+  } else {
+
+    if (!blackClockStarted) {
+      return;
+    }
+
+    blackTime = Math.max(0, blackTime - 1);
+
+    if (blackTime === 0) {
+      handleTimeout("b");
+      return;
+    }
+  }
+
+  // Low-time sound only for YOUR clock.
   if (turn === playerColor) {
-    const yourTime = playerColor === "w" ? whiteTime : blackTime;
-    if (LOWTIME_THRESHOLDS.includes(yourTime)) playGameSound("lowtime");
+
+    const yourTime =
+      playerColor === "w"
+        ? whiteTime
+        : blackTime;
+
+    if (LOWTIME_THRESHOLDS.includes(yourTime)) {
+      playGameSound("lowtime");
+    }
   }
 
   updateClockDisplays();
   saveCurrentGame();
 }
+
+// Actually run the clock every second.
+setInterval(tickClock, 1000);
 
 function handleTimeout(loserColor) {
   if (isGameLocked()) return;
@@ -984,7 +1030,6 @@ function handleTimeout(loserColor) {
 }
 
 // ---------- Color assignment ----------
-
 function assignNextColor() {
   let n = parseInt(localStorage.getItem("chess_games_started") || "0", 10);
   const color = n % 2 === 0 ? "w" : "b";
@@ -993,7 +1038,6 @@ function assignNextColor() {
 }
 
 // ---------- Save / load ----------
-
 function saveKey(mode) {
   return "chess_game_" + mode;
 }
@@ -1143,7 +1187,6 @@ function resign() {
 window.resign = resign;
 
 // ---------- Board rendering ----------
-
 function pieceImage(piece) {
   return `./images/${piece.type}${piece.color}.png`;
 }
@@ -1205,7 +1248,6 @@ function onBoardClick(sq) {
 }
 
 // ---------- Drag to move ----------
-
 const DRAG_THRESHOLD_PX = 8;
 
 let pointerTrack = null;
@@ -1342,7 +1384,6 @@ document.addEventListener("pointercancel", (e) => {
 });
 
 // ---------- Real move list ----------
-
 function renderMoveList() {
   const activeGame = inPuzzleMode ? puzzleGame : (inDrillMode ? drillGame : game);
   const hist = activeGame ? activeGame.history() : [];
@@ -1358,7 +1399,6 @@ function renderMoveList() {
 }
 
 // ---------- Move classification ----------
-
 function classifyMoveGeneric({ preValue, postValue, moveUci, preTopMove, preMoveProb, moverColor, wasMate, moveNumber, skipTopMatch }) {
   const delta = moverColor === "w" ? postValue - preValue : preValue - postValue;
   const deltaPct = delta * 100;
@@ -1396,7 +1436,6 @@ function resolvePendingMaiaGrading(currentPositionValue) {
 
 // ---------- Maia's turn ----------
 // ---------- Maia's turn ----------
-
 async function runMaiaTurn() {
 
   // Maia should only move during a normal game.
@@ -1420,7 +1459,6 @@ async function runMaiaTurn() {
     // ==================================================
     // WAIT FOR MAIA
     // ==================================================
-
     if (!maiaReady || !engine) {
 
       statusEl.textContent = "Maia is loading...";
@@ -1432,7 +1470,6 @@ async function runMaiaTurn() {
     // ==================================================
     // MAKE SURE THE GAME STILL EXISTS
     // ==================================================
-
     if (myToken !== gameToken) {
       return;
     }
@@ -1455,7 +1492,6 @@ async function runMaiaTurn() {
     // ==================================================
     // SAVE MAIA'S POSITION
     // ==================================================
-
     const maiaColor = game.turn();
 
     const moveNumber =
@@ -1464,7 +1500,6 @@ async function runMaiaTurn() {
     // ==================================================
     // ASK MAIA FOR A MOVE
     // ==================================================
-
     statusEl.classList.add("status-hidden");
 
     const [evalResult] = await Promise.all([
@@ -1499,7 +1534,6 @@ async function runMaiaTurn() {
     // ==================================================
     // GET MAIA MOVE
     // ==================================================
-
     const preMoveValue = evalResult.value;
 
     const uci =
@@ -1525,7 +1559,6 @@ async function runMaiaTurn() {
     // ==================================================
     // PLAY MOVE
     // ==================================================
-
     const maiaMoveResult = game.move({
       from,
       to,
@@ -1559,7 +1592,6 @@ async function runMaiaTurn() {
     // ==================================================
     // GRADE / SAVE MAIA MOVE
     // ==================================================
-
     if (game.game_over()) {
 
       if (game.in_checkmate()) {
@@ -1582,7 +1614,6 @@ async function runMaiaTurn() {
     // ==================================================
     // GAME OVER
     // ==================================================
-
     if (game.game_over()) {
 
       clearTurnTags();
@@ -1625,7 +1656,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // BASIC SAFETY CHECKS
   // ==================================================
-
   if (maiaThinking || isGameLocked()) {
     return;
   }
@@ -1637,7 +1667,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // SELECT PIECE
   // ==================================================
-
   if (selectedSquare === null) {
 
     const piece = game.get(sq);
@@ -1653,7 +1682,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // DESELECT PIECE
   // ==================================================
-
   if (sq === selectedSquare) {
     selectedSquare = null;
     renderBoard();
@@ -1663,7 +1691,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // SAVE POSITION BEFORE PLAYER MOVE
   // ==================================================
-
   const from = selectedSquare;
   const to = sq;
 
@@ -1677,7 +1704,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // TRY PLAYER MOVE
   // ==================================================
-
   const moveResult = game.move({
     from,
     to,
@@ -1689,7 +1715,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // ILLEGAL MOVE
   // ==================================================
-
   if (!moveResult) {
 
     const piece = game.get(sq);
@@ -1705,7 +1730,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // PLAYER MOVE SUCCESSFUL
   // ==================================================
-
   lastMoveFrom = from;
   lastMoveTo = to;
 
@@ -1725,7 +1749,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // CHECK WHETHER PLAYER ENDED THE GAME
   // ==================================================
-
   const wasMate = game.in_checkmate();
 
   const otherGameEnd =
@@ -1745,7 +1768,6 @@ async function onSquareClick(sq) {
   // ==================================================
   // CREATE A TOKEN FOR THIS TURN
   // ==================================================
-
   const myToken = gameToken;
 
   const promotion =
@@ -1766,7 +1788,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // WAIT FOR MAIA IF IT IS STILL LOADING
     // ==================================================
-
     if (!maiaReady || !engine) {
 
       statusEl.textContent =
@@ -1802,7 +1823,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // MAIA LOAD FAILURE
     // ==================================================
-
     if (maiaLoadError) {
       throw maiaLoadError;
     }
@@ -1816,7 +1836,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // CHECK THAT THIS IS STILL THE SAME GAME
     // ==================================================
-
     if (myToken !== gameToken) {
       return;
     }
@@ -1825,7 +1844,6 @@ async function onSquareClick(sq) {
     // EVALUATE THE POSITION BEFORE THE PLAYER MOVE
     // AND THE POSITION AFTER THE PLAYER MOVE
     // ==================================================
-
     const preEvalPromise =
       engine.evaluate(
         new Chess(preFen),
@@ -1855,7 +1873,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // CHECK GAME TOKEN AGAIN
     // ==================================================
-
     if (myToken !== gameToken) {
       return;
     }
@@ -1863,7 +1880,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // GRADE PREVIOUS MAIA MOVE
     // ==================================================
-
     resolvePendingMaiaGrading(
       preEval.value
     );
@@ -1871,7 +1887,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // FIND BEST/PREFERRED MOVE
     // ==================================================
-
     const preTopMove =
       Object.keys(
         preEval.policy
@@ -1883,7 +1898,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // PLAYER CHECKMATE
     // ==================================================
-
     if (wasMate) {
 
       playerMoveStats.best++;
@@ -1893,7 +1907,6 @@ async function onSquareClick(sq) {
       // ==================================================
       // GRADE PLAYER'S MOVE
       // ==================================================
-
       const label =
         classifyMoveGeneric({
           preValue: preEval.value,
@@ -1912,7 +1925,6 @@ async function onSquareClick(sq) {
       // ==================================================
       // MAIA'S TURN
       // ==================================================
-
       const maiaColor =
         game.turn();
 
@@ -1952,7 +1964,6 @@ async function onSquareClick(sq) {
       // ==================================================
       // PLAY MAIA'S MOVE
       // ==================================================
-
       const maiaInlineResult =
         game.move({
           from: mFrom,
@@ -1988,7 +1999,6 @@ async function onSquareClick(sq) {
       // ==================================================
       // CHECK WHETHER MAIA WON BY CHECKMATE
       // ==================================================
-
       if (
         game.game_over() &&
         game.in_checkmate()
@@ -2024,7 +2034,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // CHECK GAME OVER
     // ==================================================
-
     if (game.game_over()) {
 
       clearTurnTags();
@@ -2054,7 +2063,6 @@ async function onSquareClick(sq) {
     // ==================================================
     // ALWAYS RELEASE MAIA THINKING STATE
     // ==================================================
-
     if (myToken === gameToken) {
 
       maiaThinking = false;
@@ -2067,7 +2075,6 @@ async function onSquareClick(sq) {
 }
 
 // ---------- Game-over popup ----------
-
 function getResultText() {
   if (gameTimedOut) {
     const winner = timedOutColor === "w" ? "Black" : "White";
@@ -2272,7 +2279,6 @@ function closeOverlay() {
 window.closeOverlay = closeOverlay;
 
 // ---------- Maia initialization ----------
-
 let maiaReady = false;
 let maiaLoading = false;
 let maiaLoadError = null;
@@ -2394,10 +2400,10 @@ function initializeMaiaInBackground() {
 }
 
 async function init() {
+
   // -----------------------------------------
   // 1. Load the UI immediately
   // -----------------------------------------
-
   renderHistory();
 
   statusEl.textContent = "Loading game...";
@@ -2408,23 +2414,27 @@ async function init() {
   updateDefaultModeButtonLabel();
 
   // -----------------------------------------
-  // 2. Start background downloads
+  // 2. Start background resources immediately
   // -----------------------------------------
-  
-  // Openings
-  loadOpeningsData().catch((err) => {
-    console.error("Failed to load openings:", err);
-  });
-  
   // Puzzle databases
   PuzzleDB.startBackgroundDownloads().catch((err) => {
-    console.warn("Background puzzle downloads failed:", err);
+    console.warn(
+      "Background puzzle database download failed:",
+      err
+    );
+  });
+
+  // Openings
+  loadOpeningsData().catch((err) => {
+    console.error(
+      "Failed to load openings:",
+      err
+    );
   });
 
   // -----------------------------------------
   // 3. Start the current mode immediately
   // -----------------------------------------
-
   if (currentMode === "puzzles") {
 
     try {
@@ -2463,13 +2473,11 @@ async function init() {
   // -----------------------------------------
   // 4. Start Maia WITHOUT blocking the UI
   // -----------------------------------------
-
   initializeMaiaInBackground();
 
   // -----------------------------------------
   // 5. If Maia needs to move, wait for Maia
   // -----------------------------------------
-
   if (
     !inPuzzleMode &&
     !inDrillMode &&
@@ -2479,7 +2487,6 @@ async function init() {
 
     // Maia isn't ready yet.
     // initializeMaiaInBackground() is already running.
-
     if (!maiaReady) {
       statusEl.textContent = "Loading Maia...";
       statusEl.classList.remove("status-hidden");
