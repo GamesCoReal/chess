@@ -1398,16 +1398,16 @@ function resolvePendingMaiaGrading(currentPositionValue) {
 async function runMaiaTurn() {
   if (inPuzzleMode || maiaThinking || isGameLocked() || game.turn() === playerColor) return;
 
-  // Wait for Maia if it is still loading.
+  // Wait for Maia to finish loading before doing anything with the engine.
   if (!maiaReady) {
     statusEl.textContent = "Maia is loading...";
     statusEl.classList.remove("status-hidden");
-
-    while (!maiaReady && !maiaLoadError) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    if (maiaLoadError || !maiaReady) {
+  
+    try {
+      await waitForMaia();
+    } catch (err) {
+      console.error("Maia is unavailable:", err);
+  
       statusEl.textContent = "Maia couldn't load.";
       statusEl.classList.remove("status-hidden");
       return;
@@ -1467,49 +1467,84 @@ async function runMaiaTurn() {
 }
 
 // ---------- Player's turn ----------
-
 async function onSquareClick(sq) {
   if (maiaThinking || isGameLocked()) return;
   if (game.turn() !== playerColor) return;
 
+  // --------------------------------------------------
+  // Selecting a piece
+  // --------------------------------------------------
   if (selectedSquare === null) {
     const piece = game.get(sq);
+
     if (piece && piece.color === playerColor) {
       selectedSquare = sq;
       renderBoard();
     }
+
     return;
   }
+
+  // --------------------------------------------------
+  // Clicking the selected square again = deselect
+  // --------------------------------------------------
   if (sq === selectedSquare) {
     selectedSquare = null;
     renderBoard();
     return;
   }
 
+  // --------------------------------------------------
+  // Save move information BEFORE changing the game
+  // --------------------------------------------------
   const from = selectedSquare;
   const to = sq;
+
   const preFen = game.fen();
   const moverColor = playerColor;
   const moveNumber = Math.floor(game.history().length / 2) + 1;
 
-  const moveResult = game.move({ from, to, promotion: "q" });
+  // --------------------------------------------------
+  // Try to make the player's move
+  // --------------------------------------------------
+  const moveResult = game.move({
+    from,
+    to,
+    promotion: "q"
+  });
+
   selectedSquare = null;
 
+  // --------------------------------------------------
+  // Illegal move
+  // --------------------------------------------------
   if (!moveResult) {
     const piece = game.get(sq);
-    if (piece && piece.color === playerColor) selectedSquare = sq;
+
+    if (piece && piece.color === playerColor) {
+      selectedSquare = sq;
+    }
+
     renderBoard();
     return;
   }
 
+  // --------------------------------------------------
+  // Move succeeded
+  // --------------------------------------------------
   lastMoveFrom = from;
   lastMoveTo = to;
+
   playGameSound(soundForMove(game, moveResult));
+
   updateClockUnlocks();
   renderBoard();
   renderMoveList();
   saveCurrentGame();
 
+  // --------------------------------------------------
+  // Check if player's move ended the game
+  // --------------------------------------------------
   const wasMate = game.in_checkmate();
   const otherGameEnd = !wasMate && game.game_over();
 
@@ -1520,71 +1555,332 @@ async function onSquareClick(sq) {
     return;
   }
 
+  // --------------------------------------------------
+  // Create a token for this particular turn.
+  // This prevents an old async operation from changing
+  // a new game after the user starts/restarts/switches.
+  // --------------------------------------------------
   const myToken = gameToken;
-  const promotion = moveResult.promotion ? moveResult.promotion : "";
+
+  const promotion = moveResult.promotion
+    ? moveResult.promotion
+    : "";
+
   const moveUci = from + to + promotion;
 
   maiaThinking = true;
   updateStatusForTurn();
 
   try {
-    const preEvalPromise = engine.evaluate(new Chess(preFen), myRating, MAIA_ELO);
-    const postEvalPromise = wasMate ? Promise.resolve(null) : engine.evaluate(game, MAIA_ELO, myRating);
-    const [preEval, postEval] = await Promise.all([preEvalPromise, postEvalPromise, humanDelay()]);
 
-    if (myToken !== gameToken) return;
+    // ==================================================
+    // WAIT FOR MAIA TO FINISH LOADING
+    // ==================================================
+    //
+    // The board is allowed to work before Maia finishes
+    // loading. If the player moves before Maia is ready,
+    // we simply wait here.
+    //
+    // This prevents:
+    //
+    //   "Cannot read properties of undefined..."
+    //   "engine is not initialized"
+    //   "Maia failed to move"
+    //
+    // because engine.evaluate() won't be called until
+    // MaiaTensor.initMoveTables() has completed.
+    // ==================================================
 
+    if (!maiaReady) {
+
+      statusEl.textContent = "Maia is loading...";
+      statusEl.classList.remove("status-hidden");
+
+      // If Maia isn't currently loading, start it.
+      if (!maiaLoading && !maiaLoadError) {
+        initializeMaiaInBackground();
+      }
+
+      // Wait until Maia is ready or loading fails.
+      while (!maiaReady && !maiaLoadError) {
+
+        // If the user started a new game/mode while waiting,
+        // stop this old turn immediately.
+        if (myToken !== gameToken) {
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // --------------------------------------------------
+    // Maia failed to initialize
+    // --------------------------------------------------
+    if (maiaLoadError || !maiaReady) {
+
+      console.error(
+        "Maia is unavailable:",
+        maiaLoadError
+      );
+
+      if (myToken === gameToken) {
+        statusEl.textContent =
+          "Maia is still loading/unavailable. Your move was saved.";
+        statusEl.classList.remove("status-hidden");
+      }
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // Make absolutely sure the engine exists too.
+    //
+    // This protects against a situation where maiaReady
+    // was set but engine was not assigned yet.
+    // --------------------------------------------------
+    if (!engine) {
+
+      statusEl.textContent = "Starting Maia...";
+      statusEl.classList.remove("status-hidden");
+
+      // Give the initialization code a chance to finish.
+      while (!engine && !maiaLoadError) {
+
+        if (myToken !== gameToken) {
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // --------------------------------------------------
+    // Final engine check
+    // --------------------------------------------------
+    if (!engine) {
+
+      console.error(
+        "Maia finished loading, but the engine is unavailable."
+      );
+
+      if (myToken === gameToken) {
+        statusEl.textContent =
+          "Maia could not start. Check the console.";
+        statusEl.classList.remove("status-hidden");
+      }
+
+      return;
+    }
+
+    // --------------------------------------------------
+    // Make sure this is still the same game
+    // --------------------------------------------------
+    if (myToken !== gameToken) {
+      return;
+    }
+
+    // ==================================================
+    // NOW IT IS SAFE TO EVALUATE
+    // ==================================================
+
+    const preEvalPromise =
+      engine.evaluate(
+        new Chess(preFen),
+        myRating,
+        MAIA_ELO
+      );
+
+    const postEvalPromise =
+      wasMate
+        ? Promise.resolve(null)
+        : engine.evaluate(
+            game,
+            MAIA_ELO,
+            myRating
+          );
+
+    // Wait for evaluations AND human-like delay.
+    const [preEval, postEval] = await Promise.all([
+      preEvalPromise,
+      postEvalPromise,
+      humanDelay()
+    ]);
+
+    // --------------------------------------------------
+    // Make sure the game wasn't changed while Maia
+    // was thinking.
+    // --------------------------------------------------
+    if (myToken !== gameToken) {
+      return;
+    }
+
+    // --------------------------------------------------
+    // Grade the previous Maia move
+    // --------------------------------------------------
     resolvePendingMaiaGrading(preEval.value);
 
-    const preTopMove = Object.keys(preEval.policy)[0];
-    const preMoveProb = preEval.policy[moveUci] || 0;
+    const preTopMove =
+      Object.keys(preEval.policy)[0];
 
+    const preMoveProb =
+      preEval.policy[moveUci] || 0;
+
+    // ==================================================
+    // PLAYER CHECKMATE
+    // ==================================================
     if (wasMate) {
+
       playerMoveStats.best++;
+
     } else {
+
+      // ==================================================
+      // GRADE PLAYER'S MOVE
+      // ==================================================
+
       const label = classifyMoveGeneric({
-        preValue: preEval.value, postValue: postEval.value, moveUci, preTopMove, preMoveProb,
-        moverColor, wasMate: false, moveNumber, skipTopMatch: false,
+        preValue: preEval.value,
+        postValue: postEval.value,
+        moveUci,
+        preTopMove,
+        preMoveProb,
+        moverColor,
+        wasMate: false,
+        moveNumber,
+        skipTopMatch: false,
       });
+
       playerMoveStats[label]++;
 
+      // ==================================================
+      // MAIA'S TURN
+      // ==================================================
+
       const maiaColor = game.turn();
-      const maiaMoveNumber = Math.floor(game.history().length / 2) + 1;
-      const maiaPreMoveValue = postEval.value;
-      const maiaUci = Object.keys(postEval.policy)[0];
-      const maiaPreMoveProb = postEval.policy[maiaUci] || 0;
-      const mFrom = maiaUci.slice(0, 2), mTo = maiaUci.slice(2, 4);
-      const mPromo = maiaUci.length > 4 ? maiaUci.slice(4) : "q";
-      const maiaInlineResult = game.move({ from: mFrom, to: mTo, promotion: mPromo });
+
+      const maiaMoveNumber =
+        Math.floor(game.history().length / 2) + 1;
+
+      const maiaPreMoveValue =
+        postEval.value;
+
+      const maiaUci =
+        Object.keys(postEval.policy)[0];
+
+      const maiaPreMoveProb =
+        postEval.policy[maiaUci] || 0;
+
+      const mFrom =
+        maiaUci.slice(0, 2);
+
+      const mTo =
+        maiaUci.slice(2, 4);
+
+      const mPromo =
+        maiaUci.length > 4
+          ? maiaUci.slice(4)
+          : "q";
+
+      // --------------------------------------------------
+      // Make Maia's move
+      // --------------------------------------------------
+
+      const maiaInlineResult = game.move({
+        from: mFrom,
+        to: mTo,
+        promotion: mPromo
+      });
+
+      // --------------------------------------------------
+      // Safety check
+      // --------------------------------------------------
+      if (!maiaInlineResult) {
+
+        console.error(
+          "Maia selected an illegal move:",
+          maiaUci
+        );
+
+        throw new Error(
+          "Maia returned an illegal move: " + maiaUci
+        );
+      }
+
       lastMoveFrom = mFrom;
       lastMoveTo = mTo;
-      playGameSound(soundForMove(game, maiaInlineResult));
+
+      playGameSound(
+        soundForMove(
+          game,
+          maiaInlineResult
+        )
+      );
+
       updateClockUnlocks();
       renderBoard();
       renderMoveList();
       saveCurrentGame();
 
-      if (game.game_over() && game.in_checkmate()) {
+      // --------------------------------------------------
+      // Maia checkmate
+      // --------------------------------------------------
+      if (
+        game.game_over() &&
+        game.in_checkmate()
+      ) {
+
         maiaMoveStatsObj.best++;
+
       } else if (!game.game_over()) {
-        pendingMaiaGrading = { preMoveValue: maiaPreMoveValue, color: maiaColor, moveNumber: maiaMoveNumber, moveUci: maiaUci, preMoveProb: maiaPreMoveProb };
+
+        // ------------------------------------------------
+        // Save Maia's move so it can be graded after
+        // the player's next move.
+        // ------------------------------------------------
+
+        pendingMaiaGrading = {
+          preMoveValue: maiaPreMoveValue,
+          color: maiaColor,
+          moveNumber: maiaMoveNumber,
+          moveUci: maiaUci,
+          preMoveProb: maiaPreMoveProb
+        };
       }
     }
 
+    // --------------------------------------------------
+    // Game ended
+    // --------------------------------------------------
     if (game.game_over()) {
       clearTurnTags();
       showGameOverPopup();
     }
+
   } catch (err) {
-    console.error(err);
+
+    console.error(
+      "Maia/player-turn error:",
+      err
+    );
+
     if (myToken === gameToken) {
-      statusEl.textContent = "Maia failed to move — check console.";
+
+      statusEl.textContent =
+        "Maia had an error. It will try again on your next move.";
+
       statusEl.classList.remove("status-hidden");
     }
+
   } finally {
+
     if (myToken === gameToken) {
+
       maiaThinking = false;
-      if (!game.game_over()) updateStatusForTurn();
+
+      if (!game.game_over()) {
+        updateStatusForTurn();
+      }
     }
   }
 }
@@ -1795,11 +2091,43 @@ function closeOverlay() {
 window.closeOverlay = closeOverlay;
 
 // ---------- Init ----------
-// ---------- Init ----------
-
 let maiaReady = false;
 let maiaLoading = false;
 let maiaLoadError = null;
+
+function waitForMaia() {
+  return new Promise((resolve, reject) => {
+
+    // Already ready
+    if (maiaReady) {
+      resolve();
+      return;
+    }
+
+    // Already failed
+    if (maiaLoadError) {
+      reject(maiaLoadError);
+      return;
+    }
+
+    const check = () => {
+
+      if (maiaReady) {
+        resolve();
+        return;
+      }
+
+      if (maiaLoadError) {
+        reject(maiaLoadError);
+        return;
+      }
+
+      setTimeout(check, 100);
+    };
+
+    check();
+  });
+}
 
 async function initializeMaiaInBackground() {
   if (maiaReady || maiaLoading) return;
