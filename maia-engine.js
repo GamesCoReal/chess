@@ -1,5 +1,4 @@
 // Simplified port of src/lib/engine/maia.ts (React-free)
-
 class MaiaEngine {
   constructor({ modelUrl = "./maia3/maia3_simplified.onnx", modelVersion = "3", onStatus = () => {}, onProgress = () => {} } = {}) {
     this.worker = new Worker("./maia-worker.js");
@@ -81,6 +80,7 @@ class MaiaEngine {
   // chessObj: chess.js instance at the position to evaluate. Returns { policy, value }
   // policy = { "e2e4": 0.31, ... } sorted by probability descending
   async evaluate(chessObj, eloSelf = 1500, eloOppo = 1500) {
+    await this.load();
     const fen = chessObj.fen();
     const { boardTokens, legalMoves } = MaiaTensor.preprocessMaia3(chessObj);
     const { logitsMove, logitsValue } = await this._runInference(
