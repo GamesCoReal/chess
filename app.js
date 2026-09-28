@@ -1778,43 +1778,50 @@ function closeOverlay() {
 window.closeOverlay = closeOverlay;
 
 // ---------- Init ----------
-
-async function init() { 
-  renderHistory(); 
-  statusEl.textContent = "Loading..."; 
-  updateModeBadge(); 
-  updateUsernameDisplay(); 
-  updateSoundButtonLabel(); 
+async function init() {
+  renderHistory();
+  statusEl.textContent = "Loading...";
+  updateModeBadge();
+  updateUsernameDisplay();
+  updateSoundButtonLabel();
   updateDefaultModeButtonLabel();
 
-  // FIX: Route the app to either Puzzles or a standard game
-  if (currentMode === "puzzles") {
-      // Specialized startup for puzzles
-      await enterPuzzleMode(); 
-  } else {
-      // Standard startup for Rated/Unrated games
-      try { 
-          const loaded = loadGame(currentMode); 
-          applyLoadedState(loaded); 
-          renderBoard(); 
-          renderMoveList(); 
-          updateClockDisplays(); 
-      } catch (err) { 
-          console.error("Failed during initial board setup:", err); 
-      }
+  // Initialize the Maia engine FIRST so engine.evaluate() is available
+  try {
+    await MaiaTensor.initMoveTables("./data/");
+    await loadOpeningsData();
+  } catch (err) {
+    console.error("Failed to fully initialize the Maia engine:", err);
+    statusEl.textContent = "Something failed to load — check the console for details.";
+    statusEl.classList.remove("status-hidden");
+    return;
   }
 
-  // Final engine and opening data load
-  try { 
-    await MaiaTensor.initMoveTables("./data/"); 
-    await loadOpeningsData();
-  } catch (err) { 
-    console.error("Failed to fully initialize the Maia engine:", err); 
-    statusEl.textContent = "Something failed to load — check the console for details."; 
-    statusEl.classList.remove("status-hidden"); 
-  } 
+  // Start the correct mode only AFTER Maia has initialized
+  if (currentMode === "puzzles") {
+    // Specialized startup for puzzles
+    await enterPuzzleMode();
+  } else {
+    // Standard startup for Rated/Unrated games
+    try {
+      const loaded = loadGame(currentMode);
+      applyLoadedState(loaded);
+      renderBoard();
+      renderMoveList();
+      updateClockDisplays();
+      updateStatusForTurn();
+
+      // If it is Maia's turn when the saved game loads, let Maia move
+      if (game.turn() !== playerColor) {
+        runMaiaTurn();
+      }
+    } catch (err) {
+      console.error("Failed during initial board setup:", err);
+      statusEl.textContent = "Failed to load the game.";
+      statusEl.classList.remove("status-hidden");
+    }
+  }
 }
 
-
-
 init();
+
