@@ -100,3 +100,6 @@ class MaiaEngine {
 }
 
 window.MaiaEngine = MaiaEngine;
+
+// Create the global engine instance used by app.js
+window.engine = new MaiaEngine();
