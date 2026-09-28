@@ -2408,11 +2408,17 @@ async function init() {
   updateDefaultModeButtonLabel();
 
   // -----------------------------------------
-  // 2. Load openings separately
+  // 2. Start background downloads
   // -----------------------------------------
-
+  
+  // Openings
   loadOpeningsData().catch((err) => {
     console.error("Failed to load openings:", err);
+  });
+  
+  // Puzzle databases
+  PuzzleDB.startBackgroundDownloads().catch((err) => {
+    console.warn("Background puzzle downloads failed:", err);
   });
 
   // -----------------------------------------
