@@ -1,12 +1,21 @@
+let game = new Chess();
+let selectedSquare = null;
+let playerColor = "w";
+let maiaThinking = false;
+let engine = window.engine;
+let boardFlipped = false;
+let lastMoveFrom = null;
+let lastMoveTo = null;
+let gameResigned = false;
+let resignedBy = null;
+let gameTimedOut = false;
+let timedOutColor = null;
+let historyRecorded = false;
+let puzzleDB = null;
+let hintStage = 0;
+let hintMovesUsed = 0;
+let currentHintMoveIndex = 0;
 let currentSolution = [];
-
-// ---------- Color assignment ----------
-function assignNextColor() {
-  let n = parseInt(localStorage.getItem("chess_games_started") || "0", 10);
-  const color = n % 2 === 0 ? "w" : "b";
-  localStorage.setItem("chess_games_started", String(n + 1));
-  return color;
-}
 
 // ============================================================
 // PAST GAME REPLAY
@@ -15,9 +24,8 @@ function assignNextColor() {
 let replayGame = null;
 let replayMoves = [];
 let replayIndex = 0;
-let inReplayMode = false;
-let replayReturnGame = null;
-let replayControlsEl = null;
+let replayAnalysis = [];
+let replayAnalyzing = false;
 
 const MOVE_ICONS = {
   brilliant: "./images/brilliant.png",
