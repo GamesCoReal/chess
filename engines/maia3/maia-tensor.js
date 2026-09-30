@@ -1,10 +1,9 @@
 // Ported from src/lib/engine/tensor.ts (maia-platform-frontend) — plain JS, no build step needed.
-
 let allPossibleMovesMaia3 = null;         // { "e2e4": 0, ... }
 let allPossibleMovesMaia3Reversed = null; // { 0: "e2e4", ... }
 
 // Must be called once before using anything else in this file.
-async function initMoveTables(baseUrl = "./data/") {
+async function initMoveTables(baseUrl = "../../data/") {
   const [fwd, rev] = await Promise.all([
     fetch(baseUrl + "all_moves_maia3.json").then((r) => r.json()),
     fetch(baseUrl + "all_moves_maia3_reversed.json").then((r) => r.json()),
