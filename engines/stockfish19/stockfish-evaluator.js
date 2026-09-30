@@ -1,5 +1,5 @@
 class StockfishEvaluator {
-  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js", depth = 12 } = {}) {
+  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js?v=2", depth = 24 } = {}) {
     this.workerUrl = workerUrl;
     this.depth = depth;
     this.worker = null;
@@ -59,11 +59,13 @@ class StockfishEvaluator {
       return;
     }
 
-    const scoreMatch = line.match(/\bscore\s+(cp|mate)\s+(-?\d+)/);
+    const scoreMatch = line.match(/\bscore\s+(cp|mate)\s+([+-]?\d+)/);
     if (scoreMatch && this.current) {
+      const depthMatch = line.match(/\bdepth\s+(\d+)/);
       this.current.score = {
         type: scoreMatch[1],
         value: Number(scoreMatch[2]),
+        depth: depthMatch ? Number(depthMatch[1]) : null,
       };
       this.current.onUpdate?.(this.current.score);
       return;
@@ -104,7 +106,7 @@ class StockfishEvaluator {
     this.current = this.pending;
     this.pending = null;
     this.worker.postMessage(`position fen ${this.current.fen}`);
-    this.worker.postMessage("go infinite");
+    this.worker.postMessage(`go depth ${this.depth}`);
   }
 }
 

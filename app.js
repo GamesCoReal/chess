@@ -1890,7 +1890,8 @@ function updateReplayEvalBar(score, turn) {
     ? `M${Math.abs(score.value)}`
     : `${score.value > 0 ? "+" : ""}${(score.value / 100).toFixed(1)}`;
   evalBar.setAttribute("aria-label", `Position evaluation: White ${whitePct} percent, Black ${100 - whitePct} percent`);
-  evalBar.title = `White ${whitePct}% / Black ${100 - whitePct}%`;
+  const depthText = score.depth ? ` Stockfish depth ${score.depth}.` : "";
+  evalBar.title = `White ${whitePct}% / Black ${100 - whitePct}%.${depthText}`;
 }
 
 function analyzeReplayPosition() {
