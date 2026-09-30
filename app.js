@@ -1,5 +1,6 @@
 let game = new Chess();
 let selectedSquare = null;
+let premove = null;
 let playerColor = "w";
 let maiaThinking = false;
 let engine = window.engine;        // Maia
@@ -29,6 +30,7 @@ let replayAnalysis = [];
 let replayAnalyzing = false;
 let replayAnalysisRun = 0;
 let replayAnalysisPanelEl = null;
+let replayStockfishRun = 0;
 let replayPlayerColor = "w";
 
 const MOVE_ICONS = {
@@ -947,10 +949,16 @@ window.toggleFlip = toggleFlip;
 // ---------- Clocks ----------
 
 function formatClock(totalSeconds) {
-  const s = Math.max(0, Math.floor(totalSeconds));
+  const remaining = Math.max(0, totalSeconds);
+  const s = Math.floor(remaining);
   const m = Math.floor(s / 60);
   const r = s % 60;
-  return m + ":" + String(r).padStart(2, "0");
+  const base = m + ":" + String(r).padStart(2, "0");
+  if (remaining < 10) {
+    const millis = Math.floor((remaining - s) * 1000);
+    return `${base}.${String(millis).padStart(3, "0")}`;
+  }
+  return base;
 }
 
 function updateClockDisplays() {
@@ -971,6 +979,7 @@ function resetClocks() {
   // White starts the game, so White's clock starts immediately.
   whiteClockStarted = true;
   blackClockStarted = false;
+  clockLastTick = performance.now();
 
   updateClockDisplays();
 }
@@ -988,15 +997,21 @@ function updateClockUnlocks() {
 }
 
 const LOWTIME_THRESHOLDS = [60, 10, 3];
+let clockLastTick = performance.now();
 
 function tickClock() {
 
   // Clocks exist only in normal games.
   if (inPuzzleMode || inDrillMode || isGameLocked()) {
+    clockLastTick = performance.now();
     return;
   }
 
+  const now = performance.now();
+  const elapsed = Math.max(0, (now - clockLastTick) / 1000);
+  clockLastTick = now;
   const turn = game.turn();
+  const previousTime = turn === "w" ? whiteTime : blackTime;
 
   if (turn === "w") {
 
@@ -1004,7 +1019,7 @@ function tickClock() {
       return;
     }
 
-    whiteTime = Math.max(0, whiteTime - 1);
+    whiteTime = Math.max(0, whiteTime - elapsed);
 
     if (whiteTime === 0) {
       handleTimeout("w");
@@ -1017,7 +1032,7 @@ function tickClock() {
       return;
     }
 
-    blackTime = Math.max(0, blackTime - 1);
+    blackTime = Math.max(0, blackTime - elapsed);
 
     if (blackTime === 0) {
       handleTimeout("b");
@@ -1033,23 +1048,26 @@ function tickClock() {
         ? whiteTime
         : blackTime;
 
-    if (LOWTIME_THRESHOLDS.includes(yourTime)) {
+    if (LOWTIME_THRESHOLDS.some((threshold) => previousTime > threshold && yourTime <= threshold)) {
       playGameSound("lowtime");
     }
   }
 
   updateClockDisplays();
-  saveCurrentGame();
+  if (Math.floor(previousTime) !== Math.floor(turn === "w" ? whiteTime : blackTime)) {
+    saveCurrentGame();
+  }
 }
 
-// Actually run the clock every second.
-setInterval(tickClock, 1000);
+// Update frequently for millisecond display when either clock is low.
+setInterval(tickClock, 25);
 
 function handleTimeout(loserColor) {
   if (isGameLocked()) return;
   gameTimedOut = true;
   timedOutColor = loserColor;
   maiaThinking = false;
+  premove = null;
   playGameSound("checkmate");
   updateClockDisplays();
   saveCurrentGame();
@@ -1134,7 +1152,7 @@ function openPastGame(entry) {
   // Render the saved game directly on the EXISTING board.
   renderBoard();
   renderMoveList();
-  analyzeReplayMoves(entry.pgn);
+  analyzeReplayPosition();
 
   console.log(
     "Loaded past game:",
@@ -1194,24 +1212,16 @@ function createReplayControls() {
     </button>
   `;
 
-  replayAnalysisPanelEl = document.createElement("section");
-  replayAnalysisPanelEl.id = "replay-analysis-panel";
-  replayAnalysisPanelEl.className = "replay-analysis-panel";
-  replayAnalysisPanelEl.textContent = "Preparing full-game analysis…";
-
-  // Keep replay controls and the full analysis outside the horizontal move strip.
+  // Keep replay controls outside the horizontal move strip.
   const moveStrip = moveListEl && moveListEl.parentElement;
   if (moveStrip && moveStrip.parentElement) {
     moveStrip.parentElement.insertBefore(replayControlsEl, moveStrip);
-    moveStrip.parentElement.insertBefore(replayAnalysisPanelEl, moveStrip);
   } else if (gameControlsEl) {
     gameControlsEl.parentElement.appendChild(
       replayControlsEl
     );
-    gameControlsEl.parentElement.insertBefore(replayAnalysisPanelEl, gameControlsEl);
   } else {
     document.body.appendChild(replayControlsEl);
-    document.body.appendChild(replayAnalysisPanelEl);
   }
 
   document
@@ -1444,6 +1454,7 @@ function replayStart() {
   renderBoard();
   renderMoveList();
   updateReplayControls();
+  analyzeReplayPosition();
 }
 
 
@@ -1486,6 +1497,7 @@ function replayPrevious() {
   renderBoard();
   renderMoveList();
   updateReplayControls();
+  analyzeReplayPosition();
 }
 
 
@@ -1520,6 +1532,7 @@ function replayNext() {
   renderBoard();
   renderMoveList();
   updateReplayControls();
+  analyzeReplayPosition();
 }
 
 
@@ -1557,6 +1570,7 @@ function replayEnd() {
   renderBoard();
   renderMoveList();
   updateReplayControls();
+  analyzeReplayPosition();
 }
 
 
@@ -1566,6 +1580,8 @@ function replayEnd() {
 
 function exitReplay() {
   replayAnalysisRun++;
+  replayStockfishRun++;
+  window.stockfishEvaluator?.stop();
   replayAnalyzing = false;
   inReplayMode = false;
 
@@ -1670,6 +1686,7 @@ function resetForNewGame(mode) {
   gameToken++;
   maiaThinking = false;
   selectedSquare = null;
+  premove = null;
   gameResigned = false;
   resignedBy = null;
   gameTimedOut = false;
@@ -1691,6 +1708,7 @@ function applyLoadedState(loaded) {
   blackTime = loaded.blackTime;
   whiteClockStarted = loaded.whiteClockStarted;
   blackClockStarted = loaded.blackClockStarted;
+  clockLastTick = performance.now();
   playerColor = loaded.playerColor !== null ? loaded.playerColor : assignNextColor();
   updateClockUnlocks();
   boardFlipped = playerColor === "b";
@@ -1755,6 +1773,7 @@ function resign() {
   gameResigned = true;
   resignedBy = playerColor;
   maiaThinking = false;
+  premove = null;
   saveCurrentGame();
   statusEl.classList.add("status-hidden");
   clearTurnTags();
@@ -1803,6 +1822,9 @@ function renderBoard() {
       cell.dataset.square = sq;
       
       if (sq === selectedSquare) cell.classList.add("selected");
+      if (premove && (sq === premove.from || sq === premove.to)) {
+        cell.classList.add("premove-square");
+      }
       
       if (hintSquares.includes(sq)) {
         cell.classList.add("hint-highlight");
@@ -1844,28 +1866,53 @@ function renderBoard() {
 }
 
 function renderReplayEvalBar() {
+  const meter = document.getElementById("replay-eval-meter");
   const evalBar = document.getElementById("replay-eval-bar");
-  if (!evalBar) return;
+  if (!meter || !evalBar) return;
+  meter.classList.toggle("hidden", !inReplayMode || !replayGame);
+}
 
-  const currentResult = inReplayMode && replayIndex > 0
-    ? replayAnalysis[replayIndex - 1]
-    : null;
-  if (!currentResult) {
-    evalBar.classList.add("hidden");
-    evalBar.removeAttribute("aria-label");
-    evalBar.removeAttribute("title");
-    return;
-  }
+function updateReplayEvalBar(score, turn) {
+  const evalBar = document.getElementById("replay-eval-bar");
+  const scoreLabel = document.getElementById("replay-eval-score");
+  if (!evalBar || !scoreLabel) return;
 
-  const whiteChance = Math.max(0, Math.min(1, currentResult.afterWhite));
-  const whitePct = Math.round(whiteChance * 100);
-  const whitePart = evalBar.querySelector(".eval-bar-white");
-  const blackPart = evalBar.querySelector(".eval-bar-black");
-  whitePart.style.flexBasis = `${whitePct}%`;
-  blackPart.style.flexBasis = `${100 - whitePct}%`;
+  const scoreFromWhite = score.type === "mate"
+    ? (score.value > 0 ? 100 : 0)
+    : 100 / (1 + Math.exp(-0.00368208 * score.value));
+  const whiteChance = Math.max(0, Math.min(100,
+    turn === "w" ? scoreFromWhite : 100 - scoreFromWhite
+  ));
+  const whitePct = Math.round(whiteChance);
+  evalBar.querySelector(".eval-bar-white").style.flexBasis = `${whitePct}%`;
+  evalBar.querySelector(".eval-bar-black").style.flexBasis = `${100 - whitePct}%`;
+  scoreLabel.textContent = score.type === "mate"
+    ? `M${Math.abs(score.value)}`
+    : `${score.value > 0 ? "+" : ""}${(score.value / 100).toFixed(1)}`;
   evalBar.setAttribute("aria-label", `Position evaluation: White ${whitePct} percent, Black ${100 - whitePct} percent`);
-  evalBar.title = `White ${whitePct}% · Black ${100 - whitePct}%`;
-  evalBar.classList.remove("hidden");
+  evalBar.title = `White ${whitePct}% / Black ${100 - whitePct}%`;
+}
+
+function analyzeReplayPosition() {
+  const runId = ++replayStockfishRun;
+  if (!inReplayMode || !replayGame) return;
+
+  const fen = replayGame.fen();
+  const turn = replayGame.turn();
+  const scoreLabel = document.getElementById("replay-eval-score");
+  if (scoreLabel) scoreLabel.textContent = "…";
+  renderReplayEvalBar();
+
+  window.stockfishEvaluator.evaluateFen(fen, (score) => {
+    if (runId === replayStockfishRun && inReplayMode && score) {
+      updateReplayEvalBar(score, turn);
+    }
+  }).catch((error) => {
+    if (runId === replayStockfishRun) {
+      console.error("Could not evaluate replay position with Stockfish:", error);
+      if (scoreLabel) scoreLabel.textContent = "!";
+    }
+  });
 }
 
 function onBoardClick(sq) {
@@ -1892,9 +1939,10 @@ function pieceIsDraggableAt(sq) {
     const piece = drillGame.get(sq);
     return !!piece && piece.color === drillPlayerColor && drillGame.turn() === drillPlayerColor;
   }
-  if (maiaThinking || isGameLocked()) return false;
+  if (isGameLocked()) return false;
   const piece = game.get(sq);
-  return !!piece && piece.color === playerColor && game.turn() === playerColor;
+  return !!piece && piece.color === playerColor &&
+    (game.turn() === playerColor || (maiaThinking && game.turn() !== playerColor));
 }
 
 function squareFromPoint(x, y) {
@@ -2213,6 +2261,7 @@ async function runMaiaTurn() {
 
     lastMoveFrom = from;
     lastMoveTo = to;
+    clockLastTick = performance.now();
 
     playGameSound(
       soundForMove(
@@ -2286,7 +2335,56 @@ async function runMaiaTurn() {
       if (!isGameLocked()) {
         updateStatusForTurn();
       }
+      if (premove && !isGameLocked() && game.turn() === playerColor) {
+        setTimeout(() => executeQueuedPremove(myToken), 100);
+      } else if (isGameLocked()) {
+        premove = null;
+        renderBoard();
+      }
     }
+  }
+}
+
+function handlePremoveClick(sq) {
+  const piece = game.get(sq);
+  if (selectedSquare === null) {
+    premove = null;
+    if (piece && piece.color === playerColor) selectedSquare = sq;
+    renderBoard();
+    return;
+  }
+
+  if (sq === selectedSquare) {
+    selectedSquare = null;
+    premove = null;
+  } else if (piece && piece.color === playerColor) {
+    selectedSquare = sq;
+    premove = null;
+  } else {
+    premove = { from: selectedSquare, to: sq };
+    selectedSquare = null;
+  }
+  renderBoard();
+}
+
+async function executeQueuedPremove(expectedGameToken) {
+  if (!premove) return;
+  if (expectedGameToken !== gameToken || isGameLocked() || game.turn() !== playerColor) {
+    premove = null;
+    renderBoard();
+    return;
+  }
+
+  const queued = premove;
+  premove = null;
+  selectedSquare = null;
+  renderBoard();
+  const moveCount = game.history().length;
+  await onSquareClick(queued.from);
+  await onSquareClick(queued.to);
+  if (game.history().length === moveCount) {
+    selectedSquare = null;
+    renderBoard();
   }
 }
 
@@ -2296,11 +2394,16 @@ async function onSquareClick(sq) {
   // ==================================================
   // BASIC SAFETY CHECKS
   // ==================================================
-  if (maiaThinking || isGameLocked()) {
+  if (isGameLocked()) {
     return;
   }
 
   if (game.turn() !== playerColor) {
+    handlePremoveClick(sq);
+    return;
+  }
+
+  if (maiaThinking) {
     return;
   }
 
@@ -2372,6 +2475,7 @@ async function onSquareClick(sq) {
   // ==================================================
   lastMoveFrom = from;
   lastMoveTo = to;
+  clockLastTick = performance.now();
 
   playGameSound(
     soundForMove(
@@ -2709,6 +2813,12 @@ async function onSquareClick(sq) {
 
       if (!game.game_over()) {
         updateStatusForTurn();
+      }
+      if (premove && !isGameLocked() && game.turn() === playerColor) {
+        setTimeout(() => executeQueuedPremove(myToken), 100);
+      } else if (isGameLocked() && premove) {
+        premove = null;
+        renderBoard();
       }
     }
   }
