@@ -119,7 +119,7 @@ self.onmessage = async (e) => {
 
       case 'download': {
         postMessage({ type: 'status', status: 'downloading' })
-        postMessage({ type: 'progress', progress: 0 })
+        postMessage({ type: 'progress', progress: 0, loaded: 0, total: 0 })
         const response = await fetch(modelUrl)
         if (!response.ok) throw new Error('Failed to fetch model')
 
@@ -143,7 +143,7 @@ self.onmessage = async (e) => {
                 (receivedLength / contentLength) * 100,
               )
               if (currentProgress >= lastReportedProgress + 10) {
-                postMessage({ type: 'progress', progress: currentProgress })
+                postMessage({ type: 'progress', progress: currentProgress, loaded: receivedLength, total: contentLength })
                 lastReportedProgress = currentProgress
               }
             }
@@ -161,7 +161,7 @@ self.onmessage = async (e) => {
 
         await storeModel(modelUrl, modelVersion, buffer.buffer)
         await initSession(buffer.buffer)
-        postMessage({ type: 'progress', progress: 100 })
+        postMessage({ type: 'progress', progress: 100, loaded: buffer.byteLength, total: buffer.byteLength })
         postMessage({ type: 'status', status: 'ready' })
         break
       }

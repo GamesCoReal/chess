@@ -2934,6 +2934,29 @@ let maiaLoading = false;
 let maiaLoadError = null;
 let maiaInitPromise = null;
 
+// The worker already reports model download progress; surface it in the status line.
+if (engine) {
+  engine.onStatus = (status) => {
+    if (status === "downloading") {
+      statusEl.textContent = "Downloading Maia model...";
+      statusEl.classList.remove("status-hidden", "has-progress");
+      statusEl.classList.add("maia-downloading");
+    } else if (status === "ready") {
+      statusEl.classList.remove("maia-downloading", "has-progress");
+      statusEl.style.removeProperty("--download-progress");
+    }
+  };
+  engine.onProgress = (progress, loaded, total) => {
+    statusEl.style.setProperty("--download-progress", `${progress}%`);
+    statusEl.classList.add("maia-downloading");
+    statusEl.classList.toggle("has-progress", total > 0);
+    statusEl.classList.remove("status-hidden");
+    statusEl.textContent = total > 0
+      ? `Downloading Maia model... ${progress}%`
+      : `Downloading Maia model... ${Math.round(loaded / 1024 / 1024)} MB`;
+  };
+}
+
 function waitForMaia() {
   // Maia is already ready.
   if (maiaReady && engine) {

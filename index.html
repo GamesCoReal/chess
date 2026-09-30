@@ -175,6 +175,17 @@ transition:opacity .6s ease;
 opacity:1;
 }
 #status.status-hidden{opacity:0}
+#status.maia-downloading::after{
+content:"";display:block;width:100%;height:3px;margin:7px auto 0;
+background:linear-gradient(90deg,#c9a84c 0 35%,#4a4b4e 35% 100%);
+background-size:300% 100%;border-radius:2px;
+animation:download-progress 1.15s linear infinite;
+}
+#status.maia-downloading.has-progress::after{
+background:linear-gradient(90deg,#c9a84c 0 var(--download-progress),#4a4b4e var(--download-progress) 100%);
+background-size:100% 100%;animation:none;
+}
+@keyframes download-progress{from{background-position:100% 0}to{background-position:-200% 0}}
 
 /* Real board, driven by app.js */
 #board{

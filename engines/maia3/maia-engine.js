@@ -32,7 +32,7 @@ class MaiaEngine {
           }
           break;
         case "progress":
-          this.onProgress(msg.progress);
+          this.onProgress(msg.progress, msg.loaded, msg.total);
           break;
         case "error":
           if (msg.id !== undefined && this.pending.has(msg.id)) {
