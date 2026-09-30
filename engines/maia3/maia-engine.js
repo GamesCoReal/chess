@@ -1,6 +1,6 @@
 // Simplified port of src/lib/engine/maia.ts (React-free)
 class MaiaEngine {
-  constructor({ modelUrl = "./maia3/maia3_simplified.onnx", modelVersion = "3", onStatus = () => {}, onProgress = () => {} } = {}) {
+  constructor({ modelUrl = "./maia3_simplified.onnx", modelVersion = "3", onStatus = () => {}, onProgress = () => {} } = {}) {
     this.worker = new Worker("./maia-worker.js");
     this.onStatus = onStatus;
     this.onProgress = onProgress;
