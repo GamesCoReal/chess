@@ -16,7 +16,9 @@
 importScripts('./ort/ort.wasm.min.js')
 
 const ORT = ort
-ort.env.wasm.wasmPaths = "/chess/ort/";
+// Resolve runtime assets beside this worker so the app also works when hosted
+// below a non-root URL path.
+ort.env.wasm.wasmPaths = new URL('./ort/', self.location.href).href;
 
 // ── IndexedDB storage (mirrors MaiaModelStorage) ─────────────────────────────
 
