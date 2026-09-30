@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Chess vs Maia</title>
-<link rel="icon" type="image/png" href="./favicon.png">
+<link rel="icon" type="image/png" href="./images/icons/favicon.png">
 
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Arial,sans-serif}
@@ -189,6 +189,16 @@ border-radius:4px;
 overflow:hidden;
 touch-action:none;
 }
+#board-with-eval{display:grid;grid-template-columns:minmax(0,1fr) 36px;gap:6px;align-items:stretch;width:100%}
+.replay-eval-meter{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:0}
+.replay-eval-score{height:12px;font-size:9px;line-height:12px;color:#ddd;white-space:nowrap}
+.replay-eval-bar{display:flex;flex:1;flex-direction:column;align-self:stretch;min-height:0;overflow:hidden;border:1px solid #555;border-radius:4px;background:#25262a}
+.replay-eval-bar.hidden{display:none}
+.replay-eval-meter{position:relative}
+.eval-bar-total{display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;padding:6px 8px;border:1px solid #666;border-radius:6px;background:rgba(25,26,28,.96);box-shadow:0 3px 10px rgba(0,0,0,.45);color:#fff;font-size:11px;white-space:nowrap;pointer-events:none}
+.replay-eval-meter:hover .eval-bar-total,.replay-eval-meter.show-total .eval-bar-total,.replay-eval-meter:focus-within .eval-bar-total{display:block}
+.eval-bar-black{flex:0 0 50%;width:100%;background:#25262a}
+.eval-bar-white{flex:0 0 50%;width:100%;background:#eee}
 .square{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
 .square.drag-hover{outline:3px solid #c9a84c;outline-offset:-3px;background-color:rgba(201,168,76,.25)}
 .drag-ghost{
@@ -230,7 +240,7 @@ scrollbar-width:none;
 .inner{width:max-content;padding:8px 0;white-space:nowrap;font-size:clamp(14px,4vw,18px)}
 .movenum{color:#888;margin-right:2px}
 .move{margin-right:14px}
-
+.piece-rating-badge{position:absolute;top:2px;right:2px;width:clamp(13px,40%,22px);height:auto;z-index:4;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
 .controls{display:flex;justify-content:center;gap:10px;margin:18px auto;flex-wrap:wrap}
 .controls button{
 flex:1 1 0;
@@ -380,7 +390,16 @@ font-size:15px;padding:8px 10px;
 <div id="board-wrap">
 <div class="player"><span>Maia (<span id="maia-rating">250</span>)</span><span class="turn-tag" id="black-turn-tag">Black's move</span><span id="maia-clock">10:00</span></div>
 
+<div id="board-with-eval">
 <div id="board"></div>
+<div id="replay-eval-meter" class="replay-eval-meter hidden">
+<span id="replay-eval-score" class="replay-eval-score">+0.0</span>
+<div id="replay-eval-bar" class="replay-eval-bar" role="button" tabindex="0" aria-label="Position evaluation">
+<span class="eval-bar-black"></span><span class="eval-bar-white"></span>
+</div>
+<span id="replay-eval-total" class="eval-bar-total"></span>
+</div>
+</div>
 
 <div class="player"><span><span id="your-name-label">You</span> (<span id="your-rating">250</span>)</span><span class="turn-tag" id="white-turn-tag">White's move</span><span id="your-clock">10:00</span></div>
 
@@ -472,11 +491,12 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 </script>
 
 <script src="./chess.min.js" defer></script>
-<script src="./maia-tensor.js" defer></script>
-<script src="./maia-engine.js" defer></script>
+<script src="./engines/maia3/maia-tensor.js" defer></script>
+<script src="./engines/maia3/maia-engine.js" defer></script>
+<script src="./engines/stockfish19/stockfish-evaluator.js?v=2" defer></script>
 <script src="./sql/sql-wasm.js" defer></script>
 <script src="./puzzles-db.js" defer></script>
-<script src="./app.js" defer></script>
+<script src="./app.js?v=17" defer></script>
 
 </body>
 </html>
