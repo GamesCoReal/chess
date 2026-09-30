@@ -2,7 +2,8 @@ let game = new Chess();
 let selectedSquare = null;
 let playerColor = "w";
 let maiaThinking = false;
-let engine = window.engine;
+let engine = window.engine;        // Maia
+let stockfishEngine = null;       // Stockfish
 let boardFlipped = false;
 let lastMoveFrom = null;
 let lastMoveTo = null;
@@ -26,6 +27,9 @@ let replayMoves = [];
 let replayIndex = 0;
 let replayAnalysis = [];
 let replayAnalyzing = false;
+let replayAnalysisRun = 0;
+let replayAnalysisPanelEl = null;
+let replayPlayerColor = "w";
 
 const MOVE_ICONS = {
   brilliant: "./images/brilliant.png",
@@ -431,7 +435,7 @@ async function handlePuzzleAction() {
 window.handlePuzzleAction = handlePuzzleAction;
 
 async function autoNextPuzzle() {
-  await humanDelay(0750); // wait 3/4 second
+  await humanDelay(0o750); // wait 3/4 second
   await loadNextPuzzle();
 }
 
@@ -916,14 +920,16 @@ async function onDrillSquareClick(sq) {
 // ---------- Status / turn tags ----------
 function updateStatusForTurn() {
   if (inPuzzleMode || isGameLocked()) return;
+  whiteTurnTag.textContent = "Your move";
+  blackTurnTag.textContent = "Maia's move";
   if (game.turn() === playerColor) {
     statusEl.textContent = "Your move.";
     statusEl.classList.remove("status-hidden");
   } else {
     statusEl.classList.add("status-hidden");
   }
-  whiteTurnTag.classList.toggle("active", game.turn() === "w");
-  blackTurnTag.classList.toggle("active", game.turn() === "b");
+  whiteTurnTag.classList.toggle("active", game.turn() === playerColor);
+  blackTurnTag.classList.toggle("active", game.turn() !== playerColor);
 }
 
 function clearTurnTags() {
@@ -975,8 +981,8 @@ function updateClockUnlocks() {
   // White's clock starts immediately.
   whiteClockStarted = true;
 
-  // Black's clock starts AFTER White's second move.
-  if (len >= 3) {
+  // Black's clock starts as soon as White has made the opening move.
+  if (len >= 1) {
     blackClockStarted = true;
   }
 }
@@ -1064,9 +1070,6 @@ function assignNextColor() {
 // PAST GAME REPLAY
 // ============================================================
 
-let replayGame = null;
-let replayMoves = [];
-let replayIndex = 0;
 let inReplayMode = false;
 let replayReturnGame = null;
 let replayControlsEl = null;
@@ -1111,6 +1114,8 @@ function openPastGame(entry) {
   replayMoves = replayGame.history({
     verbose: true
   });
+  replayAnalysis = Array(replayMoves.length).fill(null);
+  replayPlayerColor = entry.playerColor === "b" ? "b" : entry.playerColor === "w" ? "w" : playerColor;
 
   // Start replay at the beginning.
   replayGame.reset();
@@ -1129,6 +1134,7 @@ function openPastGame(entry) {
   // Render the saved game directly on the EXISTING board.
   renderBoard();
   renderMoveList();
+  analyzeReplayMoves(entry.pgn);
 
   console.log(
     "Loaded past game:",
@@ -1145,6 +1151,9 @@ function openPastGame(entry) {
 function createReplayControls() {
   if (replayControlsEl) {
     replayControlsEl.remove();
+  }
+  if (replayAnalysisPanelEl) {
+    replayAnalysisPanelEl.remove();
   }
 
   replayControlsEl = document.createElement("div");
@@ -1185,18 +1194,24 @@ function createReplayControls() {
     </button>
   `;
 
-  // Put the replay controls above the move list.
-  if (moveListEl && moveListEl.parentElement) {
-    moveListEl.parentElement.insertBefore(
-      replayControlsEl,
-      moveListEl
-    );
+  replayAnalysisPanelEl = document.createElement("section");
+  replayAnalysisPanelEl.id = "replay-analysis-panel";
+  replayAnalysisPanelEl.className = "replay-analysis-panel";
+  replayAnalysisPanelEl.textContent = "Preparing full-game analysis…";
+
+  // Keep replay controls and the full analysis outside the horizontal move strip.
+  const moveStrip = moveListEl && moveListEl.parentElement;
+  if (moveStrip && moveStrip.parentElement) {
+    moveStrip.parentElement.insertBefore(replayControlsEl, moveStrip);
+    moveStrip.parentElement.insertBefore(replayAnalysisPanelEl, moveStrip);
   } else if (gameControlsEl) {
     gameControlsEl.parentElement.appendChild(
       replayControlsEl
     );
+    gameControlsEl.parentElement.insertBefore(replayAnalysisPanelEl, gameControlsEl);
   } else {
     document.body.appendChild(replayControlsEl);
+    document.body.appendChild(replayAnalysisPanelEl);
   }
 
   document
@@ -1235,6 +1250,179 @@ function updateReplayControls() {
 
   position.textContent =
     replayIndex + " / " + replayMoves.length;
+}
+
+// MaiaTensor.processOutputsMaia3 returns value from White's perspective.
+// Convert both evaluations to the mover's perspective before grading.
+async function analyzeFullGame(pgn, playerSide = playerColor, onProgress = () => {}, shouldCancel = () => false) {
+  await waitForMaia();
+
+  const analysisGame = new Chess();
+  const loaded = typeof analysisGame.load_pgn === "function"
+    ? analysisGame.load_pgn(pgn)
+    : analysisGame.loadPgn(pgn);
+  if (!loaded) throw new Error("Could not load PGN for analysis.");
+
+  const moves = analysisGame.history({ verbose: true });
+  analysisGame.reset();
+
+  // Snapshot the current ratings so a game analyzed over time stays consistent.
+  const userRating = myRating;
+  const maiaRating = parseInt(MAIA_ELO, 10) || userRating;
+  const ratingFor = (color) => color === playerSide ? userRating : maiaRating;
+  const evaluateTurn = (gameAtPosition) => {
+    const turn = gameAtPosition.turn();
+    const opponent = turn === "w" ? "b" : "w";
+    return engine.evaluate(
+      gameAtPosition,
+      ratingFor(turn),
+      ratingFor(opponent)
+    );
+  };
+
+  const results = [];
+  let beforeEval = moves.length ? await evaluateTurn(analysisGame) : null;
+
+  for (let i = 0; i < moves.length; i++) {
+    if (shouldCancel()) throw new Error("Analysis cancelled.");
+    const move = moves[i];
+    const moveUci = move.from + move.to + (move.promotion || "");
+    const preMoveProb = beforeEval?.policy?.[moveUci] || 0;
+    const preTopMove = Object.keys(beforeEval?.policy || {})[0] || null;
+    const playedMove = analysisGame.move(move);
+    if (!playedMove) throw new Error(`Could not replay move ${i + 1}.`);
+
+    const isMate = analysisGame.in_checkmate();
+    const isTerminal = analysisGame.game_over();
+    const afterEval = isTerminal ? null : await evaluateTurn(analysisGame);
+    if (shouldCancel()) throw new Error("Analysis cancelled.");
+    const beforeValue = move.color === "w"
+      ? beforeEval.value
+      : 1 - beforeEval.value;
+    const afterValue = isMate
+      ? 1
+      : isTerminal
+        ? 0.5
+        : move.color === "w"
+          ? afterEval.value
+          : 1 - afterEval.value;
+    const afterWhite = isMate
+      ? (move.color === "w" ? 1 : 0)
+      : isTerminal
+        ? 0.5
+        : afterEval.value;
+    const delta = afterValue - beforeValue;
+    const deltaPct = delta * 100;
+    const classification = classifyMoveGeneric({
+      preValue: beforeValue,
+      postValue: afterValue,
+      moveUci,
+      preTopMove,
+      preMoveProb,
+      moverColor: "w",
+      wasMate: isMate,
+      moveNumber: Math.floor(i / 2) + 1,
+      skipTopMatch: false,
+    });
+
+    results.push({
+      move: playedMove,
+      san: playedMove.san,
+      color: move.color,
+      before: beforeValue,
+      after: afterValue,
+      afterWhite,
+      delta,
+      deltaPct,
+      moveProbability: preMoveProb,
+      bestMove: preTopMove,
+      beforeEval,
+      afterEval,
+      classification,
+    });
+    onProgress(results, i + 1, moves.length);
+
+    if (afterEval) beforeEval = afterEval;
+  }
+
+  return results;
+}
+
+async function analyzeReplayMoves(pgn) {
+  const runId = ++replayAnalysisRun;
+  if (!replayGame) return;
+
+  replayAnalyzing = true;
+  renderReplayAnalysisPanel(0, replayMoves.length);
+  try {
+    replayAnalysis = await analyzeFullGame(
+      pgn,
+      replayPlayerColor,
+      (results, completed, total) => {
+        if (runId !== replayAnalysisRun) return;
+        replayAnalysis = results;
+        renderReplayAnalysisPanel(completed, total);
+        renderMoveList();
+        if (inReplayMode && replayIndex > 0 && replayIndex - 1 === completed - 1) {
+          renderBoard();
+        }
+      },
+      () => runId !== replayAnalysisRun
+    );
+    if (runId === replayAnalysisRun) {
+      renderReplayAnalysisPanel(replayAnalysis.length, replayAnalysis.length);
+      renderMoveList();
+    }
+  } catch (err) {
+    if (runId === replayAnalysisRun && replayAnalysisPanelEl && err.message !== "Analysis cancelled.") {
+      replayAnalysisPanelEl.textContent = `Analysis failed: ${err.message}`;
+    }
+    if (err.message !== "Analysis cancelled.") {
+      console.error("Could not analyze saved game with current rating:", err);
+    }
+  } finally {
+    if (runId === replayAnalysisRun) replayAnalyzing = false;
+  }
+}
+
+function renderReplayAnalysisPanel(completed = replayAnalysis.length, total = replayMoves.length) {
+  if (!replayAnalysisPanelEl) return;
+
+  const userStats = freshStats();
+  const maiaStats = freshStats();
+  for (const result of replayAnalysis) {
+    if (!result) continue;
+    const stats = result.color === replayPlayerColor ? userStats : maiaStats;
+    stats[result.classification]++;
+  }
+
+  const userAccuracy = computeAccuracy(userStats);
+  const maiaAccuracy = computeAccuracy(maiaStats);
+  const rows = replayAnalysis.map((result, index) => {
+    if (!result) return "";
+    const moveNo = Math.floor(index / 2) + 1;
+    const notation = index % 2 === 0 ? `${moveNo}. ${result.san}` : `${moveNo}... ${result.san}`;
+    const probabilityPct = Math.round(result.moveProbability * 100);
+    const deltaDisplay = `${result.deltaPct >= 0 ? "+" : ""}${result.deltaPct.toFixed(1)}%`;
+    return `<tr><td>${notation}</td><td>${probabilityPct}%</td><td>${deltaDisplay}</td></tr>`;
+  }).join("");
+
+  replayAnalysisPanelEl.innerHTML = `
+    <div class="replay-analysis-heading">
+      <strong>Full game analysis</strong>
+      <span>Using your current rating: ${myRating}</span>
+    </div>
+    <div class="replay-analysis-summary">
+      <span>You: ${userAccuracy === null ? "—" : `${userAccuracy}% accuracy`}</span>
+      <span>Maia: ${maiaAccuracy === null ? "—" : `${maiaAccuracy}% accuracy`}</span>
+      <span>${completed} / ${total} moves</span>
+    </div>
+    <div class="replay-analysis-table-wrap">
+      <table class="replay-analysis-table">
+        <thead><tr><th>Move</th><th>Maia move %</th><th>Change</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="3">${replayAnalyzing ? "Analyzing moves…" : "No moves to analyze."}</td></tr>`}</tbody>
+      </table>
+    </div>`;
 }
 
 
@@ -1377,6 +1565,8 @@ function replayEnd() {
 // ------------------------------------------------------------
 
 function exitReplay() {
+  replayAnalysisRun++;
+  replayAnalyzing = false;
   inReplayMode = false;
 
   // Restore the real game.
@@ -1387,6 +1577,7 @@ function exitReplay() {
   replayGame = null;
   replayMoves = [];
   replayIndex = 0;
+  replayAnalysis = [];
   replayReturnGame = null;
 
   selectedSquare = null;
@@ -1397,6 +1588,10 @@ function exitReplay() {
   if (replayControlsEl) {
     replayControlsEl.remove();
     replayControlsEl = null;
+  }
+  if (replayAnalysisPanelEl) {
+    replayAnalysisPanelEl.remove();
+    replayAnalysisPanelEl = null;
   }
 
   renderBoard();
@@ -1497,6 +1692,7 @@ function applyLoadedState(loaded) {
   whiteClockStarted = loaded.whiteClockStarted;
   blackClockStarted = loaded.blackClockStarted;
   playerColor = loaded.playerColor !== null ? loaded.playerColor : assignNextColor();
+  updateClockUnlocks();
   boardFlipped = playerColor === "b";
   document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
   restoreLastMoveFromRealGame();
@@ -1568,7 +1764,7 @@ window.resign = resign;
 
 // ---------- Board rendering ----------
 function pieceImage(piece) {
-  return `./images/${piece.type}${piece.color}.png`;
+  return `./images/pieces/${piece.type}${piece.color}.png`;
 }
 
 let draggingSquare = null;
@@ -1627,9 +1823,49 @@ function renderBoard() {
         cell.appendChild(img);
       }
 
+      if (inReplayMode && replayIndex > 0 && sq === lastMoveTo) {
+        const lastMoveRating = replayAnalysis[replayIndex - 1]?.classification;
+        if (lastMoveRating) {
+          const badge = document.createElement("img");
+          badge.src = `./images/ratings/${lastMoveRating}.png`;
+          badge.className = "piece-rating-badge";
+          badge.alt = `${lastMoveRating} move`;
+          badge.title = lastMoveRating;
+          badge.draggable = false;
+          cell.appendChild(badge);
+        }
+      }
+
       boardEl.appendChild(cell);
     }
   }
+
+  renderReplayEvalBar();
+}
+
+function renderReplayEvalBar() {
+  const evalBar = document.getElementById("replay-eval-bar");
+  if (!evalBar) return;
+
+  const currentResult = inReplayMode && replayIndex > 0
+    ? replayAnalysis[replayIndex - 1]
+    : null;
+  if (!currentResult) {
+    evalBar.classList.add("hidden");
+    evalBar.removeAttribute("aria-label");
+    evalBar.removeAttribute("title");
+    return;
+  }
+
+  const whiteChance = Math.max(0, Math.min(1, currentResult.afterWhite));
+  const whitePct = Math.round(whiteChance * 100);
+  const whitePart = evalBar.querySelector(".eval-bar-white");
+  const blackPart = evalBar.querySelector(".eval-bar-black");
+  whitePart.style.flexBasis = `${whitePct}%`;
+  blackPart.style.flexBasis = `${100 - whitePct}%`;
+  evalBar.setAttribute("aria-label", `Position evaluation: White ${whitePct} percent, Black ${100 - whitePct} percent`);
+  evalBar.title = `White ${whitePct}% · Black ${100 - whitePct}%`;
+  evalBar.classList.remove("hidden");
 }
 
 function onBoardClick(sq) {
@@ -1793,7 +2029,9 @@ function renderMoveList() {
   for (let i = 0; i < hist.length; i += 2) {
     const moveNum = i / 2 + 1;
     html += `<span class="movenum">${moveNum}.</span> <span class="move">${hist[i]}</span> `;
-    if (hist[i + 1]) html += `<span class="move">${hist[i + 1]}</span> `;
+    if (hist[i + 1]) {
+      html += `<span class="move">${hist[i + 1]}</span> `;
+    }
   }
   moveListEl.innerHTML = html;
   const scrollParent = moveListEl.closest(".moves");
@@ -2562,6 +2800,8 @@ function pushHistoryEntry() {
     else if (resultLabel === "-30") myRating = Math.max(100, myRating - 30);
     saveMyRating();
     document.getElementById("your-rating").textContent = myRating;
+    MAIA_ELO = String(myRating);
+    document.getElementById("maia-rating").textContent = MAIA_ELO;
   }
 
   const sanMoves = game.history();
@@ -2572,6 +2812,7 @@ function pushHistoryEntry() {
 
   const entry = {
     pgn: game.pgn(),
+    playerColor,
     
     result: resultLabel,
     rated: currentMode === "rated",
@@ -2917,6 +3158,6 @@ window.replayStart = replayStart;
 window.replayPrevious = replayPrevious;
 window.replayNext = replayNext;
 window.replayEnd = replayEnd;
-window.closeReplayUI = closeReplayUI;
+window.closeReplayUI = exitReplay;
 
 init();
