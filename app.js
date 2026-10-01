@@ -1800,6 +1800,44 @@ function pieceImage(piece) {
 }
 
 let draggingSquare = null;
+const boardAnnotations = [];
+let annotationPreview = null;
+
+function annotationPoint(square) {
+  const file = square.charCodeAt(0) - 97;
+  const rank = Number(square[1]);
+  const col = boardFlipped ? 7 - file : file;
+  const row = boardFlipped ? rank - 1 : 8 - rank;
+  return { x: (col + 0.5) * 12.5, y: (row + 0.5) * 12.5 };
+}
+
+function renderBoardAnnotations() {
+  const previous = boardEl.querySelector(".board-annotations");
+  if (previous) previous.remove();
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "board-annotations");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.innerHTML = '<defs><marker id="annotation-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#e53935" stroke="none" /></marker></defs>';
+  for (const mark of [...boardAnnotations, ...(annotationPreview ? [{ ...annotationPreview, preview: true }] : [])]) {
+    const from = annotationPoint(mark.from);
+    if (mark.to) {
+      const to = annotationPoint(mark.to);
+      const line = document.createElementNS(svg.namespaceURI, "path");
+      line.setAttribute("d", `M ${from.x} ${from.y} L ${to.x} ${to.y}`);
+      line.setAttribute("marker-end", "url(#annotation-arrowhead)");
+      if (mark.preview) line.setAttribute("class", "annotation-preview");
+      svg.appendChild(line);
+    } else {
+      const circle = document.createElementNS(svg.namespaceURI, "circle");
+      circle.setAttribute("cx", from.x);
+      circle.setAttribute("cy", from.y);
+      circle.setAttribute("r", "5.2");
+      if (mark.preview) circle.setAttribute("class", "annotation-preview");
+      svg.appendChild(circle);
+    }
+  }
+  boardEl.appendChild(svg);
+}
 
 function renderBoard() {
   const activeGame =
@@ -1874,6 +1912,8 @@ function renderBoard() {
       boardEl.appendChild(cell);
     }
   }
+
+  renderBoardAnnotations();
 
   renderReplayEvalBar();
 }
@@ -1962,6 +2002,7 @@ function onBoardClick(sq) {
 const DRAG_THRESHOLD_PX = 8;
 
 let pointerTrack = null;
+let annotationTrack = null;
 let ghostEl = null;
 let dragHoverSq = null;
 
@@ -2032,6 +2073,14 @@ boardEl.addEventListener("pointerdown", (e) => {
   if (!cell) return;
   const sq = cell.dataset.square;
 
+  if (e.button === 2) {
+    e.preventDefault();
+    annotationTrack = { pointerId: e.pointerId, from: sq, to: sq, startX: e.clientX, startY: e.clientY, dragging: false };
+    annotationPreview = { from: sq };
+    return;
+  }
+  if (e.button !== 0) return;
+
   pointerTrack = {
     pointerId: e.pointerId,
     startSq: sq,
@@ -2042,7 +2091,21 @@ boardEl.addEventListener("pointerdown", (e) => {
   };
 });
 
+boardEl.addEventListener("contextmenu", (e) => e.preventDefault());
+
 document.addEventListener("pointermove", (e) => {
+  if (annotationTrack && e.pointerId === annotationTrack.pointerId) {
+    const target = squareFromPoint(e.clientX, e.clientY);
+    const moved = Math.hypot(e.clientX - annotationTrack.startX, e.clientY - annotationTrack.startY) >= DRAG_THRESHOLD_PX;
+    if (moved) annotationTrack.dragging = true;
+    if (annotationTrack.dragging && target) {
+      annotationTrack.to = target;
+      annotationPreview = { from: annotationTrack.from, to: target, preview: true };
+      renderBoardAnnotations();
+    }
+    e.preventDefault();
+    return;
+  }
   if (!pointerTrack || e.pointerId !== pointerTrack.pointerId) return;
 
   const dx = e.clientX - pointerTrack.startX;
@@ -2065,6 +2128,24 @@ document.addEventListener("pointermove", (e) => {
 }, { passive: false });
 
 function endPointerTrack(e) {
+  if (annotationTrack && e.pointerId === annotationTrack.pointerId) {
+    const mark = annotationTrack;
+    annotationTrack = null;
+    annotationPreview = null;
+    const target = squareFromPoint(e.clientX, e.clientY);
+    if (mark.dragging && target && target !== mark.from) {
+      const index = boardAnnotations.findIndex((item) => item.from === mark.from && item.to === target);
+      if (index >= 0) boardAnnotations.splice(index, 1);
+      else boardAnnotations.push({ from: mark.from, to: target });
+    } else {
+      const index = boardAnnotations.findIndex((item) => item.from === mark.from && !item.to);
+      if (index >= 0) boardAnnotations.splice(index, 1);
+      else boardAnnotations.push({ from: mark.from });
+    }
+    renderBoardAnnotations();
+    e.preventDefault();
+    return;
+  }
   if (!pointerTrack || e.pointerId !== pointerTrack.pointerId) return;
   const track = pointerTrack;
   pointerTrack = null;
@@ -2087,6 +2168,12 @@ function endPointerTrack(e) {
 
 document.addEventListener("pointerup", endPointerTrack);
 document.addEventListener("pointercancel", (e) => {
+  if (annotationTrack && e.pointerId === annotationTrack.pointerId) {
+    annotationTrack = null;
+    annotationPreview = null;
+    renderBoardAnnotations();
+    return;
+  }
   if (!pointerTrack || e.pointerId !== pointerTrack.pointerId) return;
   removeGhost();
   setDragHover(null);
