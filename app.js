@@ -1,6 +1,6 @@
 let game = new Chess();
 let selectedSquare = null;
-let premove = null;
+let premoves = [];
 let playerColor = "w";
 let maiaThinking = false;
 let engine = window.engine;        // Maia
@@ -440,6 +440,8 @@ async function autoNextPuzzle() {
 async function enterPuzzleMode() {
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   if (maiaThinking) return;
+  premoves = [];
+  selectedSquare = null;
   if (inDrillMode) {
     inDrillMode = false;
     document.getElementById("drill-controls").classList.add("hidden");
@@ -764,6 +766,8 @@ window.startSelectedDrill = startSelectedDrill;
 
 function loadDrill(drill) {
   if (maiaThinking) return;
+  premoves = [];
+  selectedSquare = null;
   if (inPuzzleMode) {
     inPuzzleMode = false;
     puzzleControlsEl.classList.add("hidden");
@@ -1063,7 +1067,7 @@ function handleTimeout(loserColor) {
   gameTimedOut = true;
   timedOutColor = loserColor;
   maiaThinking = false;
-  premove = null;
+  premoves = [];
   playGameSound("checkmate");
   updateClockDisplays();
   saveCurrentGame();
@@ -1693,7 +1697,7 @@ function resetForNewGame(mode) {
   gameToken++;
   maiaThinking = false;
   selectedSquare = null;
-  premove = null;
+  premoves = [];
   gameResigned = false;
   resignedBy = null;
   gameTimedOut = false;
@@ -1782,7 +1786,7 @@ function resign() {
   gameResigned = true;
   resignedBy = playerColor;
   maiaThinking = false;
-  premove = null;
+  premoves = [];
   saveCurrentGame();
   statusEl.classList.add("status-hidden");
   clearTurnTags();
@@ -1831,7 +1835,7 @@ function renderBoard() {
       cell.dataset.square = sq;
       
       if (sq === selectedSquare) cell.classList.add("selected");
-      if (premove && (sq === premove.from || sq === premove.to)) {
+      if (premoves.some((move) => sq === move.from || sq === move.to)) {
         cell.classList.add("premove-square");
       }
       
@@ -2368,10 +2372,10 @@ async function runMaiaTurn() {
       if (!isGameLocked()) {
         updateStatusForTurn();
       }
-      if (premove && !isGameLocked() && game.turn() === playerColor) {
+      if (premoves.length && !isGameLocked() && game.turn() === playerColor) {
         setTimeout(() => executeQueuedPremove(myToken), 100);
       } else if (isGameLocked()) {
-        premove = null;
+        premoves = [];
         renderBoard();
       }
     }
@@ -2381,7 +2385,6 @@ async function runMaiaTurn() {
 function handlePremoveClick(sq) {
   const piece = game.get(sq);
   if (selectedSquare === null) {
-    premove = null;
     if (piece && piece.color === playerColor) selectedSquare = sq;
     renderBoard();
     return;
@@ -2389,37 +2392,50 @@ function handlePremoveClick(sq) {
 
   if (sq === selectedSquare) {
     selectedSquare = null;
-    premove = null;
   } else if (piece && piece.color === playerColor) {
     selectedSquare = sq;
-    premove = null;
   } else {
-    premove = { from: selectedSquare, to: sq };
+    premoves.push({ from: selectedSquare, to: sq });
     selectedSquare = null;
   }
   renderBoard();
 }
 
 async function executeQueuedPremove(expectedGameToken) {
-  if (!premove) return;
+  if (!premoves.length) return;
   if (expectedGameToken !== gameToken || isGameLocked() || game.turn() !== playerColor) {
-    premove = null;
+    premoves = [];
     renderBoard();
     return;
   }
 
-  const queued = premove;
-  premove = null;
+  const queued = premoves.shift();
   selectedSquare = null;
   renderBoard();
   const moveCount = game.history().length;
   await onSquareClick(queued.from);
   await onSquareClick(queued.to);
   if (game.history().length === moveCount) {
+    premoves = [];
     selectedSquare = null;
     renderBoard();
   }
 }
+
+function cancelAllPremoves() {
+  if (!premoves.length && selectedSquare === null) return;
+  premoves = [];
+  selectedSquare = null;
+  renderBoard();
+}
+
+boardEl.addEventListener("dblclick", (event) => {
+  if (inReplayMode || inPuzzleMode || inDrillMode) return;
+  const hasPendingSelection = game.turn() !== playerColor && selectedSquare !== null;
+  if (!premoves.length && !hasPendingSelection) return;
+  cancelAllPremoves();
+  event.preventDefault();
+});
 
 // ---------- Player's turn ----------
 async function onSquareClick(sq) {
@@ -2847,10 +2863,10 @@ async function onSquareClick(sq) {
       if (!game.game_over()) {
         updateStatusForTurn();
       }
-      if (premove && !isGameLocked() && game.turn() === playerColor) {
+      if (premoves.length && !isGameLocked() && game.turn() === playerColor) {
         setTimeout(() => executeQueuedPremove(myToken), 100);
-      } else if (isGameLocked() && premove) {
-        premove = null;
+      } else if (isGameLocked() && premoves.length) {
+        premoves = [];
         renderBoard();
       }
     }

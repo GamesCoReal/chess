@@ -26,7 +26,10 @@ margin:0 auto;
 padding:12px 14px calc(24px + env(safe-area-inset-bottom));
 }
 
-.menu{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:10px;align-items:start;position:relative;z-index:5}
+.menu{display:grid;grid-template-columns:1fr;margin-bottom:4px;align-items:start;position:relative;z-index:5}
+.menu-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-bottom:10px}
+.menu-shortcuts button{min-height:42px;padding:7px 4px;border:0;border-radius:8px;background:#2f3136;color:#fff;font-size:13px;line-height:1.15;cursor:pointer;white-space:normal}
+.menu-shortcuts button:active{background:#3a3b3e}
 .menu-item{position:relative}
 .menu-item>button{
 position:relative;z-index:3;
@@ -359,16 +362,6 @@ font-size:15px;padding:8px 10px;
 <body>
 <div class="container">
 <div class="menu">
-<div class="menu-item" id="game-item">
-<button onclick="toggleMenu('game-item')">Game ▼</button>
-<div class="dropdown"><div class="dropdown-inner">
-<div class="circle"></div>
-<div class="split">
-<button onclick="selectMode('rated')">Ranked</button>
-</div>
-</div></div>
-</div>
-
 <div class="menu-item" id="settings-item">
 <button onclick="toggleMenu('settings-item')">Settings</button>
 <div class="dropdown"><div class="dropdown-inner">
@@ -382,16 +375,12 @@ font-size:15px;padding:8px 10px;
 </div></div>
 </div>
 
-<div class="menu-item" id="learn-item">
-<button onclick="toggleMenu('learn-item')">Learn ▼</button>
-<div class="dropdown"><div class="dropdown-inner">
-<div class="circle"></div>
-<div class="split">
-<button onclick="enterPuzzleMode()">Puzzle</button>
-<button onclick="openDrillPicker()">Openings/Endgames</button>
 </div>
-</div></div>
-</div>
+
+<div class="menu-shortcuts">
+<button type="button" onclick="selectMode('rated')">Ranked</button>
+<button type="button" onclick="enterPuzzleMode()">Puzzle</button>
+<button type="button" onclick="openDrillPicker()">Openings &amp; Endgames</button>
 </div>
 
 <div id="mode-badge">Ranked</div>
@@ -505,7 +494,7 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./engines/stockfish19/stockfish-evaluator.js?v=7" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js" defer></script>
-<script src="./app.js?v=22" defer></script>
+<script src="./app.js?v=23" defer></script>
 
 </body>
 </html>
