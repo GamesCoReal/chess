@@ -34,6 +34,7 @@ let replayStockfishRun = 0;
 let replayPlayerColor = "w";
 let replayCandidateLines = [];
 let replayRankedLines = [];
+let replayStockfishBestLine = null;
 let replayLinesPanelEl = null;
 let replayLineStatus = "Waiting for Stockfish...";
 
@@ -1947,7 +1948,7 @@ function renderBoardAnnotations() {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "board-annotations");
   svg.setAttribute("viewBox", "0 0 100 100");
-  svg.innerHTML = '<defs><marker id="annotation-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#e53935" stroke="none" /></marker><marker id="line-arrowhead-1" class="line-arrow-1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" /></marker><marker id="line-arrowhead-2" class="line-arrow-2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" /></marker></defs>';
+  svg.innerHTML = '<defs><marker id="annotation-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#e53935" stroke="none" /></marker><marker id="line-arrowhead-1" class="line-arrow-1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" /></marker><marker id="line-arrowhead-stockfish" class="line-arrow-stockfish" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" /></marker></defs>';
   for (const mark of [...boardAnnotations, ...(annotationPreview ? [{ ...annotationPreview, preview: true }] : [])]) {
     const from = annotationPoint(mark.from);
     if (mark.to) {
@@ -1976,16 +1977,19 @@ function renderBoardAnnotations() {
     }
   }
   if (inReplayMode) {
-    const lines = replayRankedLines.length ? replayRankedLines : replayCandidateLines;
-    for (let index = 0; index < Math.min(2, lines.length); index++) {
-      const move = lines[index].pv?.[0];
+    const arrows = [
+      { move: replayRankedLines[0]?.pv?.[0], className: "engine-arrow engine-arrow-1", marker: "line-arrowhead-1" },
+      { move: replayStockfishBestLine?.pv?.[0], className: "engine-arrow engine-arrow-stockfish", marker: "line-arrowhead-stockfish" },
+    ];
+    for (const item of arrows) {
+      const move = item.move;
       if (!move || move.length < 4) continue;
       const from = annotationPoint(move.slice(0, 2));
       const to = annotationPoint(move.slice(2, 4));
       const arrow = document.createElementNS(svg.namespaceURI, "path");
       arrow.setAttribute("d", `M ${from.x} ${from.y} L ${to.x} ${to.y}`);
-      arrow.setAttribute("class", `engine-arrow engine-arrow-${index + 1}`);
-      arrow.setAttribute("marker-end", `url(#line-arrowhead-${index + 1})`);
+      arrow.setAttribute("class", item.className);
+      arrow.setAttribute("marker-end", `url(#${item.marker})`);
       svg.appendChild(arrow);
     }
   }
@@ -2162,6 +2166,7 @@ function analyzeReplayPosition() {
   const evaluator = window.stockfishEvaluator;
   replayCandidateLines = [];
   replayRankedLines = [];
+  replayStockfishBestLine = null;
   replayLineStatus = "Stockfish is searching five lines to depth 10...";
   renderReplayLinesPanel();
   renderBoardAnnotations();
@@ -2189,6 +2194,7 @@ function analyzeReplayPosition() {
       receivedScore = true;
       clearTimeout(watchdog);
       replayCandidateLines = lines;
+      replayStockfishBestLine = lines.find((line) => line.multipv === 1) || lines[0];
       const depth = Math.max(...lines.map((line) => line.depth || 0));
       replayLineStatus = `Stockfish depth ${depth}/10 · Maia will rank all five lines`;
       updateReplayEvalBar(lines[0], turn);
@@ -2204,6 +2210,7 @@ function analyzeReplayPosition() {
       return;
     }
     replayCandidateLines = lines;
+    replayStockfishBestLine = lines.find((line) => line.multipv === 1) || lines[0];
     replayLineStatus = `Maia is ranking ${lines.length} lines at your Elo...`;
     renderReplayLinesPanel();
     renderBoardAnnotations();
@@ -2211,7 +2218,6 @@ function analyzeReplayPosition() {
     const ranked = await rankReplayCandidateLines(lines, fen, runId);
     if (runId !== replayStockfishRun || !inReplayMode || !ranked) return;
     replayRankedLines = ranked;
-    replayCandidateLines = ranked;
     replayLineStatus = `Ranked by Maia likelihood · your Elo ${myRating}`;
     renderReplayLinesPanel();
     renderBoardAnnotations();
