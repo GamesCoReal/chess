@@ -1825,7 +1825,9 @@ function renderBoardAnnotations() {
       const fileDelta = Math.abs(mark.from.charCodeAt(0) - mark.to.charCodeAt(0));
       const rankDelta = Math.abs(Number(mark.from[1]) - Number(mark.to[1]));
       const segments = fileDelta * rankDelta === 2
-        ? [[from, { x: to.x, y: from.y }], [{ x: to.x, y: from.y }, to]]
+        ? (mark.bend === "vertical"
+            ? [[from, { x: from.x, y: to.y }], [{ x: from.x, y: to.y }, to]]
+            : [[from, { x: to.x, y: from.y }], [{ x: to.x, y: from.y }, to]])
         : [[from, to]];
       for (const [start, end] of segments) {
         const line = document.createElementNS(svg.namespaceURI, "path");
@@ -2082,7 +2084,7 @@ boardEl.addEventListener("pointerdown", (e) => {
 
   if (e.button === 2) {
     e.preventDefault();
-    annotationTrack = { pointerId: e.pointerId, from: sq, to: sq, startX: e.clientX, startY: e.clientY, dragging: false };
+    annotationTrack = { pointerId: e.pointerId, from: sq, to: sq, startX: e.clientX, startY: e.clientY, dragging: false, bend: null };
     annotationPreview = { from: sq };
     return;
   }
@@ -2111,10 +2113,15 @@ document.addEventListener("pointermove", (e) => {
   if (annotationTrack && e.pointerId === annotationTrack.pointerId) {
     const target = squareFromPoint(e.clientX, e.clientY);
     const moved = Math.hypot(e.clientX - annotationTrack.startX, e.clientY - annotationTrack.startY) >= DRAG_THRESHOLD_PX;
-    if (moved) annotationTrack.dragging = true;
+    if (moved && !annotationTrack.dragging) {
+      annotationTrack.dragging = true;
+      annotationTrack.bend = Math.abs(e.clientX - annotationTrack.startX) >= Math.abs(e.clientY - annotationTrack.startY)
+        ? "horizontal"
+        : "vertical";
+    }
     if (annotationTrack.dragging && target) {
       annotationTrack.to = target;
-      annotationPreview = { from: annotationTrack.from, to: target, preview: true };
+      annotationPreview = { from: annotationTrack.from, to: target, bend: annotationTrack.bend, preview: true };
       renderBoardAnnotations();
     }
     e.preventDefault();
@@ -2150,7 +2157,7 @@ function endPointerTrack(e) {
     if (mark.dragging && target && target !== mark.from) {
       const index = boardAnnotations.findIndex((item) => item.from === mark.from && item.to === target);
       if (index >= 0) boardAnnotations.splice(index, 1);
-      else boardAnnotations.push({ from: mark.from, to: target });
+      else boardAnnotations.push({ from: mark.from, to: target, bend: mark.bend });
     } else {
       const index = boardAnnotations.findIndex((item) => item.from === mark.from && !item.to);
       if (index >= 0) boardAnnotations.splice(index, 1);
