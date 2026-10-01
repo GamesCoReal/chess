@@ -207,8 +207,6 @@ touch-action:none;
 .replay-eval-bar{display:flex;flex:1;flex-direction:column;align-self:stretch;min-height:0;overflow:hidden;border:1px solid #555;border-radius:4px;background:#25262a}
 .replay-eval-bar.hidden{display:none}
 .replay-eval-meter{position:relative}
-.eval-bar-total{display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;padding:6px 8px;border:1px solid #666;border-radius:6px;background:rgba(25,26,28,.96);box-shadow:0 3px 10px rgba(0,0,0,.45);color:#fff;font-size:11px;white-space:nowrap;pointer-events:none}
-.replay-eval-meter:hover .eval-bar-total,.replay-eval-meter.show-total .eval-bar-total,.replay-eval-meter:focus-within .eval-bar-total{display:block}
 .eval-bar-black{flex:0 0 50%;width:100%;background:#25262a}
 .eval-bar-white{flex:0 0 50%;width:100%;background:#eee}
 .square{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
@@ -410,7 +408,6 @@ font-size:15px;padding:8px 10px;
 <div id="replay-eval-bar" class="replay-eval-bar" role="button" tabindex="0" aria-label="Position evaluation">
 <span class="eval-bar-black"></span><span class="eval-bar-white"></span>
 </div>
-<span id="replay-eval-total" class="eval-bar-total"></span>
 </div>
 </div>
 
