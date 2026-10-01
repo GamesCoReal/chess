@@ -83,6 +83,21 @@ class StockfishEvaluator {
     const scoreMatch = line.match(/\bscore\s+(cp|mate)\s+([+-]?\d+)/);
     if (scoreMatch && this.current) {
       const depthMatch = line.match(/\bdepth\s+(\d+)/);
+      if (this.current.multiPv) {
+        const pvIndex = Number(line.match(/\bmultipv\s+(\d+)/)?.[1] || 1);
+        const pvMatch = line.match(/\bpv\s+(.+)$/);
+        if (!pvMatch) return;
+        const candidate = {
+          multipv: pvIndex,
+          type: scoreMatch[1],
+          value: Number(scoreMatch[2]),
+          depth: depthMatch ? Number(depthMatch[1]) : null,
+          pv: pvMatch[1].trim().split(/\s+/),
+        };
+        this.current.lines.set(pvIndex, candidate);
+        this.current.onUpdate?.([...this.current.lines.values()].sort((a, b) => a.multipv - b.multipv));
+        return;
+      }
       this.current.score = {
         type: scoreMatch[1],
         value: Number(scoreMatch[2]),
@@ -93,7 +108,10 @@ class StockfishEvaluator {
     }
 
     if (line.startsWith("bestmove") && this.current) {
-      this.current.resolve(this.current.score);
+      const result = this.current.multiPv
+        ? [...this.current.lines.values()].sort((a, b) => a.multipv - b.multipv)
+        : this.current.score;
+      this.current.resolve(result);
       this.current = null;
       this.startPending();
     }
@@ -113,6 +131,26 @@ class StockfishEvaluator {
     });
   }
 
+  evaluateFenMultiPv(fen, { depth = 10, count = 5, onUpdate = () => {} } = {}) {
+    return new Promise((resolve, reject) => {
+      this.start().then(() => {
+        if (this.pending) this.pending.resolve(null);
+        this.pending = {
+          fen,
+          depth,
+          count,
+          multiPv: true,
+          lines: new Map(),
+          resolve,
+          reject,
+          onUpdate,
+        };
+        if (this.current) this.worker.postMessage("stop");
+        else this.startPending();
+      }).catch(reject);
+    });
+  }
+
   stop() {
     if (this.pending) {
       this.pending.resolve(null);
@@ -126,8 +164,9 @@ class StockfishEvaluator {
 
     this.current = this.pending;
     this.pending = null;
+    this.worker.postMessage(`setoption name MultiPV value ${this.current.multiPv ? this.current.count : 1}`);
     this.worker.postMessage(`position fen ${this.current.fen}`);
-    this.worker.postMessage("go infinite");
+    this.worker.postMessage(this.current.multiPv ? `go depth ${this.current.depth}` : "go infinite");
   }
 }
 

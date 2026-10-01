@@ -1,4 +1,4 @@
-const CACHE_NAME = "chess-offline-v1";
+const CACHE_NAME = "chess-offline-v2";
 const STATUS_URL = new URL("__offline_status__", self.registration.scope).href;
 
 const OFFLINE_FILES = [

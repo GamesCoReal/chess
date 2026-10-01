@@ -227,6 +227,20 @@ touch-action:none;
 .replay-eval-meter{position:relative}
 .eval-bar-black{flex:0 0 50%;width:100%;background:#25262a}
 .eval-bar-white{flex:0 0 50%;width:100%;background:#eee}
+.replay-lines-panel{width:100%;margin:4px 0 10px;border-top:1px solid #45464a;padding-top:7px;font-size:12px}
+.replay-lines-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;color:#d7d7d7}
+.replay-lines-heading span,.replay-lines-empty{color:#aeb0b4;font-size:11px}
+.replay-line-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:6px;align-items:start;padding:4px 2px;border-top:1px solid rgba(255,255,255,.07);font-variant-numeric:tabular-nums}
+.replay-line-rank{font-weight:700;color:#9bcaff}
+.replay-line-rank-1{color:#2478ff}
+.replay-line-rank-2{color:#80bdff}
+.replay-line-probability{white-space:nowrap;color:#c5c7ca}
+.board-annotations marker.line-arrow-1 path{fill:#2478ff}
+.board-annotations marker.line-arrow-2 path{fill:#80bdff}
+.board-annotations marker.line-arrow-1 path,.board-annotations marker.line-arrow-2 path{stroke:none}
+.board-annotations path.engine-arrow{stroke-width:6;opacity:.92}
+.board-annotations path.engine-arrow-1{stroke:#2478ff}
+.board-annotations path.engine-arrow-2{stroke:#80bdff}
 .square{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
 .square.drag-hover{outline:3px solid #c9a84c;outline-offset:-3px;background-color:rgba(201,168,76,.25)}
 .drag-ghost{
@@ -513,10 +527,10 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./chess.min.js" defer></script>
 <script src="./engines/maia3/maia-tensor.js" defer></script>
 <script src="./engines/maia3/maia-engine.js" defer></script>
-<script src="./engines/stockfish19/stockfish-evaluator.js?v=7" defer></script>
+<script src="./engines/stockfish19/stockfish-evaluator.js?v=8" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js?v=3" defer></script>
-<script src="./app.js?v=33" defer></script>
+<script src="./app.js?v=36" defer></script>
 
 </body>
 </html>

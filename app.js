@@ -32,6 +32,10 @@ let replayAnalysisRun = 0;
 let replayAnalysisPanelEl = null;
 let replayStockfishRun = 0;
 let replayPlayerColor = "w";
+let replayCandidateLines = [];
+let replayRankedLines = [];
+let replayLinesPanelEl = null;
+let replayLineStatus = "Waiting for Stockfish...";
 
 const MOVE_ICONS = {
   brilliant: "./images/brilliant.png",
@@ -1173,6 +1177,8 @@ function openPastGame(entry) {
     verbose: true
   });
   replayAnalysis = Array(replayMoves.length).fill(null);
+  replayCandidateLines = [];
+  replayRankedLines = [];
   replayPlayerColor = entry.playerColor === "b" ? "b" : entry.playerColor === "w" ? "w" : playerColor;
 
   // Start replay at the beginning.
@@ -1216,6 +1222,7 @@ function createReplayControls() {
   if (replayAnalysisPanelEl) {
     replayAnalysisPanelEl.remove();
   }
+  if (replayLinesPanelEl) replayLinesPanelEl.remove();
 
   replayControlsEl = document.createElement("div");
 
@@ -1267,6 +1274,12 @@ function createReplayControls() {
     document.body.appendChild(replayControlsEl);
   }
 
+  replayLinesPanelEl = document.createElement("section");
+  replayLinesPanelEl.id = "replay-lines-panel";
+  replayLinesPanelEl.className = "replay-lines-panel";
+  replayControlsEl.insertAdjacentElement("afterend", replayLinesPanelEl);
+  renderReplayLinesPanel();
+
   document
     .getElementById("replay-exit")
     .addEventListener("click", exitReplay);
@@ -1303,6 +1316,78 @@ function updateReplayControls() {
 
   position.textContent =
     replayIndex + " / " + replayMoves.length;
+}
+
+function formatReplayPv(pv, fen) {
+  const lineGame = new Chess(fen);
+  const notation = [];
+  for (let index = 0; index < pv.length; index++) {
+    const uci = pv[index];
+    if (uci.length < 4) break;
+    const color = lineGame.turn();
+    const moveNumber = Math.floor((replayIndex + index) / 2) + 1;
+    const move = lineGame.move({
+      from: uci.slice(0, 2),
+      to: uci.slice(2, 4),
+      promotion: uci[4] || "q",
+    });
+    if (!move) break;
+    notation.push(color === "w"
+      ? `${moveNumber}. ${move.san}`
+      : (index === 0 ? `${moveNumber}... ${move.san}` : move.san));
+  }
+  return notation.join(" ");
+}
+
+function formatLineLikelihood(probability) {
+  const percent = probability * 100;
+  if (!Number.isFinite(percent) || percent <= 0) return "0%";
+  return percent < 0.01 ? `${percent.toExponential(2)}%` : `${percent.toFixed(2)}%`;
+}
+
+function renderReplayLinesPanel() {
+  if (!replayLinesPanelEl) return;
+  replayLinesPanelEl.replaceChildren();
+
+  const heading = document.createElement("div");
+  heading.className = "replay-lines-heading";
+  const title = document.createElement("strong");
+  title.textContent = "Candidate lines";
+  const detail = document.createElement("span");
+  detail.textContent = `Stockfish depth 10 · Maia at ${myRating}`;
+  heading.append(title, detail);
+  replayLinesPanelEl.appendChild(heading);
+
+  const status = document.createElement("div");
+  status.className = "replay-lines-empty";
+  status.textContent = replayLineStatus;
+  replayLinesPanelEl.appendChild(status);
+
+  const lines = replayRankedLines.length ? replayRankedLines : replayCandidateLines;
+  if (!lines.length) return;
+
+  const list = document.createElement("div");
+  list.className = "replay-lines-list";
+  lines.forEach((line, index) => {
+    const row = document.createElement("div");
+    row.className = "replay-line-row";
+    const rank = document.createElement("span");
+    rank.className = `replay-line-rank replay-line-rank-${index + 1}`;
+    rank.textContent = `${index + 1}.`;
+    const moves = document.createElement("span");
+    moves.textContent = line.san || line.pv.join(" ");
+    const likelihood = document.createElement("span");
+    likelihood.className = "replay-line-probability";
+    const scoreText = line.type === "mate"
+      ? `${line.value > 0 ? "" : "-"}M${Math.abs(line.value)}`
+      : `${line.value >= 0 ? "+" : ""}${(line.value / 100).toFixed(1)}`;
+    likelihood.textContent = Number.isFinite(line.probability)
+      ? `SF ${scoreText} · Maia ${formatLineLikelihood(line.probability)}`
+      : `SF ${scoreText}`;
+    row.append(rank, moves, likelihood);
+    list.appendChild(row);
+  });
+  replayLinesPanelEl.appendChild(list);
 }
 
 // MaiaTensor.processOutputsMaia3 returns value from White's perspective.
@@ -1643,6 +1728,9 @@ function exitReplay() {
   replayMoves = [];
   replayIndex = 0;
   replayAnalysis = [];
+  replayCandidateLines = [];
+  replayRankedLines = [];
+  replayLineStatus = "Waiting for Stockfish...";
   replayReturnGame = null;
 
   selectedSquare = null;
@@ -1657,6 +1745,10 @@ function exitReplay() {
   if (replayAnalysisPanelEl) {
     replayAnalysisPanelEl.remove();
     replayAnalysisPanelEl = null;
+  }
+  if (replayLinesPanelEl) {
+    replayLinesPanelEl.remove();
+    replayLinesPanelEl = null;
   }
 
   renderBoard();
@@ -1855,7 +1947,7 @@ function renderBoardAnnotations() {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "board-annotations");
   svg.setAttribute("viewBox", "0 0 100 100");
-  svg.innerHTML = '<defs><marker id="annotation-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#e53935" stroke="none" /></marker></defs>';
+  svg.innerHTML = '<defs><marker id="annotation-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" fill="#e53935" stroke="none" /></marker><marker id="line-arrowhead-1" class="line-arrow-1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" /></marker><marker id="line-arrowhead-2" class="line-arrow-2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L6,3 L0,6 Z" /></marker></defs>';
   for (const mark of [...boardAnnotations, ...(annotationPreview ? [{ ...annotationPreview, preview: true }] : [])]) {
     const from = annotationPoint(mark.from);
     if (mark.to) {
@@ -1881,6 +1973,20 @@ function renderBoardAnnotations() {
       circle.setAttribute("r", "5.2");
       if (mark.preview) circle.setAttribute("class", "annotation-preview");
       svg.appendChild(circle);
+    }
+  }
+  if (inReplayMode) {
+    const lines = replayRankedLines.length ? replayRankedLines : replayCandidateLines;
+    for (let index = 0; index < Math.min(2, lines.length); index++) {
+      const move = lines[index].pv?.[0];
+      if (!move || move.length < 4) continue;
+      const from = annotationPoint(move.slice(0, 2));
+      const to = annotationPoint(move.slice(2, 4));
+      const arrow = document.createElementNS(svg.namespaceURI, "path");
+      arrow.setAttribute("d", `M ${from.x} ${from.y} L ${to.x} ${to.y}`);
+      arrow.setAttribute("class", `engine-arrow engine-arrow-${index + 1}`);
+      arrow.setAttribute("marker-end", `url(#line-arrowhead-${index + 1})`);
+      svg.appendChild(arrow);
     }
   }
   boardEl.appendChild(svg);
@@ -2054,6 +2160,11 @@ function analyzeReplayPosition() {
   const turn = replayGame.turn();
   const scoreLabel = document.getElementById("replay-eval-score");
   const evaluator = window.stockfishEvaluator;
+  replayCandidateLines = [];
+  replayRankedLines = [];
+  replayLineStatus = "Stockfish is searching five lines to depth 10...";
+  renderReplayLinesPanel();
+  renderBoardAnnotations();
   if (!evaluator) {
     if (scoreLabel) scoreLabel.textContent = "SF !";
     return;
@@ -2068,24 +2179,97 @@ function analyzeReplayPosition() {
       scoreLabel.textContent = "SF?";
       scoreLabel.title = "No score from Stockfish. Check whether its worker and stockfish.wasm loaded successfully.";
     }
-  }, 15000);
+  }, 25000);
 
-  evaluator.evaluateFen(fen, (score) => {
-    if (runId === replayStockfishRun && inReplayMode && score) {
+  evaluator.evaluateFenMultiPv(fen, {
+    depth: 10,
+    count: 5,
+    onUpdate: (lines) => {
+      if (runId !== replayStockfishRun || !inReplayMode || !lines?.length) return;
       receivedScore = true;
       clearTimeout(watchdog);
-      updateReplayEvalBar(score, turn);
+      replayCandidateLines = lines;
+      const depth = Math.max(...lines.map((line) => line.depth || 0));
+      replayLineStatus = `Stockfish depth ${depth}/10 · Maia will rank all five lines`;
+      updateReplayEvalBar(lines[0], turn);
+      renderReplayLinesPanel();
+      renderBoardAnnotations();
+    },
+  }).then(async (lines) => {
+    clearTimeout(watchdog);
+    if (runId !== replayStockfishRun || !inReplayMode) return;
+    if (!lines?.length) {
+      replayLineStatus = "Stockfish did not return candidate lines.";
+      renderReplayLinesPanel();
+      return;
     }
+    replayCandidateLines = lines;
+    replayLineStatus = `Maia is ranking ${lines.length} lines at your Elo...`;
+    renderReplayLinesPanel();
+    renderBoardAnnotations();
+
+    const ranked = await rankReplayCandidateLines(lines, fen, runId);
+    if (runId !== replayStockfishRun || !inReplayMode || !ranked) return;
+    replayRankedLines = ranked;
+    replayCandidateLines = ranked;
+    replayLineStatus = `Ranked by Maia likelihood · your Elo ${myRating}`;
+    renderReplayLinesPanel();
+    renderBoardAnnotations();
   }).catch((error) => {
     clearTimeout(watchdog);
     if (runId === replayStockfishRun) {
       console.error("Could not evaluate replay position with Stockfish:", error);
+      replayLineStatus = `Analysis failed: ${error.message}`;
+      renderReplayLinesPanel();
       if (scoreLabel) {
         scoreLabel.textContent = "SF !";
         scoreLabel.title = error.message;
       }
     }
   });
+}
+
+async function rankReplayCandidateLines(lines, fen, runId) {
+  await waitForMaia();
+  const ranked = [];
+  const rating = myRating;
+  const evaluationByFen = new Map();
+
+  for (let index = 0; index < lines.length; index++) {
+    if (runId !== replayStockfishRun || !inReplayMode) return null;
+    const line = lines[index];
+    const lineGame = new Chess(fen);
+    let probability = 1;
+    let plies = 0;
+
+    for (const uci of line.pv.slice(0, 10)) {
+      if (runId !== replayStockfishRun || !inReplayMode) return null;
+      const positionFen = lineGame.fen();
+      if (!evaluationByFen.has(positionFen)) {
+        evaluationByFen.set(positionFen, engine.evaluate(lineGame, rating, rating));
+      }
+      const evaluation = await evaluationByFen.get(positionFen);
+      probability *= evaluation.policy[uci] || 0;
+      const move = lineGame.move({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+        promotion: uci[4] || "q",
+      });
+      if (!move) break;
+      plies++;
+    }
+
+    ranked.push({
+      ...line,
+      probability,
+      plies,
+      san: formatReplayPv(line.pv.slice(0, plies), fen),
+    });
+    replayLineStatus = `Maia ranked ${index + 1}/${lines.length} lines at your Elo...`;
+    renderReplayLinesPanel();
+  }
+
+  return ranked.sort((a, b) => b.probability - a.probability || a.multipv - b.multipv);
 }
 
 function onBoardClick(sq) {
