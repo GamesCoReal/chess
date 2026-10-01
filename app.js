@@ -1862,7 +1862,9 @@ function renderBoard() {
               )
         );
   boardEl.innerHTML = "";
-  const boardData = activeGame.board();
+  const boardData = activeGame === game && premoves.length
+    ? getProjectedPremoveBoard()
+    : activeGame.board();
 
   const legalTargets = selectedSquare
     ? activeGame.moves({ square: selectedSquare, verbose: true }).map((m) => m.to)
@@ -2495,7 +2497,7 @@ async function runMaiaTurn() {
 }
 
 function handlePremoveClick(sq) {
-  const piece = game.get(sq);
+  const piece = getProjectedPremovePiece(sq);
   if (selectedSquare === null) {
     if (piece && piece.color === playerColor) selectedSquare = sq;
     renderBoard();
@@ -2511,6 +2513,36 @@ function handlePremoveClick(sq) {
     selectedSquare = null;
   }
   renderBoard();
+}
+
+function getProjectedPremovePiece(square) {
+  return getProjectedPremovePieces().get(square) || null;
+}
+
+function getProjectedPremovePieces() {
+  const projected = new Map();
+  const board = game.board();
+  for (let row = 0; row < 8; row++) {
+    for (let file = 0; file < 8; file++) {
+      const piece = board[row][file];
+      if (piece) projected.set(squareId(file, 8 - row), piece);
+    }
+  }
+
+  for (const move of premoves) {
+    const movingPiece = projected.get(move.from);
+    if (!movingPiece) continue;
+    projected.delete(move.from);
+    projected.set(move.to, movingPiece);
+  }
+  return projected;
+}
+
+function getProjectedPremoveBoard() {
+  const projected = getProjectedPremovePieces();
+  return Array.from({ length: 8 }, (_, row) =>
+    Array.from({ length: 8 }, (_, file) => projected.get(squareId(file, 8 - row)) || null)
+  );
 }
 
 async function executeQueuedPremove(expectedGameToken) {
