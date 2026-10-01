@@ -2012,6 +2012,7 @@ const DRAG_THRESHOLD_PX = 8;
 
 let pointerTrack = null;
 let annotationTrack = null;
+let lastAnnotationClick = null;
 let ghostEl = null;
 let dragHoverSq = null;
 
@@ -2101,13 +2102,6 @@ boardEl.addEventListener("pointerdown", (e) => {
 });
 
 boardEl.addEventListener("contextmenu", (e) => e.preventDefault());
-boardEl.addEventListener("dblclick", (e) => {
-  if (e.button !== 2) return;
-  e.preventDefault();
-  boardAnnotations.length = 0;
-  annotationPreview = null;
-  renderBoardAnnotations();
-});
 
 document.addEventListener("pointermove", (e) => {
   if (annotationTrack && e.pointerId === annotationTrack.pointerId) {
@@ -2155,10 +2149,20 @@ function endPointerTrack(e) {
     annotationPreview = null;
     const target = squareFromPoint(e.clientX, e.clientY);
     if (mark.dragging && target && target !== mark.from) {
+      lastAnnotationClick = null;
       const index = boardAnnotations.findIndex((item) => item.from === mark.from && item.to === target);
       if (index >= 0) boardAnnotations.splice(index, 1);
       else boardAnnotations.push({ from: mark.from, to: target, bend: mark.bend });
     } else {
+      const now = Date.now();
+      if (target && lastAnnotationClick?.square === target && now - lastAnnotationClick.time <= 500) {
+        boardAnnotations.length = 0;
+        lastAnnotationClick = null;
+        renderBoardAnnotations();
+        e.preventDefault();
+        return;
+      }
+      lastAnnotationClick = target ? { square: target, time: now } : null;
       const index = boardAnnotations.findIndex((item) => item.from === mark.from && !item.to);
       if (index >= 0) boardAnnotations.splice(index, 1);
       else boardAnnotations.push({ from: mark.from });
