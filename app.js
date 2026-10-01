@@ -180,20 +180,27 @@ function updateDefaultModeButtonLabel() {
 
 // --- Clear all saved data ---
 async function clearAllSavedData() {
-  // Local storage
   localStorage.clear();
   sessionStorage.clear();
 
-  // Cache Storage
+  engine?.worker?.terminate();
+  stockfishEngine?.stop?.();
+
   if ("caches" in window) {
     const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map(name => caches.delete(name)));
+    await Promise.all(cacheNames
+      .filter((name) => name.startsWith("chess-offline-"))
+      .map((name) => caches.delete(name)));
   }
 
-  // Delete puzzle databases
-  indexedDB.deleteDatabase("PuzzleDatabases");
+  await Promise.all(["PuzzleDatabases", "MaiaModels"].map((name) => new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = resolve;
+    request.onerror = resolve;
+    request.onblocked = () => resolve();
+  })));
 
-  alert("Saved data cleared. Reloading...");
+  alert("Saved data and offline downloads cleared. Reloading to download them again...");
   location.reload();
 }
 
@@ -237,6 +244,37 @@ const maiaClockEl = document.getElementById("maia-clock");
 const moveListEl = document.getElementById("move-list");
 const gameControlsEl = document.getElementById("game-controls");
 const puzzleControlsEl = document.getElementById("puzzle-controls");
+const offlineStatusEl = document.getElementById("offline-status");
+
+function updateOfflineStatus(status) {
+  if (!offlineStatusEl || !status) return;
+  if (status.state === "downloading") {
+    const currentFile = status.file ? `: ${status.file.split("/").pop()}` : "";
+    offlineStatusEl.textContent = `Downloading offline files (${status.completed}/${status.total}; roughly 900 MB)${currentFile}`;
+  } else if (status.state === "ready") {
+    offlineStatusEl.textContent = "App files saved for offline use";
+  } else if (status.state === "error") {
+    offlineStatusEl.textContent = `Offline download failed: ${status.file || status.message || "check connection and reset data"}`;
+    console.error("Offline file download failed:", status);
+  } else if (status.state === "missing") {
+    offlineStatusEl.textContent = "Preparing offline downloads...";
+    navigator.serviceWorker.ready.then((registration) => {
+      registration.active?.postMessage({ type: "REDOWNLOAD_ALL" });
+    }).catch((error) => console.warn("Could not restart offline downloads:", error));
+  }
+}
+
+if ("serviceWorker" in navigator) {
+  offlineStatusEl.textContent = "Preparing offline downloads...";
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type === "OFFLINE_STATUS") updateOfflineStatus(event.data);
+  });
+  navigator.serviceWorker.ready.then((registration) => {
+    registration.active?.postMessage({ type: "GET_OFFLINE_STATUS" });
+  }).catch((error) => console.warn("Could not read offline download status:", error));
+} else if (offlineStatusEl) {
+  offlineStatusEl.textContent = "Offline downloads require a supported browser and HTTPS";
+}
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
 

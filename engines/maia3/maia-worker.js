@@ -55,15 +55,23 @@ async function getCachedModel(modelUrl, modelVersion) {
     req.onerror = () => reject(req.error)
   })
 
-  if (!data) return null
+  try {
+    if (!data) return null
 
-  if (!isCompatibleModelCache(data, modelUrl, modelVersion)) {
-    const rwTx = db.transaction([STORE_NAME], 'readwrite')
-    rwTx.objectStore(STORE_NAME).delete(MODEL_KEY)
-    return null
+    if (!isCompatibleModelCache(data, modelUrl, modelVersion)) {
+      const rwTx = db.transaction([STORE_NAME], 'readwrite')
+      await new Promise((resolve, reject) => {
+        const req = rwTx.objectStore(STORE_NAME).delete(MODEL_KEY)
+        req.onsuccess = resolve
+        req.onerror = () => reject(req.error)
+      })
+      return null
+    }
+
+    return await data.data.arrayBuffer()
+  } finally {
+    db.close()
   }
-
-  return await data.data.arrayBuffer()
 }
 
 async function storeModel(modelUrl, modelVersion, buffer) {
@@ -80,8 +88,14 @@ async function storeModel(modelUrl, modelVersion, buffer) {
       timestamp: Date.now(),
       size: buffer.byteLength,
     })
-    req.onsuccess = () => resolve()
-    req.onerror = () => reject(req.error)
+    req.onsuccess = () => {
+      db.close()
+      resolve()
+    }
+    req.onerror = () => {
+      db.close()
+      reject(req.error)
+    }
   })
 }
 
@@ -120,7 +134,7 @@ self.onmessage = async (e) => {
       case 'download': {
         postMessage({ type: 'status', status: 'downloading' })
         postMessage({ type: 'progress', progress: 0, loaded: 0, total: 0 })
-        const response = await fetch(modelUrl)
+        const response = await fetch(modelUrl, { cache: 'reload' })
         if (!response.ok) throw new Error('Failed to fetch model')
 
         let buffer

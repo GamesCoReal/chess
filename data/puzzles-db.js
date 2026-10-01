@@ -1,10 +1,9 @@
 // Puzzle database loader.
 //
-// Puzzles now live in per-rating-range SQLite databases under ./data/, instead
-// of one big puzzles.json. Each database is downloaded from the network at
-// most once and then cached permanently in IndexedDB, exactly like the Maia
-// model is cached in maia-worker.js (MaiaModels / models store). That means:
-//   - "Clear Saved Data" (which only clears localStorage/sessionStorage/Cache
+// Puzzles live in per-rating-range SQLite databases under ./data/. The service
+// worker caches every range for offline use, with IndexedDB as a fallback.
+// That means:
+//   - "Clear Saved Data" clears the offline caches and Maia's model too.
 //     Storage) never touches these — they survive it, same as the Maia model.
 //   - Only a browser/site-data wipe removes them.
 //   - Once a database is cached, the app works fully offline for that rating
@@ -63,11 +62,23 @@ async function getCachedPuzzleDbBuffer(filename) {
   const store = tx.objectStore(PUZZLE_STORE_NAME);
   const record = await new Promise((resolve, reject) => {
     const req = store.get(filename);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      db.close();
+      resolve(req.result || null);
+    };
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
   });
-  if (!record) return null;
-  return await record.data.arrayBuffer();
+  if (record) return await record.data.arrayBuffer();
+
+  if ("caches" in window) {
+    const url = new URL(`./data/${filename}`, document.baseURI).href;
+    const response = await caches.match(url, { ignoreSearch: true });
+    if (response) return await response.arrayBuffer();
+  }
+  return null;
 }
 
 async function storePuzzleDbBuffer(filename, buffer) {
@@ -81,8 +92,14 @@ async function storePuzzleDbBuffer(filename, buffer) {
       timestamp: Date.now(),
       size: buffer.byteLength,
     });
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      db.close();
+      resolve();
+    };
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
   });
 }
 
@@ -92,10 +109,21 @@ async function isPuzzleDbCached(filename) {
   const store = tx.objectStore(PUZZLE_STORE_NAME);
   const key = await new Promise((resolve, reject) => {
     const req = store.getKey(filename);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      db.close();
+      resolve(req.result);
+    };
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
   });
-  return key !== undefined && key !== null;
+  if (key !== undefined && key !== null) return true;
+  if ("caches" in window) {
+    const url = new URL(`./data/${filename}`, document.baseURI).href;
+    return !!(await caches.match(url, { ignoreSearch: true }));
+  }
+  return false;
 }
 
 async function fetchPuzzleDbFromNetwork(filename) {
