@@ -111,7 +111,9 @@ async function fetchPuzzleDbFromNetwork(filename) {
 let sqlJsPromise = null;
 function getSQL() {
   if (!sqlJsPromise) {
-    sqlJsPromise = initSqlJs({ locateFile: (file) => "./sql/" + file });
+    sqlJsPromise = initSqlJs({
+      locateFile: (file) => new URL(`./engines/sql/${file}`, document.baseURI).href,
+    });
   }
   return sqlJsPromise;
 }
