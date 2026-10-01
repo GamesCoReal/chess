@@ -25,8 +25,6 @@ class StockfishEvaluator {
       // named stockfish.wasm, so pass its actual location explicitly.
       const workerUrl = new URL(this.workerUrl, document.baseURI);
       const wasmUrl = new URL("./stockfish.wasm", workerUrl);
-      // This single-thread bundle skips its UCI bootstrap when the hash ends
-      // in ",worker". Pass only the WASM URL so it initializes in this worker.
       workerUrl.hash = encodeURIComponent(wasmUrl.href);
       this.worker = new Worker(workerUrl.href);
       this.startupTimer = setTimeout(() => {

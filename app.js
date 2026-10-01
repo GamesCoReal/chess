@@ -1870,7 +1870,9 @@ function renderReplayEvalBar() {
   const meter = document.getElementById("replay-eval-meter");
   const evalBar = document.getElementById("replay-eval-bar");
   if (!meter || !evalBar) return;
-  meter.classList.toggle("hidden", !inReplayMode || !replayGame);
+  const visible = inReplayMode && !!replayGame;
+  meter.classList.toggle("hidden", !visible);
+  meter.style.display = visible ? "flex" : "none";
 }
 
 function updateReplayEvalBar(score, turn) {
