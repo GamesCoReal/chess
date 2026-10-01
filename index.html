@@ -364,8 +364,7 @@ font-size:15px;padding:8px 10px;
 <div class="dropdown"><div class="dropdown-inner">
 <div class="circle"></div>
 <div class="split">
-<button onclick="selectMode('rated')">Rated</button>
-<button onclick="selectMode('unrated')">Unrated</button>
+<button onclick="selectMode('rated')">Ranked</button>
 </div>
 </div></div>
 </div>
@@ -377,7 +376,7 @@ font-size:15px;padding:8px 10px;
 <div class="vstack">
 <button id="settings-username-btn" onclick="setUsername()">Username: You</button>
 <button id="settings-sound-btn" onclick="toggleSound()">Sound: On</button>
-<button id="settings-defaultmode-btn" onclick="cycleDefaultMode()">Default: Unranked</button>
+<button id="settings-defaultmode-btn" onclick="cycleDefaultMode()">Default: Ranked</button>
 <button onclick="clearAllSavedData()">Clear Saved Data</button>
 </div>
 </div></div>
@@ -395,7 +394,7 @@ font-size:15px;padding:8px 10px;
 </div>
 </div>
 
-<div id="mode-badge">Unrated</div>
+<div id="mode-badge">Ranked</div>
 <div id="status">Loading...</div>
 
 <div id="board-wrap">
@@ -506,7 +505,7 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./engines/stockfish19/stockfish-evaluator.js?v=7" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js" defer></script>
-<script src="./app.js?v=21" defer></script>
+<script src="./app.js?v=22" defer></script>
 
 </body>
 </html>

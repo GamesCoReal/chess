@@ -70,17 +70,13 @@ let username = localStorage.getItem("chess_username") || "You";
 
 let soundEnabled = localStorage.getItem("chess_sound_enabled") !== "false"; // default on
 
-let defaultMode = localStorage.getItem("chess_default_mode") || "unranked"; // "unranked" | "ranked" | "s"
-
-let currentMode;
-
-if (defaultMode === "ranked") {
-    currentMode = "rated";
-} else if (defaultMode === "puzzles") {
-    currentMode = "puzzles";
-} else {
-    currentMode = "unrated";
+let defaultMode = localStorage.getItem("chess_default_mode");
+if (defaultMode !== "ranked" && defaultMode !== "puzzles") {
+  defaultMode = "ranked";
+  localStorage.setItem("chess_default_mode", defaultMode);
 }
+
+let currentMode = defaultMode === "puzzles" ? "puzzles" : "rated";
 
 const hadPriorSession = !!localStorage.getItem("chess_active_mode"); // used once at startup below
 
@@ -93,7 +89,7 @@ function updateModeBadge() {
   } else if (inDrillMode) {
     el.textContent = currentDrillCategory === "endgame" ? "Endgame" : "Opening";
   } else {
-    el.textContent = currentMode === "rated" ? "Rated" : "Unrated";
+    el.textContent = currentMode === "rated" ? "Ranked" : "Puzzle";
   }
 }
 
@@ -166,7 +162,7 @@ function soundForMove(gameObj, moveResult) {
 
 
 // --- Default game mode ---
-const DEFAULT_MODE_ORDER = ["unranked", "ranked", "puzzles"];
+const DEFAULT_MODE_ORDER = ["ranked", "puzzles"];
 function cycleDefaultMode() {
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   const idx = DEFAULT_MODE_ORDER.indexOf(defaultMode);
@@ -1090,6 +1086,7 @@ function assignNextColor() {
 
 let inReplayMode = false;
 let replayReturnGame = null;
+let replayReturnBoardFlipped = null;
 let replayControlsEl = null;
 
 
@@ -1102,6 +1099,7 @@ function openPastGame(entry) {
     console.error("Past game has no PGN.");
     return;
   }
+  if (inReplayMode) exitReplay();
 
   // Save the current real game so we can return to it.
   replayReturnGame = game;
@@ -1141,6 +1139,9 @@ function openPastGame(entry) {
 
   // Enter replay mode.
   inReplayMode = true;
+  replayReturnBoardFlipped = boardFlipped;
+  boardFlipped = !boardFlipped;
+  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
 
   selectedSquare = null;
   lastMoveFrom = null;
@@ -1590,6 +1591,11 @@ function exitReplay() {
   if (replayReturnGame) {
     game = replayReturnGame;
   }
+  if (replayReturnBoardFlipped !== null) {
+    boardFlipped = replayReturnBoardFlipped;
+    document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+    replayReturnBoardFlipped = null;
+  }
 
   replayGame = null;
   replayMoves = [];
@@ -1720,6 +1726,8 @@ function applyLoadedState(loaded) {
 }
 
 function selectMode(mode) {
+  if (mode === "unrated") mode = "rated";
+  if (mode !== "rated" && mode !== "puzzles") return;
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   if (inPuzzleMode) exitPuzzleMode();
   if (inDrillMode) exitDrillMode();
@@ -2914,6 +2922,17 @@ function loadHistory() {
   }
 }
 
+function removeUnrankedSavedGames() {
+  localStorage.removeItem("chess_game_unrated");
+  if (localStorage.getItem("chess_active_mode") === "unrated") {
+    localStorage.setItem("chess_active_mode", "rated");
+  }
+  const rankedHistory = loadHistory().filter((entry) =>
+    entry.rated === true || entry.mode === "rated"
+  );
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(rankedHistory));
+}
+
 function pushHistoryEntry() {
   const yourAcc = computeAccuracy(playerMoveStats);
   const maiaAcc = computeAccuracy(maiaMoveStatsObj);
@@ -3004,7 +3023,7 @@ function renderHistory() {
     card.innerHTML = `
       <div class="hc-head">
         <span class="hc-result">${entry.result}</span>
-        <span class="hc-mode">${entry.rated ? "Rated" : "Unrated"}</span>
+        <span class="hc-mode">Ranked</span>
       </div>
       <div class="hc-top">
         <div class="hc-player">
@@ -3318,4 +3337,5 @@ window.replayNext = replayNext;
 window.replayEnd = replayEnd;
 window.closeReplayUI = exitReplay;
 
+removeUnrankedSavedGames();
 init();
