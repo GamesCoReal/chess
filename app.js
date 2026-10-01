@@ -1822,11 +1822,18 @@ function renderBoardAnnotations() {
     const from = annotationPoint(mark.from);
     if (mark.to) {
       const to = annotationPoint(mark.to);
-      const line = document.createElementNS(svg.namespaceURI, "path");
-      line.setAttribute("d", `M ${from.x} ${from.y} L ${to.x} ${to.y}`);
-      line.setAttribute("marker-end", "url(#annotation-arrowhead)");
-      if (mark.preview) line.setAttribute("class", "annotation-preview");
-      svg.appendChild(line);
+      const fileDelta = Math.abs(mark.from.charCodeAt(0) - mark.to.charCodeAt(0));
+      const rankDelta = Math.abs(Number(mark.from[1]) - Number(mark.to[1]));
+      const segments = fileDelta * rankDelta === 2
+        ? [[from, { x: to.x, y: from.y }], [{ x: to.x, y: from.y }, to]]
+        : [[from, to]];
+      for (const [start, end] of segments) {
+        const line = document.createElementNS(svg.namespaceURI, "path");
+        line.setAttribute("d", `M ${start.x} ${start.y} L ${end.x} ${end.y}`);
+        line.setAttribute("marker-end", "url(#annotation-arrowhead)");
+        if (mark.preview) line.setAttribute("class", "annotation-preview");
+        svg.appendChild(line);
+      }
     } else {
       const circle = document.createElementNS(svg.namespaceURI, "circle");
       circle.setAttribute("cx", from.x);
@@ -2092,6 +2099,13 @@ boardEl.addEventListener("pointerdown", (e) => {
 });
 
 boardEl.addEventListener("contextmenu", (e) => e.preventDefault());
+boardEl.addEventListener("dblclick", (e) => {
+  if (e.button !== 2) return;
+  e.preventDefault();
+  boardAnnotations.length = 0;
+  annotationPreview = null;
+  renderBoardAnnotations();
+});
 
 document.addEventListener("pointermove", (e) => {
   if (annotationTrack && e.pointerId === annotationTrack.pointerId) {
