@@ -1903,17 +1903,37 @@ function analyzeReplayPosition() {
   const fen = replayGame.fen();
   const turn = replayGame.turn();
   const scoreLabel = document.getElementById("replay-eval-score");
+  const evaluator = window.stockfishEvaluator;
+  if (!evaluator) {
+    if (scoreLabel) scoreLabel.textContent = "SF !";
+    return;
+  }
   if (scoreLabel) scoreLabel.textContent = "…";
   renderReplayEvalBar();
 
-  window.stockfishEvaluator.evaluateFen(fen, (score) => {
+  let receivedScore = false;
+  const watchdog = setTimeout(() => {
+    if (runId !== replayStockfishRun || receivedScore) return;
+    if (scoreLabel) {
+      scoreLabel.textContent = "SF?";
+      scoreLabel.title = "No score from Stockfish. Check whether its worker and stockfish.wasm loaded successfully.";
+    }
+  }, 15000);
+
+  evaluator.evaluateFen(fen, (score) => {
     if (runId === replayStockfishRun && inReplayMode && score) {
+      receivedScore = true;
+      clearTimeout(watchdog);
       updateReplayEvalBar(score, turn);
     }
   }).catch((error) => {
+    clearTimeout(watchdog);
     if (runId === replayStockfishRun) {
       console.error("Could not evaluate replay position with Stockfish:", error);
-      if (scoreLabel) scoreLabel.textContent = "!";
+      if (scoreLabel) {
+        scoreLabel.textContent = "SF !";
+        scoreLabel.title = error.message;
+      }
     }
   });
 }

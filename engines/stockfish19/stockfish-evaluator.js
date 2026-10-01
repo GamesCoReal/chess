@@ -8,6 +8,7 @@ class StockfishEvaluator {
     this.rejectReady = null;
     this.current = null;
     this.pending = null;
+    this.startupTimer = null;
   }
 
   start() {
@@ -26,9 +27,21 @@ class StockfishEvaluator {
       const wasmUrl = new URL("./stockfish.wasm", workerUrl);
       workerUrl.hash = `${encodeURIComponent(wasmUrl.href)},worker`;
       this.worker = new Worker(workerUrl.href);
+      this.startupTimer = setTimeout(() => {
+        if (this.ready) return;
+        const error = new Error("Stockfish did not finish its UCI startup handshake within 20 seconds.");
+        this.worker?.terminate();
+        this.worker = null;
+        this.rejectReady?.(error);
+        this.current?.reject(error);
+        this.pending?.reject(error);
+        this.current = null;
+        this.pending = null;
+      }, 20000);
       this.worker.onmessage = (event) => this.handleMessage(String(event.data));
       this.worker.onerror = (event) => {
         const error = new Error(event.message || "Stockfish worker failed to load.");
+        clearTimeout(this.startupTimer);
         this.rejectReady?.(error);
         this.current?.reject(error);
         this.pending?.reject(error);
@@ -60,6 +73,7 @@ class StockfishEvaluator {
     }
 
     if (line === "readyok") {
+      clearTimeout(this.startupTimer);
       this.ready = true;
       this.resolveReady?.();
       this.startPending();
