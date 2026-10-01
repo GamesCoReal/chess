@@ -1925,6 +1925,7 @@ function renderBoard() {
   }
 
   renderBoardAnnotations();
+  renderCapturedPieces();
 
   renderReplayEvalBar();
 }
@@ -1936,6 +1937,52 @@ function renderReplayEvalBar() {
   const visible = inReplayMode && !!replayGame;
   meter.classList.toggle("hidden", !visible);
   meter.style.display = visible ? "flex" : "none";
+}
+
+let capturedPieceTrays = null;
+
+function renderCapturedPieces() {
+  if (!capturedPieceTrays) {
+    capturedPieceTrays = {
+      w: document.createElement("span"),
+      b: document.createElement("span"),
+    };
+    capturedPieceTrays.w.className = "capture-slot white-capture-tray";
+    capturedPieceTrays.b.className = "capture-slot black-capture-tray";
+  }
+
+  const whiteRow = document.getElementById(playerColor === "w" ? "your-player" : "maia-player");
+  const blackRow = document.getElementById(playerColor === "b" ? "your-player" : "maia-player");
+  if (inReplayMode || inPuzzleMode || inDrillMode || !whiteRow || !blackRow) {
+    capturedPieceTrays.w.remove();
+    capturedPieceTrays.b.remove();
+    return;
+  }
+
+  const capturedBy = { w: [], b: [] };
+  for (const move of game.history({ verbose: true })) {
+    if (move.captured) {
+      capturedBy[move.color].push({
+        type: move.captured,
+        color: move.color === "w" ? "b" : "w",
+      });
+    }
+  }
+
+  for (const color of ["w", "b"]) {
+    const tray = capturedPieceTrays[color];
+    tray.replaceChildren(...capturedBy[color].map((piece) => {
+      const image = document.createElement("img");
+      image.src = pieceImage(piece);
+      image.alt = `${piece.color === "w" ? "White" : "Black"} ${piece.type} captured`;
+      image.title = image.alt;
+      image.draggable = false;
+      return image;
+    }));
+  }
+
+  whiteRow.querySelector(".clock-capture-slot").appendChild(capturedPieceTrays.w);
+  blackRow.querySelector(".name-capture-slot").appendChild(capturedPieceTrays.b);
 }
 
 function updateReplayEvalBar(score, turn) {
@@ -2506,8 +2553,6 @@ function handlePremoveClick(sq) {
 
   if (sq === selectedSquare) {
     selectedSquare = null;
-  } else if (piece && piece.color === playerColor) {
-    selectedSquare = sq;
   } else {
     premoves.push({ from: selectedSquare, to: sq });
     selectedSquare = null;
