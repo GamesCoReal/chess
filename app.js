@@ -1002,7 +1002,7 @@ let clockLastTick = performance.now();
 function tickClock() {
 
   // Clocks exist only in normal games.
-  if (inPuzzleMode || inDrillMode || isGameLocked()) {
+  if (inReplayMode || inPuzzleMode || inDrillMode || isGameLocked()) {
     clockLastTick = performance.now();
     return;
   }
@@ -1582,6 +1582,7 @@ function exitReplay() {
   replayAnalysisRun++;
   replayStockfishRun++;
   window.stockfishEvaluator?.stop();
+  clockLastTick = performance.now();
   replayAnalyzing = false;
   inReplayMode = false;
 
@@ -1886,9 +1887,10 @@ function updateReplayEvalBar(score, turn) {
   const whitePct = Math.round(whiteChance);
   evalBar.querySelector(".eval-bar-white").style.flexBasis = `${whitePct}%`;
   evalBar.querySelector(".eval-bar-black").style.flexBasis = `${100 - whitePct}%`;
-  scoreLabel.textContent = score.type === "mate"
+  const scoreText = score.type === "mate"
     ? `M${Math.abs(score.value)}`
     : `${score.value > 0 ? "+" : ""}${(score.value / 100).toFixed(1)}`;
+  scoreLabel.textContent = score.depth ? `${scoreText} d${score.depth}` : scoreText;
   evalBar.setAttribute("aria-label", `Position evaluation: White ${whitePct} percent, Black ${100 - whitePct} percent`);
   const depthText = score.depth ? ` Stockfish depth ${score.depth}.` : "";
   evalBar.title = `White ${whitePct}% / Black ${100 - whitePct}%.${depthText}`;

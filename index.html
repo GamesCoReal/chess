@@ -201,9 +201,9 @@ border-radius:4px;
 overflow:hidden;
 touch-action:none;
 }
-#board-with-eval{display:grid;grid-template-columns:minmax(0,1fr) 36px;gap:6px;align-items:stretch;width:100%}
+#board-with-eval{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:6px;align-items:stretch;width:100%}
 .replay-eval-meter{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:0}
-.replay-eval-score{height:12px;font-size:9px;line-height:12px;color:#ddd;white-space:nowrap}
+.replay-eval-score{position:absolute;left:50%;top:50%;z-index:3;transform:translate(-50%,-50%);min-width:48px;width:max-content;padding:1px 3px;border-radius:3px;background:rgba(25,26,28,.82);box-shadow:0 1px 4px rgba(0,0,0,.55);font-size:10px;line-height:14px;color:#fff;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;pointer-events:none}
 .replay-eval-bar{display:flex;flex:1;flex-direction:column;align-self:stretch;min-height:0;overflow:hidden;border:1px solid #555;border-radius:4px;background:#25262a}
 .replay-eval-bar.hidden{display:none}
 .replay-eval-meter{position:relative}
@@ -506,10 +506,10 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./chess.min.js" defer></script>
 <script src="./engines/maia3/maia-tensor.js" defer></script>
 <script src="./engines/maia3/maia-engine.js" defer></script>
-<script src="./engines/stockfish19/stockfish-evaluator.js?v=3" defer></script>
+<script src="./engines/stockfish19/stockfish-evaluator.js?v=4" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js" defer></script>
-<script src="./app.js?v=18" defer></script>
+<script src="./app.js?v=19" defer></script>
 
 </body>
 </html>

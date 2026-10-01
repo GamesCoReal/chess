@@ -1,7 +1,6 @@
 class StockfishEvaluator {
-  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js?v=2", depth = 24 } = {}) {
+  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js?v=2" } = {}) {
     this.workerUrl = workerUrl;
-    this.depth = depth;
     this.worker = null;
     this.ready = false;
     this.readyPromise = null;
@@ -44,7 +43,15 @@ class StockfishEvaluator {
     return this.readyPromise;
   }
 
-  handleMessage(line) {
+  handleMessage(message) {
+    const lines = String(message).split(/\r?\n/);
+    if (lines.length > 1) {
+      lines.forEach((line) => this.handleMessage(line));
+      return;
+    }
+    const line = lines[0].trim();
+    if (!line) return;
+
     if (line === "uciok") {
       this.worker.postMessage("setoption name Threads value 1");
       this.worker.postMessage("setoption name Hash value 16");
@@ -106,7 +113,7 @@ class StockfishEvaluator {
     this.current = this.pending;
     this.pending = null;
     this.worker.postMessage(`position fen ${this.current.fen}`);
-    this.worker.postMessage(`go depth ${this.depth}`);
+    this.worker.postMessage("go infinite");
   }
 }
 
