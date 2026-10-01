@@ -2099,16 +2099,18 @@ function renderCapturedPieces() {
     capturedPieceTrays.b.className = "capture-slot black-capture-tray";
   }
 
-  const whiteRow = document.getElementById(playerColor === "w" ? "your-player" : "maia-player");
-  const blackRow = document.getElementById(playerColor === "b" ? "your-player" : "maia-player");
-  if (inReplayMode || inPuzzleMode || inDrillMode || !whiteRow || !blackRow) {
+  const displayPlayerColor = inReplayMode ? replayPlayerColor : playerColor;
+  const whiteRow = document.getElementById(displayPlayerColor === "w" ? "your-player" : "maia-player");
+  const blackRow = document.getElementById(displayPlayerColor === "b" ? "your-player" : "maia-player");
+  if (inPuzzleMode || inDrillMode || !whiteRow || !blackRow) {
     capturedPieceTrays.w.remove();
     capturedPieceTrays.b.remove();
     return;
   }
 
   const capturedBy = { w: [], b: [] };
-  for (const move of game.history({ verbose: true })) {
+  const captureHistory = (inReplayMode ? replayGame : game).history({ verbose: true });
+  for (const move of captureHistory) {
     if (move.captured) {
       capturedBy[move.color].push({
         type: move.captured,
@@ -2302,7 +2304,22 @@ function onReplaySquareClick(sq) {
     return;
   }
 
-  const move = replayGame.move({ from: selectedSquare, to: sq, promotion: "q" });
+  const movingPiece = replayGame.get(selectedSquare);
+  const promotes = movingPiece?.type === "p" &&
+    ((movingPiece.color === "w" && sq[1] === "8") || (movingPiece.color === "b" && sq[1] === "1"));
+  let promotion = "q";
+  if (promotes) {
+    const choice = window.prompt("Promote to queen, rook, bishop, or knight? Enter q, r, b, or n.", "q");
+    if (choice === null) {
+      selectedSquare = null;
+      renderBoard();
+      return;
+    }
+    const normalizedChoice = choice.trim().toLowerCase();
+    promotion = /^[qrbn]$/.test(normalizedChoice) ? normalizedChoice : "q";
+  }
+
+  const move = replayGame.move({ from: selectedSquare, to: sq, promotion });
   if (!move) {
     if (replayGame.get(sq)) selectedSquare = sq;
     else selectedSquare = null;
