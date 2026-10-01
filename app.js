@@ -2273,9 +2273,51 @@ async function rankReplayCandidateLines(lines, fen, runId) {
 }
 
 function onBoardClick(sq) {
+  if (inReplayMode) return onReplaySquareClick(sq);
   if (inPuzzleMode) return onPuzzleSquareClick(sq);
   if (inDrillMode) return onDrillSquareClick(sq);
   return onSquareClick(sq);
+}
+
+function onReplaySquareClick(sq) {
+  if (!replayGame) return;
+
+  if (selectedSquare === null) {
+    if (replayGame.get(sq)) {
+      selectedSquare = sq;
+      renderBoard();
+    }
+    return;
+  }
+
+  if (sq === selectedSquare) {
+    selectedSquare = null;
+    renderBoard();
+    return;
+  }
+
+  const move = replayGame.move({ from: selectedSquare, to: sq, promotion: "q" });
+  if (!move) {
+    if (replayGame.get(sq)) selectedSquare = sq;
+    else selectedSquare = null;
+    renderBoard();
+    return;
+  }
+
+  replayMoves = replayGame.history({ verbose: true });
+  replayIndex = replayMoves.length;
+  replayAnalysis = Array(replayMoves.length).fill(null);
+  lastMoveFrom = move.from;
+  lastMoveTo = move.to;
+  selectedSquare = null;
+  replayCandidateLines = [];
+  replayRankedLines = [];
+  replayLineStatus = "Stockfish is searching five lines to depth 10...";
+
+  renderBoard();
+  renderMoveList();
+  updateReplayControls();
+  analyzeReplayPosition();
 }
 
 // ---------- Drag to move ----------
@@ -2288,6 +2330,7 @@ let ghostEl = null;
 let dragHoverSq = null;
 
 function pieceIsDraggableAt(sq) {
+  if (inReplayMode) return !!replayGame?.get(sq);
   if (inPuzzleMode) {
     if (puzzleLocked || puzzleAwaitingReply || !puzzleGame) return false;
     const piece = puzzleGame.get(sq);
@@ -2311,7 +2354,7 @@ function squareFromPoint(x, y) {
 }
 
 function createGhost(sq, x, y) {
-  const activeGame = inPuzzleMode ? puzzleGame : (inDrillMode ? drillGame : game);
+  const activeGame = inReplayMode ? replayGame : (inPuzzleMode ? puzzleGame : (inDrillMode ? drillGame : game));
   const piece = activeGame.get(sq);
   if (!piece) return;
 
