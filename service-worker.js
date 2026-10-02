@@ -20,6 +20,7 @@ const OFFLINE_FILES = [
   "./engines/sql/sql-wasm.js",
   "./engines/sql/sql-wasm.wasm",
   "./engines/stockfish19/stockfish-evaluator.js",
+  "./engines/stockfish19/stockfish.js",
   "./engines/stockfish19/stockfish-19-lite-single.js",
   "./engines/stockfish19/stockfish.wasm",
   "./sounds/move.mp3",
@@ -60,6 +61,7 @@ const REFRESH_ON_UPDATE = new Set([
   "./app.js",
   "./data/puzzles-db.js",
   "./engines/stockfish19/stockfish-evaluator.js",
+  "./engines/stockfish19/stockfish.js",
   "./engines/stockfish19/stockfish-19-lite-single.js",
 ]);
 

@@ -1,5 +1,5 @@
 class StockfishEvaluator {
-  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js?v=3" } = {}) {
+  constructor({ workerUrl = "./engines/stockfish19/stockfish.js?v=1" } = {}) {
     this.workerUrl = workerUrl;
     this.worker = null;
     this.ready = false;
@@ -21,12 +21,7 @@ class StockfishEvaluator {
     const startupPromise = this.readyPromise;
 
     try {
-      // Stockfish.js looks for a wasm file derived from its worker URL unless
-      // the wasm URL is supplied in the URL fragment. The bundled file here is
-      // named stockfish.wasm, so pass its actual location explicitly.
       const workerUrl = new URL(this.workerUrl, document.baseURI);
-      const wasmUrl = new URL("./stockfish.wasm", workerUrl);
-      workerUrl.hash = encodeURIComponent(wasmUrl.href);
       this.worker = new Worker(workerUrl.href);
       this.startupTimer = setTimeout(() => {
         this.failWorker(new Error("Stockfish did not finish loading its WASM engine and UCI handshake within 120 seconds."));
