@@ -25,7 +25,7 @@ class StockfishEvaluator {
       // named stockfish.wasm, so pass its actual location explicitly.
       const workerUrl = new URL(this.workerUrl, document.baseURI);
       const wasmUrl = new URL("./stockfish.wasm", workerUrl);
-      workerUrl.hash = encodeURIComponent(wasmUrl.href);
+      workerUrl.hash = `${encodeURIComponent(wasmUrl.href)},worker`;
       this.worker = new Worker(workerUrl.href);
       this.startupTimer = setTimeout(() => {
         if (this.ready) return;

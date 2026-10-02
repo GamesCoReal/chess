@@ -63,6 +63,12 @@ const OFFLINE_FILES = [
   "./images/ratings/miss.png",
   "./images/ratings/blunder.png",
 ];
+const REFRESH_ON_UPDATE = new Set([
+  "./index.html",
+  "./service-worker.js",
+  "./app.js",
+  "./engines/stockfish19/stockfish-evaluator.js",
+]);
 
 async function writeStatus(status) {
   try {
@@ -86,12 +92,17 @@ function downloadOfflineFiles() {
     let completed = 0;
     for (const file of OFFLINE_FILES) {
       const url = new URL(file, self.registration.scope).href;
+      const cache = await caches.open(CACHE_NAME);
+      if (!REFRESH_ON_UPDATE.has(file) && await cache.match(url)) {
+        completed++;
+        await writeStatus({ state: "downloading", completed, total: OFFLINE_FILES.length, file });
+        continue;
+      }
       let lastError;
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const response = await fetch(url, { cache: "reload" });
           if (response.status !== 200) throw new Error(`HTTP ${response.status} for ${file}`);
-          const cache = await caches.open(CACHE_NAME);
           await cache.put(url, response);
           lastError = null;
           break;
