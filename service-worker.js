@@ -68,6 +68,7 @@ const REFRESH_ON_UPDATE = new Set([
   "./service-worker.js",
   "./app.js",
   "./engines/stockfish19/stockfish-evaluator.js",
+  "./engines/stockfish19/stockfish-19-lite-single.js",
 ]);
 
 async function writeStatus(status) {
