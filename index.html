@@ -147,10 +147,10 @@ animation:vstackGrow .3s cubic-bezier(.34,1.3,.64,1) forwards;
 
 .player{display:flex;justify-content:space-between;align-items:center;margin:8px 2px;font-size:clamp(15px,4.2vw,19px)}
 .player-name{display:flex;align-items:center;min-width:0;white-space:nowrap}
-.capture-slot{display:flex;align-items:center;min-width:0;flex-shrink:1}
+.capture-slot{display:flex;align-items:center;min-width:0;flex-shrink:1;gap:1px}
 .capture-slot:empty{display:none}
-.capture-slot img{width:18px;height:18px;object-fit:contain;margin-left:-7px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
-.capture-slot img:first-child{margin-left:2px}
+.capture-slot img{width:18px;height:18px;flex:0 0 18px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.replay-mode .turn-tag{display:none!important}
 .clock-capture-slot{margin-left:auto}
 #your-clock,#maia-clock{min-width:8ch;text-align:right;font-variant-numeric:tabular-nums}
 
@@ -530,7 +530,7 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./engines/stockfish19/stockfish-evaluator.js?v=8" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js?v=3" defer></script>
-<script src="./app.js?v=39" defer></script>
+<script src="./app.js?v=40" defer></script>
 
 </body>
 </html>

@@ -1188,6 +1188,9 @@ function openPastGame(entry) {
 
   // Enter replay mode.
   inReplayMode = true;
+  document.getElementById("board-wrap").classList.add("replay-mode");
+  clearTurnTags();
+  statusEl.classList.add("status-hidden");
   replayReturnBoardFlipped = boardFlipped;
   boardFlipped = !boardFlipped;
   document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
@@ -1722,6 +1725,7 @@ function exitReplay() {
   if (replayReturnBoardFlipped !== null) {
     boardFlipped = replayReturnBoardFlipped;
     document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+    document.getElementById("board-wrap").classList.remove("replay-mode");
     replayReturnBoardFlipped = null;
   }
 
@@ -1754,6 +1758,7 @@ function exitReplay() {
 
   renderBoard();
   renderMoveList();
+  updateStatusForTurn();
 
   console.log("Exited replay mode.");
 }
@@ -2117,6 +2122,11 @@ function renderCapturedPieces() {
         color: move.color === "w" ? "b" : "w",
       });
     }
+  }
+
+  const pieceValue = { p: 1, n: 2, b: 3, r: 4, q: 5 };
+  for (const color of ["w", "b"]) {
+    capturedBy[color].sort((a, b) => pieceValue[a.type] - pieceValue[b.type]);
   }
 
   for (const color of ["w", "b"]) {

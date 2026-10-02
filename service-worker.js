@@ -1,4 +1,4 @@
-const CACHE_NAME = "chess-offline-v2";
+const CACHE_NAME = "chess-offline-v3";
 const STATUS_URL = new URL("__offline_status__", self.registration.scope).href;
 
 const OFFLINE_FILES = [
@@ -90,7 +90,7 @@ function downloadOfflineFiles() {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const response = await fetch(url, { cache: "reload" });
-          if (!response.ok) throw new Error(`HTTP ${response.status} for ${file}`);
+          if (response.status !== 200) throw new Error(`HTTP ${response.status} for ${file}`);
           const cache = await caches.open(CACHE_NAME);
           await cache.put(url, response);
           lastError = null;
@@ -152,12 +152,30 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(request, { ignoreSearch: true });
+    const cached = request.headers.has("range")
+      ? await cache.match(request.url, { ignoreSearch: true })
+      : await cache.match(request, { ignoreSearch: true });
+
+    if (request.headers.has("range")) {
+      try {
+        return await fetch(request);
+      } catch (error) {
+        if (cached) return cached;
+        throw error;
+      }
+    }
+
     if (cached) return cached;
 
     try {
       const response = await fetch(request);
-      if (response.ok) await cache.put(request, response.clone());
+      if (response.status === 200) {
+        try {
+          await cache.put(request, response.clone());
+        } catch (error) {
+          console.warn("Offline cache write failed:", request.url, error);
+        }
+      }
       return response;
     } catch (error) {
       if (request.mode === "navigate") {
