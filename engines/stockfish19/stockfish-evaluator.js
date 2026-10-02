@@ -1,5 +1,5 @@
 class StockfishEvaluator {
-  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js?v=2" } = {}) {
+  constructor({ workerUrl = "./engines/stockfish19/stockfish-19-lite-single.js?v=3" } = {}) {
     this.workerUrl = workerUrl;
     this.worker = null;
     this.ready = false;
@@ -18,6 +18,7 @@ class StockfishEvaluator {
       this.resolveReady = resolve;
       this.rejectReady = reject;
     });
+    const startupPromise = this.readyPromise;
 
     try {
       // Stockfish.js looks for a wasm file derived from its worker URL unless
@@ -28,32 +29,36 @@ class StockfishEvaluator {
       workerUrl.hash = encodeURIComponent(wasmUrl.href);
       this.worker = new Worker(workerUrl.href);
       this.startupTimer = setTimeout(() => {
-        if (this.ready) return;
-        const error = new Error("Stockfish did not finish its UCI startup handshake within 20 seconds.");
-        this.worker?.terminate();
-        this.worker = null;
-        this.rejectReady?.(error);
-        this.current?.reject(error);
-        this.pending?.reject(error);
-        this.current = null;
-        this.pending = null;
-      }, 20000);
+        this.failWorker(new Error("Stockfish did not finish loading its WASM engine and UCI handshake within 120 seconds."));
+      }, 120000);
       this.worker.onmessage = (event) => this.handleMessage(String(event.data));
       this.worker.onerror = (event) => {
         const error = new Error(event.message || "Stockfish worker failed to load.");
-        clearTimeout(this.startupTimer);
-        this.rejectReady?.(error);
-        this.current?.reject(error);
-        this.pending?.reject(error);
-        this.current = null;
-        this.pending = null;
+        this.failWorker(error);
       };
       this.worker.postMessage("uci");
     } catch (error) {
-      this.rejectReady?.(error);
+      this.failWorker(error);
     }
 
-    return this.readyPromise;
+    return startupPromise;
+  }
+
+  failWorker(error) {
+    clearTimeout(this.startupTimer);
+    this.worker?.terminate();
+    this.worker = null;
+    const wasReady = this.ready;
+    const rejectReady = this.rejectReady;
+    this.ready = false;
+    this.readyPromise = null;
+    this.resolveReady = null;
+    this.rejectReady = null;
+    if (!wasReady) rejectReady?.(error);
+    this.current?.reject(error);
+    this.pending?.reject(error);
+    this.current = null;
+    this.pending = null;
   }
 
   handleMessage(message) {

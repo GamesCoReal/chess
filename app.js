@@ -255,9 +255,9 @@ function updateOfflineStatus(status) {
   if (!offlineStatusEl || !status) return;
   if (status.state === "downloading") {
     const currentFile = status.file ? `: ${status.file.split("/").pop()}` : "";
-    offlineStatusEl.textContent = `Downloading offline files (${status.completed}/${status.total}; roughly 900 MB)${currentFile}`;
+    offlineStatusEl.textContent = `Downloading app files (${status.completed}/${status.total})${currentFile}`;
   } else if (status.state === "ready") {
-    offlineStatusEl.textContent = "App files saved for offline use";
+    offlineStatusEl.textContent = "App files ready for offline use";
   } else if (status.state === "error") {
     offlineStatusEl.textContent = `Offline download failed: ${status.file || status.message || "check connection and reset data"}`;
     console.error("Offline file download failed:", status);
@@ -280,6 +280,154 @@ if ("serviceWorker" in navigator) {
 } else if (offlineStatusEl) {
   offlineStatusEl.textContent = "Offline downloads require a supported browser and HTTPS";
 }
+
+let storageManagerOpen = false;
+let storageRenderRun = 0;
+const storageActions = new Set();
+const automaticStorageDownloads = new Set();
+
+function puzzleRangeLabel(range) {
+  return Number.isFinite(range.max) ? `${range.min}-${range.max}` : `${range.min}+`;
+}
+
+function formatStorageSize(bytes) {
+  if (!bytes) return "size unknown";
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function getAutomaticPuzzleFiles(rating) {
+  const ranges = PuzzleDB.ranges;
+  let index = ranges.findIndex((range) => rating >= range.min && rating <= range.max);
+  if (index < 0) index = rating < ranges[0].min ? 0 : ranges.length - 1;
+  return new Set([index - 1, index, index + 1]
+    .filter((rangeIndex) => ranges[rangeIndex])
+    .map((rangeIndex) => ranges[rangeIndex].file));
+}
+
+async function refreshStorageManager() {
+  if (!storageManagerOpen) return;
+  const runId = ++storageRenderRun;
+  const list = document.getElementById("puzzle-storage-list");
+  const usage = document.getElementById("storage-usage");
+  list.textContent = "Loading puzzle databases...";
+
+  try {
+    const [inventory, estimate] = await Promise.all([
+      PuzzleDB.listPuzzleDatabases(),
+      navigator.storage?.estimate?.().catch(() => null),
+    ]);
+    if (runId !== storageRenderRun || !storageManagerOpen) return;
+
+    const automaticFiles = getAutomaticPuzzleFiles(puzzleRating);
+    const used = estimate?.usage;
+    const quota = estimate?.quota;
+    usage.textContent = `Puzzle rating ${puzzleRating} · automatically kept ranges: ${[...automaticFiles].map((file) => {
+      const range = inventory.find((item) => item.file === file);
+      return range ? puzzleRangeLabel(range) : "";
+    }).join(", ")}${typeof used === "number" ? ` · site storage ${formatStorageSize(used)}${typeof quota === "number" ? ` / ${formatStorageSize(quota)}` : ""}` : ""}`;
+
+    list.replaceChildren(...inventory.map((item) => {
+      const auto = automaticFiles.has(item.file);
+      const busy = storageActions.has(item.file);
+      const row = document.createElement("div");
+      row.className = "storage-row";
+
+      const main = document.createElement("div");
+      main.className = "storage-row-main";
+      const name = document.createElement("div");
+      name.className = "storage-row-name";
+      name.textContent = puzzleRangeLabel(item);
+      const state = document.createElement("div");
+      state.className = "storage-row-state";
+      state.textContent = busy
+        ? "Working..."
+        : automaticStorageDownloads.has(item.file)
+          ? "Downloading automatically..."
+        : item.manual
+          ? `Saved by you · ${formatStorageSize(item.size)}`
+          : item.downloaded
+            ? `${auto ? "Automatic" : "Stored"} · ${formatStorageSize(item.size)}`
+            : auto
+              ? "Automatic range · downloads when Puzzle mode needs it"
+              : "Not downloaded";
+      main.append(name, state);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "storage-action";
+      button.disabled = busy;
+      if (item.manual) {
+        button.textContent = "Delete";
+        button.classList.add("danger");
+        button.addEventListener("click", () => runStorageAction(item.file, "delete"));
+      } else if (item.downloaded) {
+        button.textContent = "Keep";
+        button.classList.add("primary");
+        button.title = "Keep this database until you delete it";
+        button.addEventListener("click", () => runStorageAction(item.file, "keep"));
+      } else {
+        button.textContent = "Download";
+        button.classList.add("primary");
+        button.addEventListener("click", () => runStorageAction(item.file, "download"));
+      }
+
+      row.append(main, button);
+      return row;
+    }));
+  } catch (error) {
+    if (runId !== storageRenderRun) return;
+    list.textContent = `Could not read puzzle storage: ${error.message}`;
+  }
+}
+
+async function runStorageAction(filename, action) {
+  const range = PuzzleDB.ranges.find((item) => item.file === filename);
+  const label = range ? puzzleRangeLabel(range) : filename;
+  const status = document.getElementById("storage-manager-status");
+  storageActions.add(filename);
+  status.textContent = action === "delete" ? `Deleting ${label}...` : `Downloading ${label}...`;
+  refreshStorageManager();
+
+  try {
+    if (action === "delete") {
+      await PuzzleDB.deletePuzzleDatabase(filename);
+      status.textContent = `${label} deleted.`;
+    } else {
+      await PuzzleDB.downloadPuzzleDatabase(filename);
+      status.textContent = `${label} saved by you. It stays until you delete it.`;
+    }
+  } catch (error) {
+    status.textContent = `Could not ${action === "delete" ? "delete" : "download"} ${label}: ${error.message}`;
+  } finally {
+    storageActions.delete(filename);
+    await refreshStorageManager();
+  }
+}
+
+function openStorageManager() {
+  document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
+  storageManagerOpen = true;
+  document.getElementById("storage-manager-overlay").classList.remove("hidden");
+  document.getElementById("storage-manager-status").textContent = "";
+  refreshStorageManager();
+}
+window.openStorageManager = openStorageManager;
+
+function closeStorageManager(event) {
+  const overlay = document.getElementById("storage-manager-overlay");
+  if (event && event.target !== overlay) return;
+  storageManagerOpen = false;
+  overlay.classList.add("hidden");
+}
+window.closeStorageManager = closeStorageManager;
+
+window.addEventListener("puzzle-storage-changed", (event) => {
+  if (event.detail?.downloading) automaticStorageDownloads.add(event.detail.filename);
+  else if (event.detail?.downloading === false) automaticStorageDownloads.delete(event.detail.filename);
+  if (storageManagerOpen) refreshStorageManager();
+});
 
 const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
@@ -316,6 +464,9 @@ let puzzleWrongAttempts = 0;
 let puzzleHintsUsed = 0;
 function savePuzzleRating() {
   localStorage.setItem("chess_puzzle_rating", String(puzzleRating));
+  PuzzleDB.manageForRating(puzzleRating).catch((error) => {
+    console.warn("Could not update puzzle database downloads for your rating:", error);
+  });
 }
 
 function useHint() {
@@ -3746,12 +3897,8 @@ async function init() {
   // -----------------------------------------
   // 2. Start background resources immediately
   // -----------------------------------------
-  // Puzzle databases
-  PuzzleDB.startBackgroundDownloads().catch((err) => {
-    console.warn(
-      "Background puzzle database download failed:",
-      err
-    );
+  PuzzleDB.manageForRating(puzzleRating).catch((err) => {
+    console.warn("Background puzzle database preparation failed:", err);
   });
 
   // Openings

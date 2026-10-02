@@ -1,13 +1,13 @@
 // Puzzle database loader.
 //
-// Puzzles live in per-rating-range SQLite databases under ./data/. The service
-// worker caches every range for offline use, with IndexedDB as a fallback.
+// Puzzle databases live in per-rating-range SQLite files under ./data/.
+// IndexedDB tracks app-managed downloads separately from files the player keeps.
 // That means:
 //   - "Clear Saved Data" clears the offline caches and Maia's model too.
 //     Storage) never touches these — they survive it, same as the Maia model.
 //   - Only a browser/site-data wipe removes them.
-//   - Once a database is cached, the app works fully offline for that rating
-//     range without hitting the network again.
+//   - Automatic cleanup removes only app-managed files outside the rating window.
+//   - Manually kept files stay until the player explicitly deletes them.
 //
 // Only ONE sql.js database connection is kept open at a time. Puzzles are
 // fetched with SQL queries — we never load an entire table into JavaScript,
@@ -56,82 +56,219 @@ function openPuzzleIdb() {
   });
 }
 
-async function getCachedPuzzleDbBuffer(filename) {
+async function getPuzzleDbRecord(filename) {
   const db = await openPuzzleIdb();
-  const tx = db.transaction([PUZZLE_STORE_NAME], "readonly");
-  const store = tx.objectStore(PUZZLE_STORE_NAME);
-  const record = await new Promise((resolve, reject) => {
-    const req = store.get(filename);
-    req.onsuccess = () => {
+  return await new Promise((resolve, reject) => {
+    const request = db.transaction([PUZZLE_STORE_NAME], "readonly").objectStore(PUZZLE_STORE_NAME).get(filename);
+    request.onsuccess = () => {
       db.close();
-      resolve(req.result || null);
+      resolve(request.result || null);
     };
-    req.onerror = () => {
+    request.onerror = () => {
       db.close();
-      reject(req.error);
+      reject(request.error);
     };
   });
-  if (record) return await record.data.arrayBuffer();
-
-  if ("caches" in window) {
-    const url = new URL(`./data/${filename}`, document.baseURI).href;
-    const response = await caches.match(url, { ignoreSearch: true });
-    if (response) return await response.arrayBuffer();
-  }
-  return null;
 }
 
-async function storePuzzleDbBuffer(filename, buffer) {
+async function getLegacyCachedPuzzleDbResponse(filename) {
+  if (!("caches" in window)) return null;
+  const url = new URL(`./data/${filename}`, document.baseURI).href;
+  return await caches.match(url, { ignoreSearch: true });
+}
+
+async function getCachedPuzzleDbBuffer(filename) {
+  const record = await getPuzzleDbRecord(filename);
+  if (record) return await record.data.arrayBuffer();
+  const response = await getLegacyCachedPuzzleDbResponse(filename);
+  return response ? await response.arrayBuffer() : null;
+}
+
+function notifyPuzzleStorageChanged(detail = {}) {
+  window.dispatchEvent(new CustomEvent("puzzle-storage-changed", { detail }));
+}
+
+async function storePuzzleDbBuffer(filename, buffer, { manual = false } = {}) {
+  const previous = await getPuzzleDbRecord(filename);
   const db = await openPuzzleIdb();
-  const tx = db.transaction([PUZZLE_STORE_NAME], "readwrite");
-  const store = tx.objectStore(PUZZLE_STORE_NAME);
   await new Promise((resolve, reject) => {
-    const req = store.put({
+    const transaction = db.transaction([PUZZLE_STORE_NAME], "readwrite");
+    const request = transaction.objectStore(PUZZLE_STORE_NAME).put({
       filename,
       data: new Blob([buffer]),
       timestamp: Date.now(),
       size: buffer.byteLength,
+      manual: manual || !!previous?.manual,
     });
-    req.onsuccess = () => {
+    request.onsuccess = () => {};
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => {
       db.close();
       resolve();
     };
-    req.onerror = () => {
+    transaction.onerror = () => {
       db.close();
-      reject(req.error);
+      reject(transaction.error);
+    };
+    transaction.onabort = () => {
+      db.close();
+      reject(transaction.error || new Error("Puzzle database save was aborted."));
     };
   });
 }
 
-async function isPuzzleDbCached(filename) {
+async function deleteLegacyPuzzleDbCache(filename) {
+  if (!("caches" in window)) return;
+  const url = new URL(`./data/${filename}`, document.baseURI).href;
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map(async (name) => {
+    const cache = await caches.open(name);
+    await cache.delete(url, { ignoreSearch: true });
+  }));
+}
+
+async function deletePuzzleDbRecord(filename) {
+  if (activeDbFilename === filename && activeDb) {
+    activeDb.close();
+    activeDb = null;
+    activeDbFilename = null;
+  }
   const db = await openPuzzleIdb();
-  const tx = db.transaction([PUZZLE_STORE_NAME], "readonly");
-  const store = tx.objectStore(PUZZLE_STORE_NAME);
-  const key = await new Promise((resolve, reject) => {
-    const req = store.getKey(filename);
-    req.onsuccess = () => {
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction([PUZZLE_STORE_NAME], "readwrite");
+    const request = transaction.objectStore(PUZZLE_STORE_NAME).delete(filename);
+    request.onsuccess = () => {};
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => {
       db.close();
-      resolve(req.result);
+      resolve();
     };
-    req.onerror = () => {
+    transaction.onerror = () => {
       db.close();
-      reject(req.error);
+      reject(transaction.error);
+    };
+    transaction.onabort = () => {
+      db.close();
+      reject(transaction.error || new Error("Puzzle database removal was aborted."));
     };
   });
-  if (key !== undefined && key !== null) return true;
-  if ("caches" in window) {
-    const url = new URL(`./data/${filename}`, document.baseURI).href;
-    return !!(await caches.match(url, { ignoreSearch: true }));
-  }
-  return false;
+  await deleteLegacyPuzzleDbCache(filename);
 }
 
 async function fetchPuzzleDbFromNetwork(filename) {
   const response = await fetch(`./data/${filename}`);
-  if (!response.ok) {
+  if (response.status !== 200) {
     throw new Error(`Failed to fetch ${filename}: HTTP ${response.status}`);
   }
   return await response.arrayBuffer();
+}
+
+async function listPuzzleDatabases() {
+  const db = await openPuzzleIdb();
+  const records = await new Promise((resolve, reject) => {
+    const request = db.transaction([PUZZLE_STORE_NAME], "readonly").objectStore(PUZZLE_STORE_NAME).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  const byName = new Map(records.map((record) => [record.filename, record]));
+  const inventory = [];
+
+  for (const range of PUZZLE_DB_RANGES) {
+    const record = byName.get(range.file);
+    const cachedResponse = record ? null : await getLegacyCachedPuzzleDbResponse(range.file);
+    inventory.push({
+      ...range,
+      downloaded: !!record || !!cachedResponse,
+      manual: !!record?.manual,
+      size: record?.size || Number(cachedResponse?.headers.get("content-length")) || 0,
+    });
+  }
+  return inventory;
+}
+
+const puzzleDbFileTasks = new Map();
+
+async function ensurePuzzleDbStored(filename, manual = false) {
+  let task = puzzleDbFileTasks.get(filename);
+  if (!task) {
+    task = (async () => {
+      const existing = await getPuzzleDbRecord(filename);
+      if (existing && (!manual || existing.manual)) return existing;
+
+      notifyPuzzleStorageChanged({ filename, downloading: true });
+      try {
+        let buffer = existing ? await existing.data.arrayBuffer() : await getCachedPuzzleDbBuffer(filename);
+        if (!buffer) buffer = await fetchPuzzleDbFromNetwork(filename);
+        await storePuzzleDbBuffer(filename, buffer, { manual });
+        await deleteLegacyPuzzleDbCache(filename);
+        notifyPuzzleStorageChanged({ filename });
+      } finally {
+        notifyPuzzleStorageChanged({ filename, downloading: false });
+      }
+    })();
+    puzzleDbFileTasks.set(filename, task);
+  }
+
+  try {
+    await task;
+  } finally {
+    if (puzzleDbFileTasks.get(filename) === task) puzzleDbFileTasks.delete(filename);
+  }
+
+  const record = await getPuzzleDbRecord(filename);
+  if (manual && !record?.manual) return ensurePuzzleDbStored(filename, true);
+  return record;
+}
+
+async function downloadPuzzleDatabase(filename) {
+  if (!PUZZLE_DB_RANGES.some((range) => range.file === filename)) throw new Error("Unknown puzzle database.");
+  await ensurePuzzleDbStored(filename, true);
+  notifyPuzzleStorageChanged({ filename });
+}
+
+async function deletePuzzleDatabase(filename) {
+  if (!PUZZLE_DB_RANGES.some((range) => range.file === filename)) throw new Error("Unknown puzzle database.");
+  if (activeDbFilename === filename && activeDb) {
+    activeDb.close();
+    activeDb = null;
+    activeDbFilename = null;
+  }
+  await deletePuzzleDbRecord(filename);
+  notifyPuzzleStorageChanged({ filename });
+}
+
+async function reconcilePuzzleDatabases(rating) {
+  let selectedIndex = PUZZLE_DB_RANGES.findIndex((range) => rating >= range.min && rating <= range.max);
+  if (selectedIndex < 0) selectedIndex = rating < PUZZLE_DB_RANGES[0].min ? 0 : PUZZLE_DB_RANGES.length - 1;
+  const wanted = new Set([selectedIndex - 1, selectedIndex, selectedIndex + 1]
+    .filter((index) => PUZZLE_DB_RANGES[index])
+    .map((index) => PUZZLE_DB_RANGES[index].file));
+
+  const inventory = await listPuzzleDatabases();
+  for (const item of inventory) {
+    if (item.downloaded && !item.manual && !wanted.has(item.file)) {
+      await deletePuzzleDbRecord(item.file);
+      notifyPuzzleStorageChanged({ filename: item.file });
+    }
+  }
+
+  for (const filename of wanted) {
+    try {
+      await ensurePuzzleDbStored(filename, false);
+    } catch (error) {
+      console.warn(`Could not prepare puzzle database ${filename}:`, error);
+      notifyPuzzleStorageChanged({ filename, error: error.message });
+    }
+  }
+}
+
+let puzzleDbManagementQueue = Promise.resolve();
+function managePuzzleDatabasesForRating(rating) {
+  puzzleDbManagementQueue = puzzleDbManagementQueue
+    .catch(() => {})
+    .then(() => reconcilePuzzleDatabases(rating));
+  return puzzleDbManagementQueue;
 }
 
 // ---------- sql.js engine (loaded once, reused for every database) ----------
@@ -152,7 +289,6 @@ let activeDb = null;
 let activeDbFilename = null;
 let loadingFilename = null;
 let loadingPromise = null;
-let firstLoadDone = false;
 
 async function ensureDbLoaded(filename) {
   if (activeDbFilename === filename && activeDb) return activeDb;
@@ -164,11 +300,9 @@ async function ensureDbLoaded(filename) {
   loadingPromise = (async () => {
     const SQL = await getSQL();
 
-    let buffer = await getCachedPuzzleDbBuffer(filename);
-    if (!buffer) {
-      buffer = await fetchPuzzleDbFromNetwork(filename);
-      await storePuzzleDbBuffer(filename, buffer);
-    }
+    await ensurePuzzleDbStored(filename, false);
+    const buffer = await getCachedPuzzleDbBuffer(filename);
+    if (!buffer) throw new Error(`Puzzle database ${filename} disappeared after download.`);
 
     // Close the previous connection before opening the new one — never keep
     // more than one puzzle database open at a time.
@@ -180,17 +314,6 @@ async function ensureDbLoaded(filename) {
 
     activeDb = new SQL.Database(new Uint8Array(buffer));
     activeDbFilename = filename;
-
-    if (!firstLoadDone) {
-      firstLoadDone = true;
-      // Puzzle Mode is now usable — quietly grab the remaining databases in
-      // the background, one at a time, without blocking anything.
-      setTimeout(() => {
-        startBackgroundDownloads().catch((err) =>
-          console.warn("Background puzzle database download stopped:", err)
-        );
-      }, 1500);
-    }
 
     return activeDb;
   })();
@@ -308,6 +431,9 @@ async function getRandomPuzzle(rating, excludeFens) {
   console.log("Getting puzzle near rating", rating, "...");
   const filename = dbFileForRating(rating);
   const db = await ensureDbLoaded(filename);
+  managePuzzleDatabasesForRating(rating).catch((error) => {
+    console.warn("Automatic puzzle database management failed:", error);
+  });
   console.log("Database loaded");
 
   logDbDiagnostics(db, filename);
@@ -347,32 +473,12 @@ async function getRandomPuzzle(rating, excludeFens) {
   };
 }
 
-// ---------- Background downloading of the remaining databases ----------
-
-let backgroundDownloadStarted = false;
-
-async function startBackgroundDownloads() {
-  if (backgroundDownloadStarted) return;
-  backgroundDownloadStarted = true;
-
-  for (const range of PUZZLE_DB_RANGES) {
-    const filename = range.file;
-    try {
-      const cached = await isPuzzleDbCached(filename);
-      if (cached) continue; // never redownload what's already stored
-      const buffer = await fetchPuzzleDbFromNetwork(filename);
-      await storePuzzleDbBuffer(filename, buffer);
-    } catch (err) {
-      console.warn("Failed to background-download puzzle database", filename, err);
-    }
-    // Small pause between files so this never competes with a foreground
-    // puzzle request or hammers the network.
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-}
-
 window.PuzzleDB = {
   getRandomPuzzle,
   dbFileForRating,
-  startBackgroundDownloads,
+  listPuzzleDatabases,
+  downloadPuzzleDatabase,
+  deletePuzzleDatabase,
+  manageForRating: managePuzzleDatabasesForRating,
+  ranges: PUZZLE_DB_RANGES,
 };

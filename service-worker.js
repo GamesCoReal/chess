@@ -11,16 +11,6 @@ const OFFLINE_FILES = [
   "./data/openings.json",
   "./data/all_moves_maia3.json",
   "./data/all_moves_maia3_reversed.json",
-  "./data/puzzles_0100_0800.db",
-  "./data/puzzles_0801_1000.db",
-  "./data/puzzles_1001_1200.db",
-  "./data/puzzles_1201_1400.db",
-  "./data/puzzles_1401_1600.db",
-  "./data/puzzles_1601_1800.db",
-  "./data/puzzles_1801_2000.db",
-  "./data/puzzles_2001_2200.db",
-  "./data/puzzles_2201_2400.db",
-  "./data/puzzles_2401_+.db",
   "./engines/maia3/maia-engine.js",
   "./engines/maia3/maia-tensor.js",
   "./engines/maia3/maia-worker.js",
@@ -64,9 +54,11 @@ const OFFLINE_FILES = [
   "./images/ratings/blunder.png",
 ];
 const REFRESH_ON_UPDATE = new Set([
+  "./",
   "./index.html",
   "./service-worker.js",
   "./app.js",
+  "./data/puzzles-db.js",
   "./engines/stockfish19/stockfish-evaluator.js",
   "./engines/stockfish19/stockfish-19-lite-single.js",
 ]);
@@ -85,6 +77,18 @@ async function writeStatus(status) {
 }
 
 let offlineDownloadPromise = null;
+
+async function removeLegacyPuzzleDbCacheEntries() {
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map(async (name) => {
+    const cache = await caches.open(name);
+    const requests = await cache.keys();
+    await Promise.all(requests.filter((request) => {
+      const pathname = new URL(request.url).pathname;
+      return /\/data\/puzzles_[^/]+\.db$/.test(pathname);
+    }).map((request) => cache.delete(request)));
+  }));
+}
 
 function downloadOfflineFiles() {
   if (offlineDownloadPromise) return offlineDownloadPromise;
@@ -128,6 +132,9 @@ function downloadOfflineFiles() {
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
+    // Older releases cached every puzzle shard. They are now stored in
+    // IndexedDB on demand, so release those duplicate CacheStorage copies.
+    await removeLegacyPuzzleDbCacheEntries();
     await downloadOfflineFiles();
     await self.skipWaiting();
   })());
@@ -161,6 +168,11 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
   const requestUrl = new URL(request.url);
   if (!requestUrl.href.startsWith(self.registration.scope)) return;
+
+  if (/\/data\/puzzles_[^/]+\.db$/.test(requestUrl.pathname)) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
