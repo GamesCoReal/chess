@@ -228,14 +228,17 @@ touch-action:none;
 .replay-eval-meter{position:relative}
 .eval-bar-black{flex:0 0 50%;width:100%;background:#25262a}
 .eval-bar-white{flex:0 0 50%;width:100%;background:#eee}
-.replay-lines-panel{width:100%;margin:4px 0 10px;border-top:1px solid #45464a;padding-top:7px;font-size:12px}
-.replay-lines-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;color:#d7d7d7}
-.replay-lines-heading span,.replay-lines-empty{color:#aeb0b4;font-size:11px}
-.replay-line-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:6px;align-items:start;padding:4px 2px;border-top:1px solid rgba(255,255,255,.07);font-variant-numeric:tabular-nums}
-.replay-line-rank{font-weight:700;color:#9bcaff}
-.replay-line-rank-1{color:#2478ff}
-.replay-line-rank-2{color:#80bdff}
-.replay-line-probability{white-space:nowrap;color:#c5c7ca}
+.review-insights{display:none;flex-direction:column;gap:2px;min-width:0;max-width:42vw;margin-left:8px;white-space:normal;font-size:10px;line-height:1.2;overflow-wrap:anywhere}
+.review-insights.active{display:flex}
+.review-insight-move{color:#e1e2e4;font-weight:700}
+.review-insight-pro{color:#9bd5a3}
+.review-insight-con{color:#efa2a2}
+.review-insight-link{display:block;width:100%;padding:0;border:0;background:transparent;font:inherit;color:inherit;text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.review-insight-link.review-insight-pro{color:#9bd5a3}
+.review-insight-link.review-insight-con{color:#efa2a2}
+.review-insight-link:hover,.review-insight-link:focus-visible{text-decoration:underline;text-underline-offset:2px}
+.review-insight-link:focus-visible{outline:1px solid currentColor;outline-offset:1px}
+.review-insight-status{color:#aeb0b4}
 .board-annotations marker.line-arrow-1 path{fill:#2478ff}
 .board-annotations marker.line-arrow-stockfish path{fill:#32c66a}
 .board-annotations marker.line-arrow-1 path,.board-annotations marker.line-arrow-stockfish path{stroke:none}
@@ -396,6 +399,16 @@ font-size:15px;padding:8px 10px;
 .storage-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.76)}
 .storage-overlay.hidden{display:none}
 .storage-panel{width:min(540px,100%);max-height:min(780px,92vh);overflow:auto;background:#232427;border:1px solid #555;border-radius:8px;padding:16px;color:#eee;box-shadow:0 14px 40px rgba(0,0,0,.55)}
+.motif-glossary-panel{width:min(900px,100%)}
+.motif-glossary-content{box-sizing:border-box;width:100%;height:min(72vh,680px);overflow:auto;padding:12px 16px;border:1px solid #45464a;border-radius:3px;background:#1d1e20;color:#e1e2e4;font-size:14px;line-height:1.55}
+.motif-glossary-content h1{margin:0 0 12px;font-size:24px}
+.motif-glossary-content h2{margin:20px 0 8px;padding-top:8px;border-top:1px solid #45464a;font-size:19px}
+.motif-glossary-content h3{margin:14px 0 4px;color:#a9d5ff;font-size:15px}
+.motif-glossary-content p{margin:4px 0 10px}
+.motif-glossary-content ul{margin:4px 0 10px;padding-left:22px}
+.motif-glossary-content hr{border:0;border-top:1px solid #45464a;margin:14px 0}
+.motif-glossary-content code{padding:1px 4px;border-radius:3px;background:#33353a;color:#f0d494;font-size:12px}
+.motif-glossary-link{display:inline-block;margin-top:8px;color:#9bcaff;font-size:12px}
 .storage-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #45464a;padding-bottom:10px;margin-bottom:10px}
 .storage-header h2{margin:0;font-size:18px}
 .storage-close{width:34px;height:34px;border:0;border-radius:4px;background:#3a3b3e;color:#fff;font-size:22px;cursor:pointer}
@@ -423,6 +436,7 @@ font-size:15px;padding:8px 10px;
 <button id="settings-username-btn" onclick="setUsername()">Username: You</button>
 <button id="settings-sound-btn" onclick="toggleSound()">Sound: On</button>
 <button id="settings-defaultmode-btn" onclick="cycleDefaultMode()">Default: Ranked</button>
+<button id="settings-glossary-btn" onclick="openMotifGlossary()">Motif Glossary</button>
 <button id="settings-storage-btn" onclick="openStorageManager()">Storage</button>
 <button onclick="clearAllSavedData()">Clear Saved Data</button>
 </div>
@@ -451,8 +465,16 @@ font-size:15px;padding:8px 10px;
 </section>
 </div>
 
+<div id="motif-glossary-overlay" class="storage-overlay hidden" onclick="closeMotifGlossary(event)">
+<section class="storage-panel motif-glossary-panel" role="dialog" aria-modal="true" aria-labelledby="motif-glossary-title" onclick="event.stopPropagation()">
+<header class="storage-header"><h2 id="motif-glossary-title">Motif Glossary</h2><button type="button" class="storage-close" aria-label="Close motif glossary" onclick="closeMotifGlossary()">&times;</button></header>
+<article id="motif-glossary-content" class="motif-glossary-content" aria-live="polite">Loading motifs.md...</article>
+<a class="motif-glossary-link" href="./motifs.md" target="_blank" rel="noopener">Open motifs.md directly</a>
+</section>
+</div>
+
 <div id="board-wrap">
-<div class="player" id="maia-player"><span class="player-name">Maia (<span id="maia-rating">250</span>)<span class="capture-slot name-capture-slot"></span></span><span class="turn-tag" id="black-turn-tag">Black's move</span><span class="capture-slot clock-capture-slot"></span><span id="maia-clock">10:00</span></div>
+<div class="player" id="maia-player"><span class="player-name">Maia (<span id="maia-rating">250</span>)<span id="maia-review-insights" class="review-insights"></span><span class="capture-slot name-capture-slot"></span></span><span class="turn-tag" id="black-turn-tag">Black's move</span><span class="capture-slot clock-capture-slot"></span><span id="maia-clock">10:00</span></div>
 
 <div id="board-with-eval">
 <div id="board"></div>
@@ -464,7 +486,7 @@ font-size:15px;padding:8px 10px;
 </div>
 </div>
 
-<div class="player" id="your-player"><span class="player-name"><span id="your-name-label">You</span> (<span id="your-rating">250</span>)<span class="capture-slot name-capture-slot"></span></span><span class="turn-tag" id="white-turn-tag">White's move</span><span class="capture-slot clock-capture-slot"></span><span id="your-clock">10:00</span></div>
+<div class="player" id="your-player"><span class="player-name"><span id="your-name-label">You</span> (<span id="your-rating">250</span>)<span id="your-review-insights" class="review-insights"></span><span class="capture-slot name-capture-slot"></span></span><span class="turn-tag" id="white-turn-tag">White's move</span><span class="capture-slot clock-capture-slot"></span><span id="your-clock">10:00</span></div>
 
 <div class="overlay hidden" id="drill-picker-overlay">
 <div class="overlay-card">
@@ -559,7 +581,7 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./engines/stockfish19/stockfish-evaluator.js?v=12" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js?v=4" defer></script>
-<script src="./app.js?v=45" defer></script>
+<script src="./app.js?v=57" defer></script>
 
 </body>
 </html>

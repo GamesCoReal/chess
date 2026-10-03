@@ -25,6 +25,11 @@ let currentSolution = [];
 
 let replayGame = null;
 let replayMoves = [];
+let replayOriginalMoves = [];
+let replayOriginalMoveFens = [];
+let replayOriginalMoveMotifs = [];
+let replayOriginalClockHistory = [];
+let replayBranchStart = null;
 let replayIndex = 0;
 let replayAnalysis = [];
 let replayAnalyzing = false;
@@ -35,8 +40,17 @@ let replayPlayerColor = "w";
 let replayCandidateLines = [];
 let replayRankedLines = [];
 let replayStockfishBestLine = null;
-let replayLinesPanelEl = null;
-let replayLineStatus = "Waiting for Stockfish...";
+let replayMotifModulePromise = null;
+let replayMoveFens = [];
+let replayMoveMotifs = [];
+let replayMotifRun = 0;
+
+const NEGATIVE_MOTIF_IDS = new Set([
+  "hangs", "loses_castling", "bishop_pair_lost", "bad_bishop", "knight_on_rim",
+  "iqp_self", "hanging_pawns_self", "color_complex_self", "doubled_pawns_self",
+  "backward_pawn_self", "isolated_pawn", "trades_when_behind",
+]);
+const NEUTRAL_MOTIF_IDS = new Set(["stalemate", "insufficient_material"]);
 
 const MOVE_ICONS = {
   brilliant: "./images/brilliant.png",
@@ -182,6 +196,173 @@ function updateDefaultModeButtonLabel() {
   if (btn) btn.textContent = "Default: " + defaultMode.charAt(0).toUpperCase() + defaultMode.slice(1);
 }
 
+async function openMotifGlossary(motifId = null) {
+  document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
+  document.getElementById("motif-glossary-overlay")?.classList.remove("hidden");
+  const content = document.getElementById("motif-glossary-content");
+  if (!content) return;
+  content.textContent = "Loading motifs.md...";
+  try {
+    const response = await fetch("./motifs.md");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    renderMotifGlossaryMarkdown(await response.text(), content);
+    if (motifId) {
+      const targetId = findMotifGlossaryHeading(motifId, content);
+      const heading = Array.from(content.querySelectorAll("h1, h2, h3, h4, h5, h6"))
+        .find((item) => item.id === targetId);
+      heading?.scrollIntoView({ block: "start" });
+    }
+  } catch (error) {
+    content.textContent = `Could not load motifs.md: ${error.message}`;
+  }
+}
+window.openMotifGlossary = openMotifGlossary;
+
+function renderMotifGlossaryMarkdown(markdown, container) {
+  const lines = markdown.replace(/\r/g, "").split("\n");
+  const headingIds = new Map();
+  const isBlockStart = (line) => /^(#{1,6})\s+/.test(line) || /^[-*]\s+/.test(line) || /^---+\s*$/.test(line);
+  const appendInline = (parent, text) => {
+    const tokens = /(`[^`]+`|\*\*[^*]+\*\*)/g;
+    let cursor = 0;
+    for (const match of text.matchAll(tokens)) {
+      parent.appendChild(document.createTextNode(text.slice(cursor, match.index)));
+      const token = match[0];
+      const element = document.createElement(token.startsWith("`") ? "code" : "strong");
+      element.textContent = token.startsWith("`") ? token.slice(1, -1) : token.slice(2, -2);
+      parent.appendChild(element);
+      cursor = match.index + token.length;
+    }
+    parent.appendChild(document.createTextNode(text.slice(cursor)));
+  };
+
+  container.replaceChildren();
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index].trim();
+    if (!line) {
+      index++;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      const element = document.createElement(`h${heading[1].length}`);
+      appendInline(element, heading[2]);
+      const slug = heading[2].toLowerCase()
+        .replace(/^\d+\.\s*/, "")
+        .replace(/`/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "section";
+      const occurrence = (headingIds.get(slug) || 0) + 1;
+      headingIds.set(slug, occurrence);
+      element.id = occurrence === 1 ? slug : `${slug}-${occurrence}`;
+      container.appendChild(element);
+      index++;
+      continue;
+    }
+
+    if (/^---+\s*$/.test(line)) {
+      container.appendChild(document.createElement("hr"));
+      index++;
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      const list = document.createElement("ul");
+      while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
+        const item = document.createElement("li");
+        appendInline(item, lines[index].trim().replace(/^[-*]\s+/, ""));
+        list.appendChild(item);
+        index++;
+      }
+      container.appendChild(list);
+      continue;
+    }
+
+    const paragraph = [];
+    while (index < lines.length && lines[index].trim() && !isBlockStart(lines[index].trim())) {
+      paragraph.push(lines[index].trim());
+      index++;
+    }
+    const element = document.createElement("p");
+    appendInline(element, paragraph.join(" "));
+    container.appendChild(element);
+  }
+}
+
+const MOTIF_GLOSSARY_ALIASES = {
+  castles_kingside: ["kingside castling", "castling"],
+  castles_queenside: ["queenside castling", "castling"],
+  castles: ["castling"],
+  connects_rooks: ["connect the rooks"],
+  capture: ["capture or trade"],
+  queen_trade: ["capture or trade", "simplification", "exchange"],
+  piece_trade: ["capture or trade", "exchange"],
+  simplifies: ["simplification"],
+  trades_when_behind: ["simplification", "exchange"],
+  trades_into_endgame: ["simplification", "exchange"],
+  exchange_sacrifice: ["sacrifice or hangs", "sacrifice", "exchange"],
+  check: ["check class", "check"],
+  discovered_check: ["check class", "check"],
+  double_check: ["check class", "check"],
+  threatens: ["threats and creates", "attack"],
+  creates_threat: ["threats and creates"],
+  attacks_king: ["attacks king"],
+  eyes_king_zone: ["eyes king zone"],
+  removes_defender: ["removal of defender"],
+  traps_piece: ["traps piece", "trapped piece"],
+  sacrifice: ["sacrifice or hangs", "sacrifice"],
+  hangs: ["sacrifice or hangs", "hanging piece"],
+  defends: ["defends hanging", "pawn structure changes"],
+  smothered_hint: ["smothered mate hint", "smothered mate"],
+  anastasia_mate_threat: ["anastasia mate threat"],
+  bodens_mate_threat: ["bodens mate threat"],
+  arabian_mate_threat: ["arabian mate threat"],
+  back_rank_mate_threat: ["back rank mate threat"],
+  rook_lift: ["rook lift"],
+  rook_seventh: ["rook on the seventh rank"],
+  knight_invasion: ["piece invasion"],
+  rook_play: ["open file rook", "rook activity"],
+  bishop_pair_lost: ["bishop pair"],
+  iqp_self: ["isolated queen pawn", "pawn structure changes"],
+  iqp_them: ["isolated queen pawn", "pawn structure changes"],
+  doubled_pawns_them: ["doubled pawns", "pawn structure changes"],
+  hanging_pawns_self: ["hanging pawns", "pawn structure changes"],
+  backward_pawn_self: ["backward pawn", "pawn structure changes"],
+  opens_file_for: ["opens line for"],
+  opens_diagonal_for: ["opens line for"],
+  prepares_castling_kingside: ["castling"],
+  prepares_castling_queenside: ["castling"],
+  loses_castling: ["loss of castling rights", "castling"],
+  activates: ["piece activity", "development"],
+};
+
+function findMotifGlossaryHeading(motifId, container) {
+  const normalize = (value) => value.toLowerCase()
+    .replace(/^\d+\.\s*/, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const headings = Array.from(container.querySelectorAll("h1, h2, h3, h4, h5, h6"));
+  const normalizedHeadings = headings.map((heading) => normalize(heading.textContent));
+  const candidates = [
+    motifId.replace(/_/g, " "),
+    ...(MOTIF_GLOSSARY_ALIASES[motifId] || []),
+  ].map(normalize);
+  for (const candidate of candidates) {
+    const matches = headings.filter((heading, index) => normalizedHeadings[index] === candidate);
+    if (matches.length) return matches[matches.length - 1].id;
+  }
+  return headings.find((heading) => /^\d+ tactics$/i.test(normalize(heading.textContent)))?.id
+    || headings[0]?.id;
+}
+
+function closeMotifGlossary(event) {
+  const overlay = document.getElementById("motif-glossary-overlay");
+  if (!overlay || (event && event.target !== overlay)) return;
+  overlay.classList.add("hidden");
+}
+window.closeMotifGlossary = closeMotifGlossary;
+
 
 // --- Clear all saved data ---
 async function clearAllSavedData() {
@@ -222,6 +403,8 @@ let pendingMaiaGrading = null;
 
 let whiteTime = STARTING_CLOCK_SECONDS;
 let blackTime = STARTING_CLOCK_SECONDS;
+let moveClockHistory = [];
+let replayClockHistory = [];
 let whiteClockStarted = false;
 let blackClockStarted = false;
 
@@ -1156,19 +1339,34 @@ function formatClock(totalSeconds) {
 }
 
 function updateClockDisplays() {
-  const yourTime =
-    playerColor === "w" ? whiteTime : blackTime;
+  const displayColor = inReplayMode ? replayPlayerColor : playerColor;
+  const replaySnapshot = inReplayMode
+    ? replayClockHistory[replayIndex - 1]
+    : null;
+  const hasReplayClock = !inReplayMode || replayIndex === 0 || Number.isFinite(replaySnapshot?.white);
+  const shownWhiteTime = replaySnapshot?.white ?? (inReplayMode ? STARTING_CLOCK_SECONDS : whiteTime);
+  const shownBlackTime = replaySnapshot?.black ?? (inReplayMode ? STARTING_CLOCK_SECONDS : blackTime);
+  const yourTime = displayColor === "w" ? shownWhiteTime : shownBlackTime;
+  const maiaTime = displayColor === "w" ? shownBlackTime : shownWhiteTime;
 
-  const maiaTime =
-    playerColor === "w" ? blackTime : whiteTime;
+  yourClockEl.textContent = hasReplayClock ? formatClock(yourTime) : "--:--";
+  maiaClockEl.textContent = hasReplayClock ? formatClock(maiaTime) : "--:--";
+}
 
-  yourClockEl.textContent = formatClock(yourTime);
-  maiaClockEl.textContent = formatClock(maiaTime);
+function recordMoveClockSnapshot() {
+  const moveIndex = game.history().length - 1;
+  if (moveIndex < 0) return;
+  moveClockHistory[moveIndex] = {
+    white: whiteTime,
+    black: blackTime,
+    movedAt: Date.now(),
+  };
 }
 
 function resetClocks() {
   whiteTime = STARTING_CLOCK_SECONDS;
   blackTime = STARTING_CLOCK_SECONDS;
+  moveClockHistory = [];
 
   // White starts the game, so White's clock starts immediately.
   whiteClockStarted = true;
@@ -1328,10 +1526,19 @@ function openPastGame(entry) {
   replayMoves = replayGame.history({
     verbose: true
   });
+  replayMoveFens = captureReplayMoveFens();
+  replayMoveMotifs = Array(replayMoves.length).fill(null);
+  replayOriginalMoves = replayMoves.map((move) => ({ ...move }));
+  replayOriginalMoveFens = replayMoveFens;
+  replayOriginalMoveMotifs = replayMoveMotifs;
+  const motifRunId = ++replayMotifRun;
   replayAnalysis = Array(replayMoves.length).fill(null);
   replayCandidateLines = [];
   replayRankedLines = [];
   replayPlayerColor = entry.playerColor === "b" ? "b" : entry.playerColor === "w" ? "w" : playerColor;
+  replayClockHistory = Array.isArray(entry.clockHistory) ? entry.clockHistory : [];
+  replayOriginalClockHistory = replayClockHistory.slice();
+  replayBranchStart = null;
 
   // Start replay at the beginning.
   replayGame.reset();
@@ -1352,10 +1559,12 @@ function openPastGame(entry) {
 
   // Show replay controls.
   createReplayControls();
+  analyzeReplayPlayedMoves(motifRunId);
 
   // Render the saved game directly on the EXISTING board.
   renderBoard();
   renderMoveList();
+  updateClockDisplays();
   analyzeReplayPosition();
 
   console.log(
@@ -1365,6 +1574,44 @@ function openPastGame(entry) {
   );
 }
 
+function captureReplayMoveFens() {
+  const fens = Array(replayMoves.length);
+  for (let index = replayMoves.length - 1; index >= 0; index--) {
+    if (!replayGame.undo()) break;
+    fens[index] = replayGame.fen();
+  }
+  for (const move of replayMoves) replayGame.move(move);
+  return fens;
+}
+
+async function analyzeReplayPlayedMoves(runId) {
+  try {
+    const batchSize = 6;
+    for (let start = 0; start < replayMoves.length; start += batchSize) {
+      const end = Math.min(start + batchSize, replayMoves.length);
+      const results = await Promise.all(replayMoves.slice(start, end).map(async (move, offset) => {
+        const index = start + offset;
+        const uci = move.from + move.to + (move.promotion || "");
+        return window.analyzePositionalChessMove(replayMoveFens[index], uci);
+      }));
+      if (runId !== replayMotifRun || !inReplayMode) return;
+      results.forEach((result, offset) => {
+        replayMoveMotifs[start + offset] = result?.error ? [] : (result?.motifs || []);
+      });
+      renderMoveList();
+      renderReplayMoveInsights();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  } catch (error) {
+    if (runId !== replayMotifRun) return;
+    console.warn("Could not analyze played moves for motifs:", error);
+  } finally {
+    if (runId === replayMotifRun) {
+      renderMoveList();
+      renderReplayMoveInsights();
+    }
+  }
+}
 
 // ------------------------------------------------------------
 // Replay controls
@@ -1377,7 +1624,6 @@ function createReplayControls() {
   if (replayAnalysisPanelEl) {
     replayAnalysisPanelEl.remove();
   }
-  if (replayLinesPanelEl) replayLinesPanelEl.remove();
 
   replayControlsEl = document.createElement("div");
 
@@ -1429,12 +1675,6 @@ function createReplayControls() {
     document.body.appendChild(replayControlsEl);
   }
 
-  replayLinesPanelEl = document.createElement("section");
-  replayLinesPanelEl.id = "replay-lines-panel";
-  replayLinesPanelEl.className = "replay-lines-panel";
-  replayControlsEl.insertAdjacentElement("afterend", replayLinesPanelEl);
-  renderReplayLinesPanel();
-
   document
     .getElementById("replay-exit")
     .addEventListener("click", exitReplay);
@@ -1471,79 +1711,31 @@ function updateReplayControls() {
 
   position.textContent =
     replayIndex + " / " + replayMoves.length;
+  renderReplayMoveInsights();
 }
 
-function formatReplayPv(pv, fen) {
-  const lineGame = new Chess(fen);
-  const notation = [];
-  for (let index = 0; index < pv.length; index++) {
-    const uci = pv[index];
-    if (uci.length < 4) break;
-    const color = lineGame.turn();
-    const moveNumber = Math.floor((replayIndex + index) / 2) + 1;
-    const move = lineGame.move({
-      from: uci.slice(0, 2),
-      to: uci.slice(2, 4),
-      promotion: uci[4] || "q",
-    });
-    if (!move) break;
-    notation.push(color === "w"
-      ? `${moveNumber}. ${move.san}`
-      : (index === 0 ? `${moveNumber}... ${move.san}` : move.san));
+function getStockfishSuggestion(maiaLine = null) {
+  const first = replayCandidateLines.find((line) => line.multipv === 1) || replayCandidateLines[0];
+  const second = replayCandidateLines.find((line) => line.multipv === 2) || replayCandidateLines[1];
+  const sameFirstMove = maiaLine?.pv?.[0] && maiaLine.pv[0] === first?.pv?.[0];
+  return sameFirstMove ? second || first : first || second;
+}
+
+function loadReplayMotifModule() {
+  if (!replayMotifModulePromise) {
+    replayMotifModulePromise = import("./engines/motifs/motif-detector.mjs?v=1")
+      .catch((error) => {
+        replayMotifModulePromise = null;
+        throw error;
+      });
   }
-  return notation.join(" ");
+  return replayMotifModulePromise;
 }
 
-function formatLineLikelihood(probability) {
-  const percent = probability * 100;
-  if (!Number.isFinite(percent) || percent <= 0) return "0%";
-  return percent < 0.01 ? `${percent.toExponential(2)}%` : `${percent.toFixed(2)}%`;
-}
-
-function renderReplayLinesPanel() {
-  if (!replayLinesPanelEl) return;
-  replayLinesPanelEl.replaceChildren();
-
-  const heading = document.createElement("div");
-  heading.className = "replay-lines-heading";
-  const title = document.createElement("strong");
-  title.textContent = "Candidate lines";
-  const detail = document.createElement("span");
-  detail.textContent = `Stockfish depth 10 · Maia at ${myRating}`;
-  heading.append(title, detail);
-  replayLinesPanelEl.appendChild(heading);
-
-  const status = document.createElement("div");
-  status.className = "replay-lines-empty";
-  status.textContent = replayLineStatus;
-  replayLinesPanelEl.appendChild(status);
-
-  const lines = replayRankedLines.length ? replayRankedLines : replayCandidateLines;
-  if (!lines.length) return;
-
-  const list = document.createElement("div");
-  list.className = "replay-lines-list";
-  lines.forEach((line, index) => {
-    const row = document.createElement("div");
-    row.className = "replay-line-row";
-    const rank = document.createElement("span");
-    rank.className = `replay-line-rank replay-line-rank-${index + 1}`;
-    rank.textContent = `${index + 1}.`;
-    const moves = document.createElement("span");
-    moves.textContent = line.san || line.pv.join(" ");
-    const likelihood = document.createElement("span");
-    likelihood.className = "replay-line-probability";
-    const scoreText = line.type === "mate"
-      ? `${line.value > 0 ? "" : "-"}M${Math.abs(line.value)}`
-      : `${line.value >= 0 ? "+" : ""}${(line.value / 100).toFixed(1)}`;
-    likelihood.textContent = Number.isFinite(line.probability)
-      ? `SF ${scoreText} · Maia ${formatLineLikelihood(line.probability)}`
-      : `SF ${scoreText}`;
-    row.append(rank, moves, likelihood);
-    list.appendChild(row);
-  });
-  replayLinesPanelEl.appendChild(list);
-}
+window.analyzePositionalChessMove = async (fen, uci) =>
+  (await loadReplayMotifModule()).analyzeMove(fen, uci);
+window.analyzePositionalChessPv = async (fen, ucis, plies = ucis.length) =>
+  (await loadReplayMotifModule()).analyzePv(fen, ucis, plies);
 
 // MaiaTensor.processOutputsMaia3 returns value from White's perspective.
 // Convert both evaluations to the mover's perspective before grading.
@@ -1723,12 +1915,25 @@ function renderReplayAnalysisPanel(completed = replayAnalysis.length, total = re
 // Go to beginning
 // ------------------------------------------------------------
 
+function restoreOriginalReplayLine(index) {
+  replayGame.reset();
+  replayMoves = replayOriginalMoves.map((move) => ({ ...move }));
+  for (let i = 0; i < index; i++) replayGame.move(replayMoves[i]);
+  replayIndex = index;
+  replayMoveFens = replayOriginalMoveFens;
+  replayMoveMotifs = replayOriginalMoveMotifs;
+  replayClockHistory = replayOriginalClockHistory.slice();
+  replayBranchStart = null;
+  replayAnalysisRun++;
+  replayAnalysis = Array(replayMoves.length).fill(null);
+  replayMotifRun++;
+  analyzeReplayPlayedMoves(replayMotifRun);
+}
+
 function replayStart() {
   if (!replayGame) return;
 
-  replayGame.reset();
-
-  replayIndex = 0;
+  restoreOriginalReplayLine(0);
 
   lastMoveFrom = null;
   lastMoveTo = null;
@@ -1736,6 +1941,7 @@ function replayStart() {
 
   renderBoard();
   renderMoveList();
+  updateClockDisplays();
   updateReplayControls();
   analyzeReplayPosition();
 }
@@ -1752,17 +1958,14 @@ function replayPrevious() {
     return;
   }
 
-  replayGame.reset();
-
-  for (
-    let i = 0;
-    i < replayIndex - 1;
-    i++
-  ) {
-    replayGame.move(replayMoves[i]);
+  const previousIndex = replayIndex - 1;
+  if (replayBranchStart !== null && previousIndex <= replayBranchStart) {
+    restoreOriginalReplayLine(previousIndex);
+  } else {
+    replayGame.reset();
+    for (let i = 0; i < previousIndex; i++) replayGame.move(replayMoves[i]);
+    replayIndex = previousIndex;
   }
-
-  replayIndex--;
 
   const last =
     replayIndex > 0
@@ -1779,6 +1982,7 @@ function replayPrevious() {
 
   renderBoard();
   renderMoveList();
+  updateClockDisplays();
   updateReplayControls();
   analyzeReplayPosition();
 }
@@ -1814,6 +2018,7 @@ function replayNext() {
 
   renderBoard();
   renderMoveList();
+  updateClockDisplays();
   updateReplayControls();
   analyzeReplayPosition();
 }
@@ -1864,6 +2069,7 @@ function replayEnd() {
 function exitReplay() {
   replayAnalysisRun++;
   replayStockfishRun++;
+  replayMotifRun++;
   window.stockfishEvaluator?.stop();
   clockLastTick = performance.now();
   replayAnalyzing = false;
@@ -1882,11 +2088,18 @@ function exitReplay() {
 
   replayGame = null;
   replayMoves = [];
+  replayMoveFens = [];
+  replayMoveMotifs = [];
+  replayClockHistory = [];
+  replayOriginalMoves = [];
+  replayOriginalMoveFens = [];
+  replayOriginalMoveMotifs = [];
+  replayOriginalClockHistory = [];
+  replayBranchStart = null;
   replayIndex = 0;
   replayAnalysis = [];
   replayCandidateLines = [];
   replayRankedLines = [];
-  replayLineStatus = "Waiting for Stockfish...";
   replayReturnGame = null;
 
   selectedSquare = null;
@@ -1902,14 +2115,11 @@ function exitReplay() {
     replayAnalysisPanelEl.remove();
     replayAnalysisPanelEl = null;
   }
-  if (replayLinesPanelEl) {
-    replayLinesPanelEl.remove();
-    replayLinesPanelEl = null;
-  }
 
   renderBoard();
   renderMoveList();
   updateStatusForTurn();
+  updateClockDisplays();
 
   console.log("Exited replay mode.");
 }
@@ -1936,6 +2146,7 @@ function saveCurrentGame() {
     saveKey(currentMode),
     JSON.stringify({
       pgn: game.pgn(),
+      clockHistory: moveClockHistory,
       resigned: gameResigned,
       resignedBy,
       timedOut: gameTimedOut,
@@ -1956,6 +2167,7 @@ function loadGame(mode) {
   const blank = {
     game: new Chess(), resigned: false, resignedBy: null, timedOut: false, timedOutColor: null,
     historyRecorded: false, playerColor: null,
+    clockHistory: [],
     whiteTime: STARTING_CLOCK_SECONDS, blackTime: STARTING_CLOCK_SECONDS,
     whiteClockStarted: false, blackClockStarted: false,
   };
@@ -1968,6 +2180,7 @@ function loadGame(mode) {
         game: loaded, resigned: !!d.resigned, resignedBy: d.resignedBy || null,
         timedOut: !!d.timedOut, timedOutColor: d.timedOutColor || null,
         historyRecorded: !!d.historyRecorded, playerColor: d.playerColor || "w",
+        clockHistory: Array.isArray(d.clockHistory) ? d.clockHistory : [],
         whiteTime: typeof d.whiteTime === "number" ? d.whiteTime : STARTING_CLOCK_SECONDS,
         blackTime: typeof d.blackTime === "number" ? d.blackTime : STARTING_CLOCK_SECONDS,
         whiteClockStarted: !!d.whiteClockStarted, blackClockStarted: !!d.blackClockStarted,
@@ -1990,6 +2203,7 @@ function resetForNewGame(mode) {
   gameTimedOut = false;
   timedOutColor = null;
   historyRecorded = false;
+  moveClockHistory = [];
   playerMoveStats = freshStats();
   maiaMoveStatsObj = freshStats();
   pendingMaiaGrading = null;
@@ -2002,6 +2216,7 @@ function applyLoadedState(loaded) {
   gameTimedOut = loaded.timedOut;
   timedOutColor = loaded.timedOutColor;
   historyRecorded = loaded.historyRecorded;
+  moveClockHistory = loaded.clockHistory;
   whiteTime = loaded.whiteTime;
   blackTime = loaded.blackTime;
   whiteClockStarted = loaded.whiteClockStarted;
@@ -2232,6 +2447,7 @@ function renderBoard() {
   renderCapturedPieces();
 
   renderReplayEvalBar();
+  if (inReplayMode) updateClockDisplays();
 }
 
 function renderReplayEvalBar() {
@@ -2293,7 +2509,7 @@ function renderCapturedPieces() {
   }
 
   whiteRow.querySelector(".clock-capture-slot").appendChild(capturedPieceTrays.w);
-  blackRow.querySelector(".name-capture-slot").appendChild(capturedPieceTrays.b);
+  blackRow.querySelector(".clock-capture-slot").appendChild(capturedPieceTrays.b);
 }
 
 function updateReplayEvalBar(score, turn) {
@@ -2330,8 +2546,6 @@ function analyzeReplayPosition() {
   replayCandidateLines = [];
   replayRankedLines = [];
   replayStockfishBestLine = null;
-  replayLineStatus = "Stockfish is searching five lines to depth 10...";
-  renderReplayLinesPanel();
   renderBoardAnnotations();
   if (!evaluator) {
     if (scoreLabel) scoreLabel.textContent = "SF !";
@@ -2358,38 +2572,29 @@ function analyzeReplayPosition() {
       clearTimeout(watchdog);
       replayCandidateLines = lines;
       replayStockfishBestLine = lines.find((line) => line.multipv === 1) || lines[0];
-      const depth = Math.max(...lines.map((line) => line.depth || 0));
-      replayLineStatus = `Stockfish depth ${depth}/10 · Maia will rank all five lines`;
       updateReplayEvalBar(lines[0], turn);
-      renderReplayLinesPanel();
       renderBoardAnnotations();
     },
   }).then(async (lines) => {
     clearTimeout(watchdog);
     if (runId !== replayStockfishRun || !inReplayMode) return;
     if (!lines?.length) {
-      replayLineStatus = "Stockfish did not return candidate lines.";
-      renderReplayLinesPanel();
       return;
     }
     replayCandidateLines = lines;
     replayStockfishBestLine = lines.find((line) => line.multipv === 1) || lines[0];
-    replayLineStatus = `Maia is ranking ${lines.length} lines at your Elo...`;
-    renderReplayLinesPanel();
+    if (runId !== replayStockfishRun || !inReplayMode) return;
     renderBoardAnnotations();
 
     const ranked = await rankReplayCandidateLines(lines, fen, runId);
     if (runId !== replayStockfishRun || !inReplayMode || !ranked) return;
     replayRankedLines = ranked;
-    replayLineStatus = `Ranked by Maia likelihood · your Elo ${myRating}`;
-    renderReplayLinesPanel();
+    replayStockfishBestLine = getStockfishSuggestion(ranked[0]);
     renderBoardAnnotations();
   }).catch((error) => {
     clearTimeout(watchdog);
     if (runId === replayStockfishRun) {
       console.error("Could not evaluate replay position with Stockfish:", error);
-      replayLineStatus = `Analysis failed: ${error.message}`;
-      renderReplayLinesPanel();
       if (scoreLabel) {
         scoreLabel.textContent = "SF !";
         scoreLabel.title = error.message;
@@ -2432,10 +2637,7 @@ async function rankReplayCandidateLines(lines, fen, runId) {
       ...line,
       probability,
       plies,
-      san: formatReplayPv(line.pv.slice(0, plies), fen),
     });
-    replayLineStatus = `Maia ranked ${index + 1}/${lines.length} lines at your Elo...`;
-    renderReplayLinesPanel();
   }
 
   return ranked.sort((a, b) => b.probability - a.probability || a.multipv - b.multipv);
@@ -2480,6 +2682,13 @@ function onReplaySquareClick(sq) {
     promotion = /^[qrbn]$/.test(normalizedChoice) ? normalizedChoice : "q";
   }
 
+  const originalNextMove = replayOriginalMoves[replayIndex];
+  const followsOriginalLine = originalNextMove &&
+    originalNextMove.from === selectedSquare &&
+    originalNextMove.to === sq &&
+    (originalNextMove.promotion || "") === (promotion === "q" && !promotes ? "" : promotion);
+  const startsBranch = !followsOriginalLine && replayBranchStart === null;
+
   const move = replayGame.move({ from: selectedSquare, to: sq, promotion });
   if (!move) {
     if (replayGame.get(sq)) selectedSquare = sq;
@@ -2488,15 +2697,26 @@ function onReplaySquareClick(sq) {
     return;
   }
 
+  if (startsBranch) {
+    replayBranchStart = replayIndex;
+    replayAnalysisRun++;
+  }
+
   replayMoves = replayGame.history({ verbose: true });
   replayIndex = replayMoves.length;
-  replayAnalysis = Array(replayMoves.length).fill(null);
+  if (replayBranchStart !== null) {
+    replayMoveFens = captureReplayMoveFens();
+    replayMoveMotifs = Array(replayMoves.length).fill(null);
+    replayClockHistory = replayOriginalClockHistory.slice(0, replayBranchStart);
+    replayAnalysis = Array(replayMoves.length).fill(null);
+    const motifRunId = ++replayMotifRun;
+    analyzeReplayPlayedMoves(motifRunId);
+  }
   lastMoveFrom = move.from;
   lastMoveTo = move.to;
   selectedSquare = null;
   replayCandidateLines = [];
   replayRankedLines = [];
-  replayLineStatus = "Stockfish is searching five lines to depth 10...";
 
   renderBoard();
   renderMoveList();
@@ -2719,18 +2939,75 @@ function renderMoveList() {
                   : game
               )
         );
-  const hist = activeGame ? activeGame.history() : [];
-  let html = "";
-  for (let i = 0; i < hist.length; i += 2) {
-    const moveNum = i / 2 + 1;
-    html += `<span class="movenum">${moveNum}.</span> <span class="move">${hist[i]}</span> `;
-    if (hist[i + 1]) {
-      html += `<span class="move">${hist[i + 1]}</span> `;
+  const history = activeGame ? activeGame.history() : [];
+  moveListEl.replaceChildren();
+  history.forEach((san, index) => {
+    if (index % 2 === 0) {
+      const number = document.createElement("span");
+      number.className = "movenum";
+      number.textContent = `${Math.floor(index / 2) + 1}.`;
+      moveListEl.appendChild(number);
+      moveListEl.appendChild(document.createTextNode(" "));
     }
-  }
-  moveListEl.innerHTML = html;
+
+    const move = document.createElement("span");
+    move.className = "move";
+    move.textContent = san;
+    moveListEl.append(move, document.createTextNode(" "));
+  });
   const scrollParent = moveListEl.closest(".moves");
   if (scrollParent) scrollParent.scrollLeft = scrollParent.scrollWidth;
+}
+
+function renderReplayMoveInsights() {
+  const yourInsights = document.getElementById("your-review-insights");
+  const maiaInsights = document.getElementById("maia-review-insights");
+  if (!yourInsights || !maiaInsights) return;
+
+  for (const element of [yourInsights, maiaInsights]) {
+    element.classList.remove("active");
+    element.replaceChildren();
+  }
+  if (!inReplayMode || replayIndex <= 0) return;
+
+  const moveIndex = replayIndex - 1;
+  const move = replayMoves[moveIndex];
+  if (!move) return;
+
+  const target = move.color === replayPlayerColor ? yourInsights : maiaInsights;
+  target.classList.add("active");
+  const moveLabel = document.createElement("span");
+  moveLabel.className = "review-insight-move";
+  moveLabel.textContent = move.san;
+  target.appendChild(moveLabel);
+  const motifs = replayMoveMotifs[moveIndex];
+  if (motifs === null || motifs === undefined) {
+    const status = document.createElement("span");
+    status.className = "review-insight-status";
+    status.textContent = "Analyzing...";
+    target.appendChild(status);
+    return;
+  }
+
+  const pros = motifs.filter((motif) => !NEGATIVE_MOTIF_IDS.has(motif.id) && !NEUTRAL_MOTIF_IDS.has(motif.id));
+  const cons = motifs.filter((motif) => NEGATIVE_MOTIF_IDS.has(motif.id));
+  for (const [kind, list] of [["pro", pros], ["con", cons]]) {
+    list.forEach((motif) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = `review-insight-link review-insight-${kind}`;
+      item.textContent = `${motif.label || motif.id}: ${motif.phrase}`;
+      item.title = "Open this motif in the glossary";
+      item.addEventListener("click", () => openMotifGlossary(motif.id));
+      target.appendChild(item);
+    });
+  }
+  if (!pros.length && !cons.length) {
+    const status = document.createElement("span");
+    status.className = "review-insight-status";
+    status.textContent = "No notable motifs detected";
+    target.appendChild(status);
+  }
 }
 
 // ---------- Move classification ----------
@@ -2909,6 +3186,7 @@ async function runMaiaTurn() {
     lastMoveFrom = from;
     lastMoveTo = to;
     clockLastTick = performance.now();
+    recordMoveClockSnapshot();
 
     playGameSound(
       soundForMove(
@@ -3163,6 +3441,7 @@ async function onSquareClick(sq) {
   lastMoveFrom = from;
   lastMoveTo = to;
   clockLastTick = performance.now();
+  recordMoveClockSnapshot();
 
   playGameSound(
     soundForMove(
@@ -3412,6 +3691,8 @@ async function onSquareClick(sq) {
 
       lastMoveFrom = mFrom;
       lastMoveTo = mTo;
+      clockLastTick = performance.now();
+      recordMoveClockSnapshot();
 
       playGameSound(
         soundForMove(
@@ -3621,6 +3902,7 @@ function pushHistoryEntry() {
   const entry = {
     pgn: game.pgn(),
     playerColor,
+    clockHistory: moveClockHistory.slice(0, game.history().length),
     
     result: resultLabel,
     rated: currentMode === "rated",

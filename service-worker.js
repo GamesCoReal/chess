@@ -1,4 +1,5 @@
 const CACHE_NAME = "chess-offline-v3";
+// Refresh replay branching and pros/cons styling in the app shell.
 const STATUS_URL = new URL("__offline_status__", self.registration.scope).href;
 
 const OFFLINE_FILES = [
@@ -8,6 +9,7 @@ const OFFLINE_FILES = [
   "./app.js",
   "./chess.min.js",
   "./data/puzzles-db.js",
+  "./motifs.md",
   "./data/openings.json",
   "./data/all_moves_maia3.json",
   "./data/all_moves_maia3_reversed.json",
@@ -23,6 +25,9 @@ const OFFLINE_FILES = [
   "./engines/stockfish19/stockfish.js",
   "./engines/stockfish19/stockfish-19-lite-single.js",
   "./engines/stockfish19/stockfish.wasm",
+  "./engines/motifs/motif-detector.mjs",
+  "./engines/motifs/engine_rs.mjs",
+  "./engines/motifs/engine_rs_bg.wasm",
   "./sounds/move.mp3",
   "./sounds/capture.mp3",
   "./sounds/check.mp3",
@@ -60,9 +65,13 @@ const REFRESH_ON_UPDATE = new Set([
   "./service-worker.js",
   "./app.js",
   "./data/puzzles-db.js",
+  "./motifs.md",
   "./engines/stockfish19/stockfish-evaluator.js",
   "./engines/stockfish19/stockfish.js",
   "./engines/stockfish19/stockfish-19-lite-single.js",
+  "./engines/motifs/motif-detector.mjs",
+  "./engines/motifs/engine_rs.mjs",
+  "./engines/motifs/engine_rs_bg.wasm",
 ]);
 
 async function writeStatus(status) {
