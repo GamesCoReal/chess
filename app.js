@@ -44,6 +44,10 @@ let replayMotifModulePromise = null;
 let replayMoveFens = [];
 let replayMoveMotifs = [];
 let replayMotifRun = 0;
+let replayPositionScores = new Map();
+let replayOriginalPositionScores = new Map();
+let replayLineVersion = 0;
+let replayOriginalPgn = "";
 
 const NEGATIVE_MOTIF_IDS = new Set([
   "hangs", "loses_castling", "bishop_pair_lost", "bad_bishop", "knight_on_rim",
@@ -1538,6 +1542,10 @@ function openPastGame(entry) {
   replayPlayerColor = entry.playerColor === "b" ? "b" : entry.playerColor === "w" ? "w" : playerColor;
   replayClockHistory = Array.isArray(entry.clockHistory) ? entry.clockHistory : [];
   replayOriginalClockHistory = replayClockHistory.slice();
+  replayOriginalPgn = entry.pgn;
+  replayPositionScores.clear();
+  replayOriginalPositionScores.clear();
+  replayLineVersion++;
   replayBranchStart = null;
 
   // Start replay at the beginning.
@@ -1560,6 +1568,7 @@ function openPastGame(entry) {
   // Show replay controls.
   createReplayControls();
   analyzeReplayPlayedMoves(motifRunId);
+  analyzeReplayMoves(entry.pgn);
 
   // Render the saved game directly on the EXISTING board.
   renderBoard();
@@ -1798,18 +1807,6 @@ async function analyzeFullGame(pgn, playerSide = playerColor, onProgress = () =>
         : afterEval.value;
     const delta = afterValue - beforeValue;
     const deltaPct = delta * 100;
-    const classification = classifyMoveGeneric({
-      preValue: beforeValue,
-      postValue: afterValue,
-      moveUci,
-      preTopMove,
-      preMoveProb,
-      moverColor: "w",
-      wasMate: isMate,
-      moveNumber: Math.floor(i / 2) + 1,
-      skipTopMatch: false,
-    });
-
     results.push({
       move: playedMove,
       san: playedMove.san,
@@ -1823,7 +1820,9 @@ async function analyzeFullGame(pgn, playerSide = playerColor, onProgress = () =>
       bestMove: preTopMove,
       beforeEval,
       afterEval,
-      classification,
+      classification: null,
+      wasMate: isMate,
+      moveUci,
     });
     onProgress(results, i + 1, moves.length);
 
@@ -1846,6 +1845,7 @@ async function analyzeReplayMoves(pgn) {
       (results, completed, total) => {
         if (runId !== replayAnalysisRun) return;
         replayAnalysis = results;
+        refreshReplayMoveRating(completed - 1);
         renderReplayAnalysisPanel(completed, total);
         renderMoveList();
         if (inReplayMode && replayIndex > 0 && replayIndex - 1 === completed - 1) {
@@ -1855,8 +1855,10 @@ async function analyzeReplayMoves(pgn) {
       () => runId !== replayAnalysisRun
     );
     if (runId === replayAnalysisRun) {
+      replayAnalysis.forEach((_, index) => refreshReplayMoveRating(index));
       renderReplayAnalysisPanel(replayAnalysis.length, replayAnalysis.length);
       renderMoveList();
+      if (inReplayMode && replayIndex > 0) renderBoard();
     }
   } catch (err) {
     if (runId === replayAnalysisRun && replayAnalysisPanelEl && err.message !== "Analysis cancelled.") {
@@ -1868,6 +1870,62 @@ async function analyzeReplayMoves(pgn) {
   } finally {
     if (runId === replayAnalysisRun) replayAnalyzing = false;
   }
+}
+
+function stockfishScoreToWhiteChance(score, turn) {
+  const scoreFromTurn = score.type === "mate"
+    ? (score.value > 0 ? 1 : 0)
+    : 1 / (1 + Math.exp(-0.00368208 * score.value));
+  return turn === "w" ? scoreFromTurn : 1 - scoreFromTurn;
+}
+
+function classifyReplayMove({ deltaPct, moveUci, bestMove, moveProbability, moveNumber, wasMate }) {
+  if (wasMate) return "best";
+  if (deltaPct <= -20) return "blunder";
+  if (deltaPct <= -10) return "mistake";
+  if (moveProbability < 0.05 && deltaPct <= -4) return "miss";
+  if (deltaPct <= -3) return "inaccuracy";
+  if (moveProbability < 0.05 && deltaPct >= 12) return "brilliant";
+  if (moveUci && moveUci === bestMove) return "best";
+  if (moveNumber <= 6 && moveProbability >= 0.35) return "book";
+  if (deltaPct >= 8) return "excellent";
+  if (deltaPct >= 3) return "great";
+  return "good";
+}
+
+function refreshReplayMoveRating(moveIndex) {
+  const result = replayAnalysis[moveIndex];
+  const before = replayPositionScores.get(moveIndex);
+  const after = replayPositionScores.get(moveIndex + 1);
+  if (!result || !before || !after || before.lineVersion !== replayLineVersion || after.lineVersion !== replayLineVersion) return;
+
+  const moverChanceBefore = result.color === "w"
+    ? stockfishScoreToWhiteChance(before.score, before.turn)
+    : 1 - stockfishScoreToWhiteChance(before.score, before.turn);
+  const moverChanceAfter = result.color === "w"
+    ? stockfishScoreToWhiteChance(after.score, after.turn)
+    : 1 - stockfishScoreToWhiteChance(after.score, after.turn);
+  result.before = moverChanceBefore;
+  result.after = moverChanceAfter;
+  result.deltaPct = (moverChanceAfter - moverChanceBefore) * 100;
+  result.classification = classifyReplayMove({
+    deltaPct: result.deltaPct,
+    moveUci: result.moveUci,
+    bestMove: result.bestMove,
+    moveProbability: result.moveProbability,
+    moveNumber: Math.floor(moveIndex / 2) + 1,
+    wasMate: result.wasMate,
+  });
+}
+
+function recordReplayPositionScore(positionIndex, fen, turn, score, lineVersion) {
+  if (!score || lineVersion !== replayLineVersion) return;
+  const position = { fen, turn, score, lineVersion };
+  replayPositionScores.set(positionIndex, position);
+  if (replayBranchStart === null) replayOriginalPositionScores.set(positionIndex, position);
+  const moveIndex = positionIndex - 1;
+  refreshReplayMoveRating(moveIndex);
+  if (moveIndex === replayIndex - 1 && replayAnalysis[moveIndex]?.classification) renderBoard();
 }
 
 function renderReplayAnalysisPanel(completed = replayAnalysis.length, total = replayMoves.length) {
@@ -1926,8 +1984,14 @@ function restoreOriginalReplayLine(index) {
   replayBranchStart = null;
   replayAnalysisRun++;
   replayAnalysis = Array(replayMoves.length).fill(null);
+  replayLineVersion++;
+  replayPositionScores = new Map([...replayOriginalPositionScores].map(([ply, position]) => [
+    ply,
+    { ...position, lineVersion: replayLineVersion },
+  ]));
   replayMotifRun++;
   analyzeReplayPlayedMoves(replayMotifRun);
+  analyzeReplayMoves(replayOriginalPgn);
 }
 
 function replayStart() {
@@ -2096,6 +2160,9 @@ function exitReplay() {
   replayOriginalMoveMotifs = [];
   replayOriginalClockHistory = [];
   replayBranchStart = null;
+  replayOriginalPgn = "";
+  replayPositionScores.clear();
+  replayOriginalPositionScores.clear();
   replayIndex = 0;
   replayAnalysis = [];
   replayCandidateLines = [];
@@ -2433,7 +2500,14 @@ function renderBoard() {
           badge.src = `./images/ratings/${lastMoveRating}.png`;
           badge.className = "piece-rating-badge";
           badge.alt = `${lastMoveRating} move`;
-          badge.title = lastMoveRating;
+          const moveGrade = replayAnalysis[replayIndex - 1];
+          const chance = moveGrade?.moveProbability;
+          const swing = moveGrade?.deltaPct;
+          badge.title = [
+            lastMoveRating,
+            Number.isFinite(chance) ? `Maia thought you would find it ${Math.round(chance * 100)}% of the time` : "Maia likelihood pending",
+            Number.isFinite(swing) ? `Stockfish win-chance change ${swing >= 0 ? "+" : ""}${swing.toFixed(1)} points` : "Stockfish comparison pending",
+          ].join(" · ");
           badge.draggable = false;
           cell.appendChild(badge);
         }
@@ -2541,6 +2615,8 @@ function analyzeReplayPosition() {
 
   const fen = replayGame.fen();
   const turn = replayGame.turn();
+  const positionIndex = replayIndex;
+  const lineVersion = replayLineVersion;
   const scoreLabel = document.getElementById("replay-eval-score");
   const evaluator = window.stockfishEvaluator;
   replayCandidateLines = [];
@@ -2573,6 +2649,7 @@ function analyzeReplayPosition() {
       replayCandidateLines = lines;
       replayStockfishBestLine = lines.find((line) => line.multipv === 1) || lines[0];
       updateReplayEvalBar(lines[0], turn);
+      recordReplayPositionScore(positionIndex, fen, turn, lines[0], lineVersion);
       renderBoardAnnotations();
     },
   }).then(async (lines) => {
@@ -2583,6 +2660,7 @@ function analyzeReplayPosition() {
     }
     replayCandidateLines = lines;
     replayStockfishBestLine = lines.find((line) => line.multipv === 1) || lines[0];
+    recordReplayPositionScore(positionIndex, fen, turn, replayStockfishBestLine, lineVersion);
     if (runId !== replayStockfishRun || !inReplayMode) return;
     renderBoardAnnotations();
 
@@ -2700,6 +2778,10 @@ function onReplaySquareClick(sq) {
   if (startsBranch) {
     replayBranchStart = replayIndex;
     replayAnalysisRun++;
+    replayLineVersion++;
+    replayPositionScores = new Map([...replayOriginalPositionScores]
+      .filter(([ply]) => ply <= replayBranchStart)
+      .map(([ply, position]) => [ply, { ...position, lineVersion: replayLineVersion }]));
   }
 
   replayMoves = replayGame.history({ verbose: true });
@@ -2711,6 +2793,7 @@ function onReplaySquareClick(sq) {
     replayAnalysis = Array(replayMoves.length).fill(null);
     const motifRunId = ++replayMotifRun;
     analyzeReplayPlayedMoves(motifRunId);
+    analyzeReplayMoves(replayGame.pgn());
   }
   lastMoveFrom = move.from;
   lastMoveTo = move.to;
