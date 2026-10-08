@@ -1,121 +1,111 @@
-# Chess Knowledge Reference
-
-This file contains the chess rules, evaluation concepts, strategic concepts, tactical motifs, positional motifs, endgame concepts, opening concepts, and explanations used by the chess engine and motif detector.
-
----
-
-# 1. Rules of Chess
-
 ## Piece Movement
 
 ### King
-
-The king moves one square in any direction.
+The king moves exactly one square in any direction: horizontally, vertically, or diagonally. The king may capture an enemy piece on an adjacent square if that square is not protected by an enemy piece. A king may never make a move that leaves it in check, and the two kings may never occupy adjacent squares because each would attack the other.
 
 ### Queen
-
-The queen moves any number of squares horizontally, vertically, or diagonally.
+The queen moves any number of squares horizontally, vertically, or diagonally, provided no piece blocks the path. It can capture an enemy piece on its destination square. The queen combines the movement of a rook and bishop.
 
 ### Rook
-
-The rook moves any number of squares horizontally or vertically.
+The rook moves any number of squares horizontally or vertically along an unobstructed rank or file. It captures by moving onto an enemy-occupied square. Rooks are unable to jump over pieces.
 
 ### Bishop
-
-The bishop moves any number of squares diagonally.
+The bishop moves any number of squares diagonally along an unobstructed diagonal. A bishop always remains on the same color of square on which it started. Each side begins with one light-squared bishop and one dark-squared bishop.
 
 ### Knight
-
-The knight moves in an L-shape: two squares in one direction and one square perpendicular to it.
+The knight moves in an L-shape: two squares in one direction and one square perpendicular to that direction. Unlike other pieces, the knight can jump over intervening pieces. It captures an enemy piece by landing on its square.
 
 ### Pawn
-
-Pawns move forward and capture diagonally.
-
----
+Pawns move forward one square toward the opponent's side of the board, normally from their starting position. A pawn may move two squares forward from its starting rank if both squares are clear. Pawns capture one square diagonally forward. Pawns cannot move backward and cannot capture directly forward.
 
 ## Special Moves
 
 ### Castling
-
-A king and rook move simultaneously as part of one legal move.
+Castling is a special king-and-rook move in which the king moves two squares toward a rook and that rook moves to the square immediately on the other side of the king. Castling is legal only if the king and the chosen rook have not previously moved, the squares between them are empty, the king is not currently in check, and the king does not cross or land on a square attacked by an enemy piece.
 
 ### Kingside Castling
-
-The king moves two squares toward the h-file rook and the rook moves to the square immediately beside the king.
+Kingside castling is castling toward the h-file rook. White's king moves from e1 to g1 and the rook from h1 to f1. Black's king moves from e8 to g8 and the rook from h8 to f8.
 
 ### Queenside Castling
-
-The king moves two squares toward the a-file rook and the rook moves to the square immediately beside the king.
+Queenside castling is castling toward the a-file rook. White's king moves from e1 to c1 and the rook from a1 to d1. Black's king moves from e8 to c8 and the rook from a8 to d8. The additional square between the king and rook on the queenside must also be empty, even though the king does not move through that square.
 
 ### En Passant
-
-A pawn can capture an opposing pawn that has just advanced two squares from its starting position as though that pawn had moved only one square.
+En passant is a special pawn capture. If a pawn advances two squares from its starting rank and lands beside an opposing pawn, that opposing pawn may capture it as though it had moved only one square. The capture must be made immediately on the next move or the right disappears.
 
 ### Promotion
+When a pawn reaches the opponent's final rank, it must immediately be promoted to a queen, rook, bishop, or knight. Promotion does not require the promoted piece to have previously been captured.
 
-A pawn reaching the final rank must promote to a queen, rook, bishop, or knight.
+### Underpromotion
+Underpromotion is promoting a pawn to a rook, bishop, or knight instead of the usual queen. It is useful when a non-queen promotion gives a tactical advantage, avoids stalemate, gives check, or is required for a specific winning position.
 
----
+## Game States
 
-## Check
+### Check
+A king is in check when it is currently attacked by at least one enemy piece. The player in check must make a legal move that removes the check. A player may respond by moving the king, capturing the checking piece, or blocking the checking line when blocking is possible.
 
-A king is in check when an enemy piece currently attacks its square.
-
-## Checkmate
-
-A king is in check and there is no legal move that removes the check.
-
-## Stalemate
-
-A player has no legal moves, but their king is not in check. The game is drawn.
-
----
-
-## Draw
-
-A game can be drawn through several mechanisms.
+### Checkmate
+Checkmate occurs when a player's king is in check and there is no legal move that removes the check. Checkmate immediately ends the game and the checkmated player loses.
 
 ### Stalemate
+Stalemate occurs when the player whose turn it is has no legal move, but their king is not in check. Stalemate immediately ends the game as a draw.
 
-A player has the move, their king is not in check, but they have no legal move.
+### Legal Move
+A legal move is a move permitted by the rules of chess that leaves the moving player's own king not in check. It must obey the movement rules of the piece and all applicable special-move and game-state rules.
 
-The game ends immediately as a draw.
+### Illegal Move
+An illegal move violates one or more chess rules. Examples include moving a piece in a way it cannot move, moving through a blocking piece when the piece cannot jump, moving a pinned piece in a way that exposes the king, moving the king onto an attacked square, or castling when castling is not permitted.
+
+### Resignation
+Resignation is the voluntary decision of a player to concede the game. The player resigning loses immediately under normal chess rules, even if the position might technically still be playable.
+
+### Time Forfeit
+A time forfeit occurs when a player's clock reaches zero before the game has ended, normally resulting in a loss on time. The exact result can depend on whether the opponent has sufficient mating material and on the rules of the competition.
+
+### Flagging
+Flagging is the common chess term for a player's clock running out of time. In digital chess, the player's clock reaching zero normally records a time-forfeit loss according to the platform's rules.
+
+## Draw Rules
+
+### Draw
+A draw is a game result in which neither player wins. Chess has multiple ways a draw can occur, including agreement, stalemate, repetition, move-count rules, and positions in which checkmate is impossible.
+
+### Stalemate
+A stalemate is a draw caused by the player to move having no legal moves while their king is not in check. It is different from checkmate because checkmate requires the king to be in check.
 
 ### Threefold Repetition
+Threefold repetition is a draw rule concerning the same position occurring three times. The relevant position includes the same side to move, the same pieces on the same squares, the same castling rights, and the same en-passant rights. Under FIDE rules, a player may claim the draw when the position is about to occur or has occurred three times; the exact claiming procedure matters.
 
-The same position occurs three times.
-
-The relevant position includes:
-
-- The same pieces on the same squares
-- The same player to move
-- The same castling rights
-- The same en-passant rights
-
-Depending on the rules being used, the draw may need to be claimed.
+### Fivefold Repetition
+Fivefold repetition occurs when the same position has appeared five times. Under FIDE rules, the game is automatically drawn when the same position has occurred five times, so a claim is not required.
 
 ### Fifty-Move Rule
+The fifty-move rule allows a draw claim after each player has made 50 moves without any pawn move or capture. A pawn move or capture resets the relevant move count.
 
-A draw can be claimed after 50 moves by each player without a pawn move or a capture.
+### Seventy-Five-Move Rule
+Under FIDE rules, the game is automatically drawn after 75 moves by each player without a pawn move or capture, unless the last move resulted in checkmate. This is an automatic rule rather than a normal player claim.
 
 ### Insufficient Mating Material
+Insufficient mating material describes positions where the remaining material cannot produce checkmate through any legal sequence. Common examples include king versus king, king and bishop versus king, and king and knight versus king.
 
-The remaining material cannot produce checkmate through any legal sequence.
-
-Common examples include:
-
-- King vs. King
-- King + Bishop vs. King
-- King + Knight vs. King
+### Dead Position
+A dead position is a position in which neither player can possibly checkmate the opponent by any legal sequence of moves. The game is immediately drawn. Dead position is broader than simply saying "insufficient material"; a position can be dead because of the specific arrangement of the pieces and pawns even when material remains.
 
 ### Agreement
-
-Both players may agree to a draw.
+Players may agree to a draw when the rules of the game permit it. Under standard tournament rules, a draw agreement is normally made by one player offering a draw and the other accepting it.
 
 ### Other Draw Rules
+Other rules can produce a draw depending on the ruleset, competition, or platform. These can include automatic draw conditions and special regulations concerning repetition, move counts, dead positions, or tournament procedures.
 
-Other applicable chess rules can also result in a draw, including certain dead positions and automatic-draw conditions depending on the ruleset.
+## Official / Tournament Rules
+
+### Touch-Move Rule
+In over-the-board tournament chess, the touch-move rule generally requires a player who deliberately touches one of their own pieces while having the move to move that piece if it has a legal move. Deliberately touching an opponent's piece generally requires the player to capture it if a legal capture exists. A player intending only to adjust a piece must normally announce the adjustment, commonly with "j'adoube" or an equivalent indication, before touching it.
+
+### Castling Rights
+Castling rights are the rights a player has to castle on the kingside and/or queenside. A king loses all castling rights permanently once it moves. A rook loses the castling right associated with that rook once the rook moves or is captured. Castling rights are part of the definition of a chess position for repetition purposes.
+
+### En Passant Rights
+En passant rights describe whether an en passant capture is currently available. The right exists only immediately after a pawn makes a two-square advance from its starting rank and an opposing pawn could legally capture it en passant. It disappears after any other move.
 
 ---
 
@@ -123,792 +113,252 @@ Other applicable chess rules can also result in a draw, including certain dead p
 
 ## Piece Values
 
-Piece values are conventional material estimates used to compare pieces. They are not literal points awarded during a game.
-
 ### Pawn
-
-**1 point**
-
-The basic unit of material.
+A pawn has a conventional value of about 1 point. This is an evaluation guideline rather than a rule. A pawn's practical value can be much higher or lower depending on promotion potential, structure, king safety, and position.
 
 ### Knight
-
-**3 points**
-
-A knight is commonly valued at approximately three pawns.
-
-Its ability to jump over pieces and create forks makes it particularly useful in many positions.
+A knight is conventionally valued at about 3 points. Its practical value rises when it has strong central or outpost squares and falls when it is restricted or lacks useful targets.
 
 ### Bishop
-
-**3 points**
-
-A bishop is commonly valued at approximately three pawns.
-
-Bishops can control long diagonals and become especially powerful in open positions.
+A bishop is conventionally valued at about 3 points. Bishops tend to become stronger in open positions with active diagonals and can be especially valuable when they attack both sides of the board.
 
 ### Rook
-
-**5 points**
-
-A rook is commonly valued at approximately five pawns.
-
-Rooks are particularly effective on open and semi-open files and on advanced ranks.
+A rook is conventionally valued at about 5 points. Rooks are particularly effective on open and semi-open files, active ranks, and behind or beside passed pawns.
 
 ### Queen
-
-**9 points**
-
-A queen is commonly valued at approximately nine pawns.
-
-It combines rook-like and bishop-like movement.
+A queen is conventionally valued at about 9 points. It combines rook-like and bishop-like movement and is extremely powerful but also vulnerable to gaining tempi when attacked by less valuable pieces.
 
 ### King
-
-The king has no conventional material value because it cannot be captured.
-
-Checkmate ends the game.
-
-These values are guidelines rather than absolute measurements. A piece's actual value depends on the position.
-
----
+The king has no conventional material value because it cannot legally be captured. Its safety is nevertheless the most important practical concern because checkmate ends the game.
 
 ## Evaluation Factors
 
 ### Material
-
-The difference in the value of the pieces and pawns remaining on the board.
+Material is the relative quantity and quality of pieces and pawns each side has. Material advantage often provides a significant advantage, but it can be outweighed by king safety, activity, initiative, or other positional factors.
 
 ### King Safety
-
-How vulnerable each king is to checks, attacks, mating threats, and exposed lines.
+King safety measures how exposed or protected a king is. It includes pawn cover, nearby defenders, open files and diagonals, enemy piece activity, mating threats, and the number of safe squares around the king.
 
 ### Piece Activity
-
-How effectively the pieces control useful squares and participate in the position.
+Piece activity describes how effectively a piece participates in the game. Active pieces control important squares, attack targets, restrict the opponent, and have useful routes for improvement.
 
 ### Development
-
-How quickly pieces are brought into useful positions.
+Development measures how effectively a side has brought its pieces into useful positions, especially during the opening. A development advantage can provide greater activity and tactical opportunities.
 
 ### Center Control
-
-Control and occupation of central squares.
+Center control is the ability to occupy or influence the central squares and surrounding central territory. Control of the center can give pieces greater mobility and support attacks on either wing.
 
 ### Space
-
-The amount of useful territory controlled by a player.
+Space is the amount of territory a side controls for its pieces. A space advantage can make it easier to maneuver while restricting the opponent's pieces.
 
 ### Pawn Structure
-
-The strengths and weaknesses created by the arrangement of pawns.
+Pawn structure is the arrangement of pawns and the long-term strengths and weaknesses created by that arrangement. It includes doubled, isolated, backward, passed, hanging, and majority structures.
 
 ### Initiative
-
-The ability to create threats and force the opponent to respond.
+Initiative is the ability to make threats that require the opponent to respond. A player with the initiative often determines the direction of the game even without having a material advantage.
 
 ### Mobility
-
-The number and quality of useful legal moves available to the pieces.
+Mobility is the number and quality of useful legal moves available to a piece or side. A side can have many legal moves but poor practical mobility if most of them are passive or unhelpful.
 
 ### Passed Pawns
-
-Advanced pawns that cannot be stopped by enemy pawns on their file or adjacent files.
+Passed pawns are pawns that have no opposing pawn on their own file or either adjacent file capable of stopping their advance. They can become especially dangerous when they are advanced and supported.
 
 ### Weak Squares
-
-Squares that cannot easily be defended by pawns and may become useful invasion points.
+Weak squares are squares that are difficult or impossible for enemy pawns to challenge or control. A weak square can become an outpost or invasion point.
 
 ### Piece Coordination
+Piece coordination describes how effectively a player's pieces support one another and cooperate toward common targets. Good coordination allows tactical combinations and makes pieces stronger than they would be individually.
 
-How effectively the pieces support each other.
+### Compensation
+Compensation is an advantage or collection of advantages received in return for material that has been sacrificed or given up. Compensation can include king attack, initiative, development, activity, pawn structure, positional pressure, or long-term attacking chances.
+
+### Counterplay
+Counterplay is active play by the side that is under pressure or has a disadvantage. Instead of only defending, the player creates threats, attacks targets, advances pawns, or seeks tactical opportunities.
+
+### Static Advantage
+A static advantage is a relatively stable positional advantage that tends to persist unless the structure or position changes. Examples include a better pawn structure, a permanent weak square in the opponent's camp, or a favorable minor-piece matchup.
+
+### Dynamic Advantage
+A dynamic advantage is an advantage based on temporary activity, initiative, development, king safety, tactical opportunities, or momentum. Dynamic advantages can disappear if the player does not act.
+
+### Development Advantage
+A development advantage means one side has brought more or more useful pieces into play, often giving that side greater activity and tactical potential. It is especially important in the opening and can justify temporary material sacrifices.
 
 ---
 
 # 3. Opening Concepts
 
-## Development
+### Development
+Development is the process of moving pieces from their starting squares to useful active squares. Good development improves activity, center control, king safety, and coordination.
 
-Moving knights and bishops from their starting squares to useful active squares.
+### Center Control
+Center control is the occupation or influence of important central squares, especially d4, e4, d5, and e5. It can be achieved with pawns, pieces, or long-range control.
 
-Good development generally aims to bring pieces into positions where they control important squares, support other pieces, or prepare strategic plans.
+### King Safety
+King safety is the process of protecting the king from immediate and future attacks. Castling, developing pieces, maintaining pawn cover, and avoiding unnecessary weaknesses are common ways to improve it.
 
-## Center Control
+### Tempo
+A tempo is one unit of move-time. A player gains a tempo when a move accomplishes a useful purpose, particularly when it also forces the opponent to spend a move responding.
 
-Controlling or occupying central squares, especially:
+### Opening Principles
+Opening principles are general guidelines such as developing pieces, controlling the center, castling, connecting rooks, and avoiding unnecessary repeated moves. They are not absolute rules and can be overridden by concrete tactics or strategic considerations.
 
-- e4
-- d4
-- e5
-- d5
+### Fianchetto
+A fianchetto is a setup in which a bishop is developed to b2 or g2 for White, or b7 or g7 for Black. It usually gives the bishop a long diagonal and can support central control and king safety.
 
-The center can be controlled with pawns or pieces without necessarily occupying it with a pawn.
+### Open File
+An open file contains no pawns of either color. It is often an excellent route for rooks and can provide access to the opponent's position.
 
-## King Safety
+### Semi-Open File
+A semi-open file contains a pawn of one side but none of the other side's pawns. The side without the pawn can often use the file for rook pressure.
 
-Getting the king to safety, usually through castling.
+### Connect the Rooks
+The rooks become connected when the pieces between them on the back rank have been cleared. This commonly occurs after castling and development.
 
-## Tempo
+### Avoid Unnecessary Repeated Moves
+Repeatedly moving the same piece without a concrete reason can waste tempi that could have been used for development or king safety. The principle does not prohibit useful repeated moves.
 
-A useful move or unit of time gained while developing, creating a threat, attacking a piece, or accomplishing another useful purpose.
+### Avoid Premature Queen Movement
+Moving the queen early can expose it to attacks from developing pieces and cost tempi. Early queen movement can still be correct when it creates a concrete threat or solves a tactical problem.
 
-## Opening Principles
+### Develop Toward Useful Squares
+A developing move should place a piece where it contributes to the position rather than merely moving it once. Useful squares may improve center control, defend targets, attack pieces, prepare castling, or support a plan.
 
-Common goals include:
+### Opening Theory
+Opening theory is the body of analyzed and established knowledge concerning the moves, plans, tactical ideas, and typical positions of an opening. Theory can be based on historical games, engine analysis, databases, and human analysis.
 
-- Develop pieces
-- Control the center
-- Castle
-- Connect the rooks
-- Avoid unnecessary repeated moves
-- Avoid premature queen movement
-- Develop pieces toward useful squares
+### Book Move
+A book move is a move that belongs to established opening theory or is commonly found in opening databases. Being a book move does not automatically mean it is the strongest move in every position.
 
-These are principles rather than absolute rules. A move that violates one of them can still be correct when there is a tactical or strategic reason for it.
+### Novelty
+A novelty is a move that is new or previously unrecorded within the relevant body of opening theory or database history. A novelty can be strong, equal, or bad; "novel" simply describes its theoretical status.
 
-## Fianchetto
+### Transposition
+A transposition occurs when different move orders lead to the same or essentially the same position. Players can reach the same opening structure through different sequences.
 
-Developing a bishop to:
+### Move Order
+Move order is the specific sequence in which moves are played. Small changes in move order can change available options, avoid or allow certain variations, or transpose into another opening.
 
-- b2 or g2 for White
-- b7 or g7 for Black
+### Gambit
+A gambit is an opening strategy in which a player voluntarily offers material, usually a pawn, to obtain compensation such as development, initiative, center control, or attacking chances.
 
-A fianchetto typically places the bishop on a long diagonal toward the center or opposite side of the board.
+### Accepted Gambit
+A gambit is accepted when the opponent captures the offered material. The resulting position is called the accepted form of that gambit.
 
-## Open File
+### Declined Gambit
+A gambit is declined when the opponent chooses not to capture the offered material and instead plays another move.
 
-A file containing no pawns.
+### Countergambit
+A countergambit is a gambit played in response to an opponent's opening pawn offer or gambit, in which the defending side also offers material for active compensation.
 
-Open files can provide useful routes for rooks and queens.
+### Opening Trap
+An opening trap is a tactical sequence in the opening designed to punish a specific inaccurate move or natural-looking response. A trap usually depends on the opponent making a particular mistake.
 
-## Semi-open File
+### Early Queen Attack
+An early queen attack is a plan in which the queen becomes active unusually early to attack material, threaten mate, or exploit an opening weakness. It can be effective but may also allow the opponent to gain tempi by developing with attacks on the queen.
 
-A file containing one side's pawn but not the other side's pawn.
+### Development Lead
+A development lead means one side has more pieces developed or has developed them more effectively than the opponent. It can provide a temporary initiative and tactical opportunities.
 
-The side without the pawn can often use the file as a rook route.
+### Central Pawn Majority
+A central pawn majority means one side has more pawns in the central files or a greater number of central pawns than the opponent. It can provide space, control, and potential pawn breaks.
 
-## Connect the Rooks
+### Castled Position
+A castled position is a position in which the king has completed castling and the rook has moved to its castled square. Castling usually improves king safety and rook development, although the resulting pawn structure can also create specific weaknesses.
 
-The rooks become connected when the pieces between them have been cleared from the back rank.
+### Uncastled King
+An uncastled king is a king that has not yet castled while castling remains possible or relevant. An uncastled king may be vulnerable because it is often less coordinated with the rooks and may remain in the center.
 
-This commonly happens after the king has castled and the minor pieces have developed.
+### Open Center
+An open center is a position in which central pawn exchanges have removed many pawns from the central files, leaving open lines and diagonals. Open centers generally increase the value of piece activity and long-range pieces.
 
-## Avoid Unnecessary Repeated Moves
+### Closed Center
+A closed center is a position in which central pawns block one another and few central pawn exchanges have occurred. Closed centers often make maneuvering, pawn breaks, and wing attacks more important.
 
-Moving the same piece repeatedly in the opening can spend tempi that could have been used to develop other pieces or improve the position.
+### Semi-Open Center
+A semi-open center is a position where the center is partially opened: some central files or diagonals are open while significant central pawn blocks remain. It combines characteristics of open and closed centers.
 
-## Avoid Premature Queen Movement
-
-Moving the queen too early can allow the opponent to gain tempi by attacking it with developing pieces.
-
-Early queen movement is not automatically bad when there is a concrete reason for it.
-
-## Develop Toward Useful Squares
-
-Development is not simply moving a piece away from its starting square.
-
-A useful developing square can:
-
-- Control the center
-- Attack an enemy piece
-- Defend a piece
-- Prepare castling
-- Support another piece
-- Create a tactical threat
-- Prepare a strategic plan
+### Pawn Break
+A pawn break is a pawn advance or exchange intended to alter the pawn structure, open lines, gain space, create weaknesses, or create a passed pawn.
 
 ---
 
 # 4. Middlegame Concepts
 
-## Piece Activity
+### Piece Activity
+Piece activity is the usefulness and effectiveness of a piece's current placement. Active pieces control important squares, attack targets, and have routes to improve.
 
-Keeping pieces on active squares where they control important areas.
+### Initiative
+The initiative is the ability to create threats and force the opponent to respond. It often comes from active pieces, king attacks, pawn breaks, or tactical threats.
 
-## Initiative
+### Prophylaxis
+Prophylaxis is a move or plan intended to prevent, restrict, or reduce the opponent's future plan before it becomes dangerous.
 
-Creating threats that force the opponent to react.
+### Outpost
+An outpost is a strong square, usually in enemy territory, where a piece can establish itself and cannot easily be attacked by enemy pawns. Knights particularly benefit from outposts.
 
-## Prophylaxis
+### Weak Square
+A weak square is a square that cannot be effectively controlled by enemy pawns and can therefore become a stable target or invasion point.
 
-Preventing or reducing the opponent's intended plan.
+### Pawn Break
+A pawn break deliberately changes the pawn structure, usually to open lines, challenge a pawn chain, create a weakness, or create a passed pawn.
 
-## Outpost
+### Open Lines
+Open lines are files, ranks, or diagonals that have been cleared of obstructing pawns or pieces, allowing long-range pieces to use them.
 
-An advanced square, usually protected from enemy pawn attacks, where a piece can establish itself.
+### Attack
+An attack is a coordinated attempt to create threats against a target, especially the enemy king, a weak piece, pawn, or square.
 
-## Weak Square
+### Restriction
+Restriction means reducing the opponent's useful moves, active squares, or ability to execute plans. Restriction can be achieved by pawn advances, piece placement, or control of key squares.
 
-A square that is difficult for the opponent to control with pawns.
+### Blockade
+A blockade is the placement of a piece directly in front of an enemy pawn, especially a passed pawn, to prevent its advance. A good blockading piece can also perform other useful duties.
 
-## Pawn Break
+### Blockading Piece
+The blockading piece is the piece that stops an enemy pawn from advancing by occupying the square directly in front of it. Knights and rooks are common blockaders, depending on the position.
 
-A pawn move intended to change the pawn structure and open lines or create weaknesses.
+### Minority Attack
+A minority attack is an attack by a smaller number of pawns against a larger opposing pawn group, usually intended to create a weakness such as an isolated or backward pawn.
 
-## Open Lines
+### Majority
+A majority is a greater number of pawns on one side or area of the board compared with the opponent. A majority can potentially create a passed pawn through exchanges or pawn advances.
 
-Opening files, ranks, or diagonals for rooks, bishops, or queens.
+### Pawn Majority
+A pawn majority means one side has more pawns than the opponent in a particular sector, such as the queenside or center. A majority can provide space and the possibility of creating a passed pawn.
 
-## Attack
+### Minority
+A minority is the smaller pawn group in a sector when compared with the opponent's pawn group. A minority can sometimes be used actively, particularly in a minority attack.
 
-Concentrating pieces and threats against a target, especially the king.
+### Space Advantage
+A space advantage means one side controls more territory and therefore has more room for its pieces to maneuver. The side with less space may have difficulty finding active squares.
 
-## Restriction
+### Weakness Creation
+Weakness creation is the deliberate or forced creation of a lasting defect in the opponent's position, such as a weak pawn, weak square, isolated pawn, or damaged king shelter.
 
-Reducing the opponent's useful moves and limiting their pieces.
+### Target
+A target is a piece, pawn, king, square, or structural weakness that can be attacked or exploited.
 
----
+### Target Square
+A target square is a square that a player wants to occupy or control because doing so creates an advantage, such as an outpost, invasion point, or mating square.
 
-# 5. Endgame Concepts
+### Invasion Square
+An invasion square is a square in the opponent's territory where an active piece can enter to attack important targets, restrict the opponent, or create decisive threats.
 
-## King Activity
+### Piece Invasion
+Piece invasion is the process of moving a piece deep into the opponent's territory, usually onto a protected or difficult-to-chase square, to attack targets or create threats.
 
-In endgames the king becomes an important active piece and can participate directly in attacking pawns, defending pieces, and controlling key squares.
+### Transformation
+Transformation is a strategic change in the nature of a position, such as changing from an attack into an endgame, converting a pawn structure, exchanging a key piece, or shifting from one type of advantage to another.
 
-## Opposition
+### Counterplay
+Counterplay is active play generated by the side under pressure or with a disadvantage. It gives that side threats of its own instead of allowing the opponent to attack without resistance.
 
-Two kings face each other with an odd number of squares between them, allowing one king to control the other's approach.
+### Compensation
+Compensation is the collection of positional, tactical, or dynamic advantages received in return for material that has been sacrificed or lost.
 
-## Zugzwang
+### Static Advantage
+A static advantage is a stable or long-term feature that tends to remain unless the position is structurally changed, such as a better pawn structure or permanent weak square.
 
-A position where having to make a move worsens the player's position.
-
-## Passed Pawn
-
-A pawn with no enemy pawn capable of stopping it on its file or adjacent files.
-
-## Pawn Promotion
-
-Advancing a pawn to the final rank and promoting it to a:
-
-- Queen
-- Rook
-- Bishop
-- Knight
-
-## Rook Activity
-
-Active rooks are especially important for:
-
-- Attacking passed pawns
-- Supporting one's own passed pawns
-- Checking the enemy king
-- Controlling important files and ranks
-
-## Rule of the Square
-
-A method of determining whether a king can catch a passed pawn without calculating every move.
-
-## Lucena Position
-
-A fundamental rook-and-pawn winning technique in which the stronger side uses the rook and king to force promotion.
-
-## Philidor Position
-
-A fundamental rook-and-pawn defensive technique in which the defending rook prevents the opposing king from advancing and supports checks from the rear.
-
-## Opposition in King-and-Pawn Endgames
-
-Using king positioning to force the opposing king away from critical squares and allow your king or pawn to advance.
-
----
-
-# 6. Tactical Concepts
-
-## Fork
-
-A move that attacks two or more enemy pieces or important targets simultaneously.
-
-## Pin
-
-A piece is unable or reluctant to move because moving it would expose a more valuable piece, commonly the king or queen, to attack.
-
-## Skewer
-
-An attack on a valuable piece that forces it to move, exposing a less valuable piece behind it.
-
-## Battery
-
-Two friendly pieces are aligned so that one supports or reinforces the other, often along a file, rank, or diagonal.
-
-## Removal of Defender
-
-A move removes or distracts a defending piece, making another enemy piece vulnerable.
-
-## Overloaded Piece
-
-A piece is responsible for defending multiple important targets and cannot adequately perform all of its defensive duties.
-
-## Sacrifice
-
-Giving up material intentionally in exchange for compensation such as:
-
-- King attack
-- Development
-- Initiative
-- Positional advantage
-- Tactical gain
-- Checkmate
-
-## Hanging Piece
-
-A piece is undefended or insufficiently defended and can potentially be captured without adequate compensation.
-
-## Trapped Piece
-
-A piece has very limited or no safe squares and can potentially be won because its escape routes are unavailable.
-
----
-
-# 7. King Attack Concepts
-
-## Greek Gift
-
-A classic bishop sacrifice on h7 or h2 against a castled king, usually involving a follow-up attack with the queen and knight.
-
-## Back-Rank Mate
-
-A checkmate or mating threat against a king trapped on its back rank, often because its own pawns prevent escape.
-
-## Smothered Mate
-
-A checkmate delivered by a knight against a king whose escape squares are blocked by its own pieces.
-
-## Anastasia's Mate
-
-A mating pattern involving a knight restricting the king while a rook attacks along the king's rank or file.
-
-## Boden's Mate
-
-A mating pattern involving two bishops attacking the king from different-colored diagonals.
-
-## Arabian Mate
-
-A mating pattern typically involving a rook restricting the king along a rank or file while a knight controls nearby escape squares.
-
-## Luft
-
-An escape square created for the king, usually by moving a pawn near the castled king to reduce back-rank mating threats.
-
----
-
-# 8. Pawn Structure Concepts
-
-## Doubled Pawns
-
-Two friendly pawns occupying the same file.
-
-## Isolated Pawn
-
-A pawn with no friendly pawn on either adjacent file.
-
-## Isolated Queen Pawn
-
-An isolated pawn on the d-file, commonly called an IQP.
-
-## Backward Pawn
-
-A pawn that is behind neighboring friendly pawns and cannot safely advance because of enemy control.
-
-## Hanging Pawns
-
-A pair of adjacent pawns, usually on neighboring files, that are not protected by pawns on the files behind them and can become targets.
-
-## Pawn Storm
-
-A series of pawn advances, usually toward the enemy king, intended to gain space and open attacking lines.
-
-## Passed Pawn
-
-A pawn with no enemy pawn on its file or adjacent files capable of stopping it.
-
-## Pawn Breakthrough
-
-A pawn advance or capture that creates or enables a passed pawn or otherwise significantly changes the pawn structure.
-
----
-
-# 9. Positional Concepts
-
-## Knight on the Rim
-
-A knight placed on the a- or h-file.
-
-It can have fewer useful squares because of its location.
-
-## Bishop Pair
-
-Having both bishops while the opponent has fewer than two bishops.
-
-The bishop pair can become especially valuable in open positions.
-
-## Bad Bishop
-
-A bishop whose activity is restricted by its own pawns, particularly when those pawns occupy squares of the same color as the bishop.
-
-## Color Complex
-
-A group of squares of the same color that becomes strategically important because of weaknesses in control of those squares.
-
-## Long Diagonal
-
-One of the two diagonals running from corner to corner:
-
-- a1–h8
-- h1–a8
-
-## Rook Lift
-
-Moving a rook away from its normal back-rank position to an active rank, often to support an attack.
-
-## Rook on the Seventh Rank
-
-A rook placed on the opponent's seventh rank, or second rank for Black, where it can attack pawns and restrict the enemy king.
-
-## Open File Rook
-
-A rook using a file containing no pawns.
-
-## Semi-Open File Rook
-
-A rook using a file containing the opponent's pawn but no friendly pawn.
-
-## Centralization
-
-Moving a piece toward central squares where it can control a greater number of important squares.
-
-## Piece Invasion
-
-Moving a piece into the opponent's territory to attack important targets or establish a strong position.
-
----
-
-# 10. Strategic Concepts
-
-## Multi-Purpose Move
-
-A move that accomplishes several useful objectives simultaneously.
-
-For example, one move might:
-
-- Develop a piece
-- Attack an enemy piece
-- Defend a pawn
-- Prepare castling
-
-## Prophylaxis
-
-A move designed primarily to prevent or reduce an opponent's plan.
-
-## Restriction
-
-Limiting the opponent's legal moves, useful squares, or piece activity.
-
-## Piece Coordination
-
-Creating positions where pieces support each other and work together toward common targets.
-
-## Initiative
-
-Maintaining the ability to make threats and force the opponent to respond.
-
-## Simplification
-
-Trading pieces or pawns to reduce the complexity of the position, often when the resulting position is favorable.
-
-## Exchange
-
-Trading one piece for another, commonly pieces of similar material value.
-
-## Pawn Lever
-
-A pawn move that attacks an enemy pawn or creates the possibility of changing the pawn structure.
-
-## Pawn Break
-
-A pawn move that deliberately changes the structure to open lines, create weaknesses, or gain space.
-
----
-
-# 11. Move-Class Basics
-
-## castling
-
-Detects when the move is kingside or queenside castling.
-
-It can also detect when castling connects the two rooks.
-
-## promotion
-
-Detects a pawn promotion and identifies the piece the pawn promotes to.
-
-## en passant
-
-Detects an en passant capture.
-
-## capture or trade
-
-Classifies captures and trades.
-
-It distinguishes:
-
-- Normal captures
-- Same-piece trades
-- Queen trades
-- Simplification while ahead
-- Trades into an endgame
-- Exchange sacrifices
-
-## check class
-
-Determines whether a move gives:
-
-- Normal check
-- Discovered check
-- Double check
-
----
-
-# 12. Tactics
-
-## pin
-
-Detects when a rook, bishop, or queen attacks along a line through one enemy piece to a more valuable enemy piece behind it.
-
-The front piece is effectively pinned to the more valuable piece.
-
-## skewer
-
-Detects when a rook, bishop, or queen attacks two enemy pieces on the same line, with the more valuable piece in front.
-
-The front piece is expected to be forced away, exposing the less valuable piece behind it.
-
-## fork
-
-Detects when the moved piece attacks at least two enemy targets and the attack represents a real material threat.
-
-The detector gives special treatment to forks involving the king.
-
-## battery
-
-Detects two friendly sliding pieces aligned on the same line, with the rear piece supporting or reinforcing the front piece toward an important target such as a king, queen, or rook.
-
-## threats and creates
-
-Detects a new concrete threat created by the move, such as:
-
-- Attacking a valuable enemy piece
-- Creating a mating threat
-- Making another enemy piece become hanging
-- Creating a tactical threat
-
-## traps piece
-
-Detects when an enemy non-pawn, non-king piece has no safe legal escape because its possible moves lose material.
-
-## removal of defender
-
-Detects when a move removes a piece that was defending another enemy piece, causing that other piece to become hanging.
-
-## overloaded
-
-Detects an enemy piece that is the critical defender of at least two other pieces, where removing that defender would make both targets tactically vulnerable.
-
-## sacrifice or hangs
-
-Determines whether the moved piece is being given up.
-
-### sacrifice
-
-Material is sacrificed but the position provides enough compensation.
-
-### hangs
-
-The piece is lost without enough compensation.
-
-## defends hanging
-
-Detects when a move saves one of your previously hanging pieces by making it no longer vulnerable.
-
----
-
-# 13. King Attack
-
-## greek gift
-
-Detects the classic bishop sacrifice on h7/h2 against a castled king when the attacking side has a suitable follow-up with a knight or queen.
-
-## back rank mate threat
-
-Detects a position where the enemy king is stuck on the back rank and a rook or queen has a realistic route to create a back-rank mate.
-
-## attacks king
-
-Detects a move that newly increases the moved piece's pressure around the enemy king.
-
-It specifically identifies newly attacked king-zone squares.
-
-## eyes king zone
-
-Detects a rook, bishop, or queen that newly controls important squares around the enemy king or has a potential line toward the king blocked by a piece.
-
-## smothered mate hint
-
-Detects a knight check where the enemy king's surrounding squares are heavily occupied by its own pieces, indicating a possible smothered-mate pattern.
-
-## anastasia mate threat
-
-Detects the setup for an Anastasia-style mate:
-
-- A knight restricting the king
-- A rook prepared to attack along the king's rim file or rank
-
-## bodens mate threat
-
-Detects the setup for Boden's mate, where two bishops attack the enemy king from opposite-colored diagonals.
-
-## arabian mate threat
-
-Detects the Arabian-mate setup:
-
-- A rook attacks along the king's rank or file
-- A nearby knight controls the king's escape squares
-
-## luft
-
-Detects a pawn move that creates an escape square for a king trapped on the back rank in response to a real back-rank threat.
-
----
-
-# 14. Positional / Piece-specific
-
-## knight invasion
-
-Detects a knight entering the opponent's territory on an outpost-like square that cannot easily be challenged by enemy pawns.
-
-## outpost
-
-Detects a knight or bishop establishing itself on an advanced square that cannot be effectively challenged by enemy pawns.
-
-## fianchetto
-
-Detects a bishop developing to b2/g2 for White or b7/g7 for Black.
-
-## long diagonal
-
-Detects a bishop or queen moving onto one of the two long diagonals:
-
-- a1–h8
-- h1–a8
-
-## rook lift
-
-Detects a rook moving from the back rank to an attacking rank on the kingside, such as a rook lift toward rank 3 for White or rank 6 for Black.
-
-## rook play
-
-Detects useful rook placement such as:
-
-- Doubling rooks
-- Using an open file
-- Using a semi-open file
-- Placing a rook on the seventh rank
-
-## opens line for
-
-Detects when moving a piece off a square opens a useful file or diagonal for one of your bishops, rooks, or queens.
-
-## bad bishop
-
-Detects a bishop whose movement is heavily restricted by its own pawns on squares of the bishop's color.
-
-## bishop pair lost
-
-Detects when you give up your bishop pair, particularly when the opponent still has both bishops.
-
-## color complex
-
-Detects when a side has no bishop controlling one color of squares while having enough pawns on that color to make those squares a lasting weakness.
-
-## centralizes
-
-Detects a piece moving onto a central square.
-
-For pawns it uses a broader definition of the center.
-
-## attacks pawn
-
-Detects when a piece newly attacks an enemy pawn and the attack represents a real or positional pressure on that pawn, especially if the pawn is isolated or backward.
-
-## prepares castling
-
-Detects a move that clears the necessary squares for kingside or queenside castling.
-
-## knight on rim
-
-Detects an early knight move to the a- or h-file, which is generally considered a less active location.
-
-## offers trade
-
-Detects a quiet move that places a defended piece where an equal-value enemy piece can exchange with it cleanly.
-
-## pawn breakthrough
-
-Detects a pawn capture that creates or unlocks a passed pawn, creating a potential promotion threat.
-
----
-
-# 15. Pawn Structure
-
-## pawn structure changes
-
-Detects structural changes involving:
-
-- Isolated queen pawns (IQPs)
-- Hanging pawn pairs
-- Doubled pawns
-- Backward pawns
-
-It can identify these structures appearing for either side.
-
-## pawn specific
-
-Detects pawn-specific ideas such as:
-
-- Pawn breaks
-- Pawn levers
-- Passed pawns
-- Pawn storms
-- Isolated pawns
-
----
-
-# 16. Restriction / Development
-
-## restricts
-
-Detects when a move significantly reduces the opponent's available legal moves.
-
-## develops
-
-Detects useful development or activation of knights and bishops, with its wording changing depending on whether the game is in the opening, middlegame, or endgame.
-
----
-
-# 17. Higher-order Strategic Features
-
-## loss of castling rights
-
-Detects when a king or rook move permanently removes kingside or queenside castling rights in the opening or middlegame.
-
-## decisive combination
-
-Detects a capture that also gives check or creates a serious follow-up threat, provided the move produces a significant evaluation improvement.
-
-## prophylaxis
-
-Detects a move that restricts the opponent by blocking an enemy attacking line, intended as a heuristic for prophylactic play.
-
-## multi purpose
-
-Detects a quiet move that accomplishes at least three useful strategic goals at once, without already being classified as a major tactical motif.
+### Dynamic Advantage
+A dynamic advantage comes from temporary features such as initiative, development, king safety, tactical activity, or superior piece activity. It often requires immediate action before it disappears.

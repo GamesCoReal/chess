@@ -1,0 +1,675 @@
+eco	name	pgn	playercount	win	draw	loss
+A00	Amar Opening: Paris Gambit	1. Nh3 d5 2. g3 e5 3. f4	20227	46.7	3.7	49.6
+A00	Amar Opening: Paris Gambit, Gent Gambit	1. Nh3 d5 2. g3 e5 3. f4 Bxh3 4. Bxh3 exf4 5. O-O fxg3 6. hxg3	309	45.31	7.44	47.25
+A00	Amsterdam Attack	1. e3 e5 2. c4 d6 3. Nc3 Nc6 4. b3 Nf6	5820	50.4	3.28	46.32
+A00	Anderssen's Opening: Polish Gambit	1. a3 a5 2. b4	13773	48.62	6.91	44.46
+A00	Barnes Opening: Fool's Mate	1. f3 e5 2. g4 Qh4#	48440	0.0	0.0	100.0
+A00	Barnes Opening: Gedult Gambit	1. f3 d5 2. e4 g6 3. d4 dxe4 4. c3	373	49.87	1.61	48.53
+A00	Barnes Opening: Gedult Gambit	1. f3 f5 2. e4 fxe4 3. Nc3	1346	50.15	2.45	47.4
+A00	Barnes Opening: Hammerschlag	1. f3 e5 2. Kf2	417545	47.37	3.44	49.19
+A00	Clemenz Opening: Spike Lee Gambit	1. h3 h5 2. g4	7690	39.3	10.57	50.13
+A00	Creepy Crawly Formation: Classical Defense	1. h3 d5 2. a3 e5	263123	46.42	3.59	49.99
+A00	Formation: Hippopotamus Attack	1. a3 e5 2. b3 d5 3. c3 Nf6 4. d3 Nc6 5. e3 Bd6 6. f3 O-O 7. g3	3210	37.76	2.71	59.53
+A00	Formation: Shy Attack	1. a3 e5 2. g3 d5 3. Bg2 Nf6 4. d3 Nc6 5. Nd2 Bd6 6. e3 O-O 7. h3	58	46.55	6.9	46.55
+A00	Global Opening	1. h3 e5 2. a3	491022	46.57	3.59	49.84
+A00	Grob Opening: Double Grob, Coca-Cola Gambit	1. g4 g5 2. f4	6280	27.83	21.43	50.73
+A00	Grob Opening: Grob Gambit	1. g4 d5 2. Bg2	5835916	51.93	3.23	44.84
+A00	Grob Opening: Grob Gambit Declined	1. g4 d5 2. Bg2 c6	1056939	47.2	3.82	48.98
+A00	Grob Opening: Grob Gambit, Basman Gambit	1. g4 d5 2. Bg2 h5 3. gxh5	6055	49.45	3.55	47.0
+A00	Grob Opening: Grob Gambit, Fritz Gambit	1. g4 d5 2. Bg2 Bxg4 3. c4	2064745	56.89	3.01	40.1
+A00	Grob Opening: Grob Gambit, Fritz Gambit, Romford Countergambit	1. g4 d5 2. Bg2 Bxg4 3. c4 d4 4. Bxb7 Nd7 5. Bxa8 Qxa8	17577	48.02	2.76	49.22
+A00	Grob Opening: Grob Gambit, Keres Gambit	1. g4 d5 2. Bg2 e5 3. d4 exd4 4. c3	188	42.55	4.79	52.66
+A00	Grob Opening: Grob Gambit, Richter-Grob Gambit	1. g4 d5 2. Bg2 c6 3. c4 dxc4 4. b3	12068	43.28	3.3	53.42
+A00	Grob Opening: Keene Defense	1. g4 d5 2. h3 e5 3. Bg2 c6	68567	47.79	3.58	48.63
+A00	Grob Opening: Keene Defense, Main Line	1. g4 d5 2. h3 e5 3. Bg2 c6 4. d4 e4 5. c4 Bd6 6. Nc3 Ne7	2524	43.9	4.4	51.7
+A00	Grob Opening: London Defense	1. g4 e5 2. h3 Nc6	92705	46.56	3.33	50.11
+A00	Grob Opening: Romford Countergambit	1. g4 d5 2. Bg2 Bxg4 3. c4 d4	37210	57.01	2.34	40.65
+A00	Grob Opening: Spike Attack	1. g4 d5 2. Bg2 c6 3. g5	277020	48.29	4.3	47.41
+A00	Grob Opening: Spike, Hurst Attack	1. g4 e5 2. Bg2 d5 3. c4	1439333	53.45	2.89	43.66
+A00	Grob Opening: Zilbermints Gambit	1. g4 d5 2. e4 dxe4 3. Nc3	8038	49.3	4.06	46.64
+A00	Grob Opening: Zilbermints Gambit, Schiller Defense	1. g4 d5 2. e4 dxe4 3. Nc3 h5	268	45.9	8.21	45.9
+A00	Grob Opening: Zilbermints Gambit, Zilbermints-Hartlaub Gambit	1. g4 d5 2. e4 dxe4 3. Nc3 e5 4. d3	86	46.51	13.95	39.53
+A00	Hungarian Opening	1. g3	134652843	50.18	3.92	45.9
+A00	Hungarian Opening: Asten Gambit	1. g3 Nc6 2. Nc3 d5 3. d4 e5 4. dxe5 d4 5. Ne4 f5	18	33.33	0.0	66.67
+A00	Hungarian Opening: Burk Gambit	1. g3 e5 2. a3 d5 3. Nf3 e4 4. Nh4 Be7 5. d3	262	59.92	2.67	37.4
+A00	Hungarian Opening: Catalan Formation	1. g3 d5 2. Bg2 e6	4694856	51.86	4.14	44.0
+A00	Hungarian Opening: Indian Defense	1. g3 Nf6	10115044	48.87	4.34	46.78
+A00	Hungarian Opening: Pachman Gambit	1. g3 f5 2. e4 fxe4 3. Qh5+ g6	421	38.72	2.14	59.14
+A00	Hungarian Opening: Reversed Alekhine	1. g3 e5 2. Nf3	716593	47.86	3.71	48.43
+A00	Hungarian Opening: Reversed Modern Defense	1. g3 d5 2. Bg2 c5	2077346	50.17	3.85	45.98
+A00	Hungarian Opening: Reversed Norwegian Defense	1. g3 e5 2. Nf3 e4 3. Nh4	45835	45.55	3.1	51.36
+A00	Hungarian Opening: Sicilian Invitation	1. g3 c5	9450219	49.98	3.84	46.18
+A00	Hungarian Opening: Slav Formation	1. g3 d5 2. Bg2 c6	5429119	49.72	4.45	45.84
+A00	Hungarian Opening: Symmetrical Variation	1. g3 g6	9350823	49.02	4.31	46.67
+A00	Hungarian Opening: Van Kuijk Gambit	1. g3 h5 2. Nf3 h4	95273	46.08	3.64	50.27
+A00	Hungarian Opening: Winterberg Gambit	1. g3 d5 2. Bg2 e5 3. c4 dxc4 4. b3	4072	52.16	3.17	44.67
+A00	Kádas Opening: Beginner's Trap	1. h4 d5 2. Rh3	118272	27.34	6.15	66.51
+A00	Kádas Opening: Kádas Gambit	1. h4 d5 2. d4 c5 3. Nf3 cxd4 4. c3	1418	49.01	3.67	47.32
+A00	Kádas Opening: Kádas Gambit	1. h4 e5 2. d4 exd4 3. c3	2830	43.29	4.42	52.3
+A00	Kádas Opening: Steinbok Gambit	1. h4 f5 2. e4 fxe4 3. d3	260	55.0	5.38	39.62
+A00	Mieses Opening: Reversed Rat	1. d3 e5	15276682	47.63	3.54	48.83
+A00	Mieses Opening: Venezolana Variation	1. d3 c5 2. Nc3 Nc6 3. g3	7918	45.58	3.9	50.52
+A00	Polish Opening, with d5	1. b4 d5	6785598	51.71	3.66	44.63
+A00	Polish Opening, with d5	1. b4 d5 2. Bb2 Nf6 3. Nf3	306555	49.65	4.04	46.32
+A00	Polish Opening: Baltic Defense	1. b4 d5 2. Bb2 Bf5	559694	52.18	3.66	44.16
+A00	Polish Opening: Birmingham Gambit	1. b4 c5	908636	50.33	3.15	46.52
+A00	Polish Opening: Bugayev Advance Variation	1. b4 e5 2. Bb2 f6 3. b5	356829	53.26	3.75	42.99
+A00	Polish Opening: Bugayev Attack	1. b4 e5 2. a3	653779	50.35	3.86	45.79
+A00	Polish Opening: Czech Defense	1. b4 e5 2. Bb2 d6	2903985	49.63	4.1	46.27
+A00	Polish Opening: King's Indian Variation	1. b4 Nf6 2. Bb2 g6	997670	46.54	4.58	48.88
+A00	Polish Opening: King's Indian Variation, Schiffler Attack	1. b4 Nf6 2. Bb2 g6 3. e4	146552	44.29	3.75	51.96
+A00	Polish Opening: King's Indian Variation, Sokolsky Attack	1. b4 Nf6 2. Bb2 g6 3. c4 Bg7 4. e3 d6 5. Nf3 O-O 6. d4	35667	48.6	5.47	45.93
+A00	Polish Opening: Myers Variation	1. b4 d5 2. Bb2 c6 3. a4	105665	50.19	3.54	46.26
+A00	Polish Opening: Outflank Variation	1. b4 c6	1378944	48.27	3.99	47.74
+A00	Polish Opening: Outflank Variation, Schuehler Gambit	1. b4 c6 2. Bb2 a5 3. b5	4606	46.48	3.8	49.72
+A00	Polish Opening: Queen's Indian Variation	1. b4 e6 2. Bb2 Nf6 3. b5 b6	116752	50.82	4.55	44.64
+A00	Polish Opening: Queenside Defense	1. b4 e6 2. Bb2 Nf6 3. b5 a6	144502	50.27	5.64	44.09
+A00	Polish Opening: Rooks Swap Line	1. b4 e6 2. Bb2 Nf6 3. b5 a6 4. a4 axb5 5. axb5 Rxa1 6. Bxa1	82028	50.83	6.63	42.54
+A00	Polish Opening: Schiffler-Sokolsky Variation	1. b4 e6 2. Bb2 Nf6 3. b5 d5 4. e3	281089	50.22	4.75	45.03
+A00	Polish Opening: Schuehler Gambit	1. b4 c6 2. Bb2 a5 3. b5 cxb5 4. e4	1553	48.49	3.8	47.71
+A00	Polish Opening: Tartakower Gambit	1. b4 e5 2. Bb2 f6 3. e4	77723	50.56	3.4	46.05
+A00	Sodium Attack: Celadon Variation	1. Na3 e5 2. d3 Bxa3 3. bxa3 d5 4. e3 c5 5. Rb1	11	36.36	18.18	45.45
+A00	Sodium Attack: Durkin Gambit	1. Na3 e5 2. Nc4 Nc6 3. e4 f5	422	49.05	4.03	46.92
+A00	Valencia Opening	1. d3 e5 2. Nd2	930468	51.6	3.04	45.36
+A00	Van Geet Opening: Billockus-Johansen Gambit	1. Nc3 e5 2. Nf3 Bc5	176175	50.14	3.49	46.38
+A00	Van Geet Opening: Damhaug Gambit	1. Nc3 d5 2. f4 e5	4246	47.39	4.1	48.52
+A00	Van Geet Opening: Dougherty Gambit	1. Nc3 d5 2. e4 dxe4 3. f3	139901	51.13	3.61	45.25
+A00	Van Geet Opening: Dunst-Perrenet Gambit	1. Nc3 d5 2. e4 dxe4 3. d3	148822	47.7	4.19	48.1
+A00	Van Geet Opening: Gladbacher Gambit	1. Nc3 e5 2. b3 d5 3. e4 dxe4 4. d3	32	65.62	6.25	28.12
+A00	Van Geet Opening: Hector Gambit	1. Nc3 d5 2. e4 dxe4 3. Bc4	123797	46.81	3.21	49.98
+A00	Van Geet Opening: Hergert Gambit	1. Nc3 d6 2. f4 e5 3. fxe5 Nc6	3581	46.41	2.65	50.94
+A00	Van Geet Opening: Kluever Gambit	1. Nc3 f5 2. e4 fxe4 3. d3	39256	57.75	3.19	39.06
+A00	Van Geet Opening: Liebig Gambit	1. Nc3 e5 2. e3 d5 3. Qh5 Nf6	21020	48.02	3.25	48.73
+A00	Van Geet Opening: Melleby Gambit	1. Nc3 d5 2. f4 d4 3. Ne4 c5	3965	48.4	2.55	49.05
+A00	Van Geet Opening: Myers Attack	1. Nc3 g6 2. h4	54320	52.81	3.95	43.24
+A00	Van Geet Opening: Napoleon Attack	1. Nc3 e5 2. Nf3 Nc6 3. d4	914577	52.48	4.45	43.07
+A00	Van Geet Opening: Novosibirsk Variation	1. Nc3 c5 2. d4 cxd4 3. Qxd4 Nc6 4. Qh4	218463	51.85	3.76	44.39
+A00	Van Geet Opening: Nowokunski Gambit	1. Nc3 e5 2. f4 exf4 3. e4	3324	46.48	2.8	50.72
+A00	Van Geet Opening: Pfeiffer Gambit	1. Nc3 d5 2. f4 d4 3. Ne4 e5	1081	46.25	3.33	50.42
+A00	Van Geet Opening: Pfeiffer Gambit, Sleipnir Countergambit	1. Nc3 d5 2. f4 d4 3. Ne4 e5 4. Nf3	77	51.95	1.3	46.75
+A00	Van Geet Opening: Reversed Nimzowitsch	1. Nc3 e5	11267962	49.2	3.82	46.98
+A00	Van Geet Opening: Reversed Scandinavian	1. Nc3 e5 2. d4 exd4 3. Qxd4 Nc6 4. Qa4	208632	53.04	2.96	44.0
+A00	Van Geet Opening: Sicilian Two Knights	1. Nc3 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4	169933	46.93	4.24	48.83
+A00	Van Geet Opening: Sleipnir Gambit	1. Nc3 d5 2. e3 e5 3. d4 Bb4	11191	50.3	4.07	45.63
+A00	Van Geet Opening: Tübingen Gambit	1. Nc3 Nf6 2. g4	55973	52.66	4.4	42.95
+A00	Van Geet Opening: Venezolana Variation	1. Nc3 d5 2. d3 Nf6 3. g3	26795	45.28	4.23	50.49
+A00	Van't Kruijs Opening	1. e3	172117260	47.72	3.5	48.78
+A00	Van't Kruijs Opening: Bouncing Bishop Variation	1. e3 e5 2. Bc4 b5 3. Bb3	1281	73.22	2.97	23.81
+A00	Van't Kruijs Opening: Keoni-Hiva Gambit, Akahi Variation	1. e3 e5 2. Nc3 Nf6 3. f4 exf4 4. Nf3	1601	53.03	3.0	43.97
+A00	Van't Kruijs Opening: Keoni-Hiva Gambit, Alua Variation	1. e3 e5 2. Nc3 Nc6 3. f4 exf4 4. Nf3	1484	52.02	2.56	45.42
+A00	Van't Kruijs Opening: Keoni-Hiva Gambit, Ekolu Variation	1. e3 e5 2. Nc3 d5 3. f4 exf4 4. Nf3	1890	47.83	3.28	48.89
+A00	Ware Opening: Crab Variation	1. a4 e5 2. h4	262567	40.8	4.05	55.15
+A00	Ware Opening: Meadow Hay Trap	1. a4 e5 2. Ra3	206966	38.94	4.16	56.89
+A00	Ware Opening: Symmetric Variation	1. a4 a5	267663	45.24	9.77	44.99
+A00	Ware Opening: Ware Gambit	1. a4 e5 2. a5 d5 3. e3 f5 4. a6	627	51.83	2.87	45.3
+A00	Ware Opening: Wing Gambit	1. a4 b5 2. axb5 Bb7	1491	47.62	10.6	41.78
+A01	Nimzo-Larsen Attack	1. b3	123286165	50.43	3.69	45.87
+A01	Nimzo-Larsen Attack: Classical Variation	1. b3 d5	29263175	50.15	3.68	46.17
+A01	Nimzo-Larsen Attack: English Variation	1. b3 c5	8245860	50.05	3.63	46.32
+A01	Nimzo-Larsen Attack: Graz Attack	1. b3 d5 2. Ba3	376759	47.79	4.06	48.15
+A01	Nimzo-Larsen Attack: Indian Variation	1. b3 Nf6	13933697	48.89	4.24	46.87
+A01	Nimzo-Larsen Attack: Modern Variation	1. b3 e5	33051179	50.24	3.57	46.19
+A01	Nimzo-Larsen Attack: Modern Variation	1. b3 e5 2. Bb2 Nc6	16763024	49.82	3.63	46.55
+A01	Nimzo-Larsen Attack: Modern Variation	1. b3 e5 2. Bb2 Nc6 3. e3	8083859	51.46	3.76	44.78
+A01	Nimzo-Larsen Attack: Modern Variation	1. b3 e5 2. Bb2 Nc6 3. c4 Nf6	290148	49.59	4.1	46.31
+A01	Nimzo-Larsen Attack: Ringelbach Gambit	1. b3 f5 2. Bb2 e6 3. e4	18324	58.33	3.2	38.46
+A01	Nimzo-Larsen Attack: Spike Variation	1. b3 Nf6 2. Bb2 g6 3. g4	551519	51.33	3.31	45.36
+A02	Bird Opening	1. f4	73842228	49.61	3.77	46.62
+A02	Bird Opening: Double Duck Formation	1. f4 f5 2. d4 d5	71658	50.26	6.25	43.49
+A02	Bird Opening: From's Gambit	1. f4 e5	7637033	47.83	3.25	48.91
+A02	Bird Opening: From's Gambit, Langheld Gambit	1. f4 e5 2. fxe5 d6 3. exd6 Nf6	24251	43.77	3.29	52.94
+A02	Bird Opening: From's Gambit, Lasker Variation	1. f4 e5 2. fxe5 d6 3. exd6 Bxd6 4. Nf3 g5	589541	48.99	3.38	47.62
+A02	Bird Opening: From's Gambit, Lipke Variation	1. f4 e5 2. fxe5 d6 3. exd6 Bxd6 4. Nf3 Nh6 5. d4	2543	46.6	3.3	50.1
+A02	Bird Opening: Hobbs-Zilbermints Gambit	1. f4 h6 2. Nf3 g5	15281	45.33	3.22	51.45
+A02	Bird Opening: Lasker Gambit	1. f4 e5 2. fxe5 f6	152359	50.56	3.31	46.13
+A02	Bird Opening: Schlechter Gambit	1. f4 e5 2. fxe5 Nc6	954856	50.41	3.06	46.53
+A02	Bird Opening: Siegener Gambit	1. f4 e5 2. d4 exd4 3. Nf3 c5 4. c3	1364	53.67	3.3	43.04
+A02	Bird Opening: Swiss Gambit	1. f4 f5 2. e4 fxe4 3. Nc3 Nf6 4. g4	807	57.0	2.6	40.4
+A02	Bird Opening: Wagner-Zwitersch Gambit	1. f4 f5 2. e4	156152	53.03	4.48	42.48
+A03	Bird Opening: Dutch Variation	1. f4 d5	25726048	49.8	3.93	46.27
+A03	Bird Opening: Lasker Variation	1. f4 d5 2. Nf3 Nf6 3. e3 c5	423584	50.99	4.33	44.68
+A03	Bird Opening: Sturm Gambit	1. f4 d5 2. c4	301135	49.8	3.32	46.88
+A03	Bird Opening: Thomas Gambit	1. f4 d5 2. b3 Nf6 3. Bb2 d4 4. Nf3 c5 5. e3	3439	53.71	4.13	42.16
+A03	Bird Opening: Williams Gambit	1. f4 d5 2. e4	445544	43.11	3.4	53.49
+A03	Bird Opening: Williams Gambit	1. f4 d5 2. e4 dxe4 3. Nc3 Nf6 4. Qe2	110693	49.78	2.72	47.5
+A03	Bird Opening: Williams-Zilbermints Gambit	1. f4 d5 2. e4 dxe4 3. Nc3 Nf6 4. Nge2	98611	47.49	3.01	49.5
+A04	Colle System: Rhamphorhynchus Variation	1. Nf3 c5 2. e3 g6 3. d4 Bg7 4. dxc5 Qa5+	36000	44.04	4.14	51.81
+A04	Modern Defense: Semi-Averbakh Variation, Polish Variation	1. Nf3 c5 2. c4 g6 3. d4 Bg7 4. e4 Qb6	8110	42.84	4.86	52.31
+A04	Modern Defense: Semi-Averbakh Variation, Pterodactyl Variation	1. Nf3 c5 2. c4 g6 3. d4 Bg7 4. e4 Qa5+	8090	42.78	5.81	51.41
+A04	Modern Defense: Semi-Averbakh Variation, Pterodactyl Variation Accepted	1. Nf3 g6 2. d4 Bg7 3. e4 d6 4. c4 c5 5. dxc5 Qa5+	10339	46.42	4.65	48.93
+A04	Zukertort Defense: Kingside Variation	1. Nf3 Nh6 2. d4 g6	16530	50.91	3.9	45.19
+A04	Zukertort Defense: Sicilian Knight Variation	1. Nf3 Na6 2. e4 c5	10540	59.95	3.65	36.39
+A04	Zukertort Opening	1. Nf3	278148190	51.07	4.35	44.58
+A04	Zukertort Opening: Arctic Defense, Drunken Knight Variation	1. Nf3 f6 2. e4 Nh6 3. d4 Nf7	34136	47.88	3.08	49.04
+A04	Zukertort Opening: Black Mustang Defense	1. Nf3 Nc6	19440273	50.99	4.06	44.96
+A04	Zukertort Opening: Drunken Cavalry Variation	1. Nf3 Na6 2. e4 Nh6	25741	60.41	3.94	35.65
+A04	Zukertort Opening: Kingside Fianchetto	1. Nf3 g6	15073458	49.54	4.42	46.05
+A04	Zukertort Opening: Lisitsyn Gambit	1. Nf3 f5 2. e4	263130	53.65	3.45	42.9
+A04	Zukertort Opening: Lisitsyn Gambit Deferred	1. Nf3 f5 2. d3 Nf6 3. e4	88134	58.11	4.21	37.67
+A04	Zukertort Opening: Pirc Invitation	1. Nf3 d6	15780429	50.66	4.16	45.19
+A04	Zukertort Opening: Queen's Gambit Invitation	1. Nf3 e6	26118063	52.35	3.96	43.69
+A04	Zukertort Opening: Ross Gambit	1. Nf3 e5	15073955	53.24	3.28	43.48
+A04	Zukertort Opening: Sicilian Invitation	1. Nf3 c5	25870556	49.91	4.41	45.69
+A04	Zukertort Opening: Speelsmet Gambit	1. Nf3 c5 2. d4 cxd4 3. e3	340638	46.09	3.7	50.22
+A04	Zukertort Opening: The Walrus	1. Nf3 e5 2. Nxe5 Nc6 3. Nxc6 dxc6	690123	50.8	3.52	45.68
+A04	Zukertort Opening: Vos Gambit	1. Nf3 d6 2. d4 e5	1224762	53.11	4.0	42.89
+A04	Zukertort Opening: Wade Defense	1. Nf3 d6 2. e4 Bg4	1756561	51.18	4.06	44.76
+A05	King's Indian Attack	1. Nf3 Nf6 2. g3 d5	2305158	51.11	5.67	43.22
+A05	King's Indian Attack: Smyslov Variation	1. Nf3 Nf6 2. g3 g6 3. b4	34070	53.53	6.48	39.99
+A05	King's Indian Attack: Symmetrical Defense	1. Nf3 Nf6 2. g3 g6	5976560	49.98	5.94	44.09
+A05	King's Indian Attack: Wahls Defense	1. Nf3 Nf6 2. g3 g6 3. Bg2 Bg7 4. O-O O-O 5. d3 d5	704321	48.89	5.76	45.35
+A05	Polish Opening: Zukertort System	1. Nf3 Nf6 2. b4 g6 3. Bb2	35917	47.21	5.16	47.63
+A05	Zukertort Opening	1. Nf3 Nf6	41763906	49.68	5.28	45.03
+A05	Zukertort Opening	1. Nf3 Nf6 2. Nc3 Nc6	669726	47.78	5.56	46.65
+A05	Zukertort Opening: Lemberger Gambit	1. Nf3 Nf6 2. e4	1022709	48.47	3.36	48.17
+A05	Zukertort Opening: Nimzo-Larsen Variation	1. Nf3 Nf6 2. b3	2201631	49.74	5.81	44.45
+A05	Zukertort Opening: Quiet System	1. Nf3 Nf6 2. e3	2141968	48.5	4.85	46.66
+A06	Nimzo-Larsen Attack: Classical Variation	1. Nf3 d5 2. b3	3660373	52.04	4.64	43.32
+A06	Nimzo-Larsen Attack: Norfolk Gambit	1. Nf3 d5 2. b3 c5 3. e4	27292	52.36	3.84	43.8
+A06	Zukertort Opening	1. Nf3 d5	88037056	51.29	4.36	44.35
+A06	Zukertort Opening: Old Indian Attack	1. Nf3 d5 2. d3	4143421	51.24	4.06	44.7
+A06	Zukertort Opening: Pachman Gambit	1. Nf3 d5 2. e3 c5 3. c4 dxc4 4. b3	110	55.45	3.64	40.91
+A06	Zukertort Opening: Regina-Nu Gambit	1. Nf3 d5 2. b3 c5 3. c4 dxc4 4. Nc3	10	70.0	0.0	30.0
+A06	Zukertort Opening: Reversed Mexican Defense	1. Nf3 d5 2. Nc3	3475370	45.71	4.05	50.24
+A06	Zukertort Opening: Santasiere's Folly	1. b4 d5 2. Nf3	53839	49.71	3.85	46.43
+A06	Zukertort Opening: Tennison Gambit	1. e4 d5 2. Nf3	40168065	46.98	3.16	49.86
+A06	Zukertort Opening: Tennison Gambit, Brigg's Trap	1. e4 d5 2. Nf3 dxe4 3. Ng5 Nf6 4. Nc3 Bf5 5. Qe2 Qd4	433371	71.51	2.44	26.04
+A07	King's Indian Attack	1. Nf3 d5 2. g3	21149384	52.55	4.73	42.72
+A07	King's Indian Attack, with Bf5	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bf5	1145641	50.61	5.91	43.49
+A07	King's Indian Attack, with Bf5	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bf5 5. d3 h6	136558	48.48	5.86	45.66
+A07	King's Indian Attack, with Bf5	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bf5 5. d3 h6 6. c4 dxc4	2149	43.6	10.8	45.6
+A07	King's Indian Attack, with Bf5	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bf5 5. d3 e6 6. Nbd2	346486	52.04	5.12	42.85
+A07	King's Indian Attack, with Bf5	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bf5 5. d3 e6 6. Nh4	39928	51.7	5.4	42.9
+A07	King's Indian Attack, with e6	1. Nf3 Nf6 2. g3 d5 3. Bg2 e6	1897275	52.7	5.28	42.02
+A07	King's Indian Attack, with e6	1. Nf3 Nf6 2. g3 d5 3. Bg2 e6 4. O-O Be7	2475642	52.09	5.65	42.26
+A07	King's Indian Attack: Keres Variation	1. Nf3 d5 2. g3 Bg4	1280303	52.55	4.55	42.9
+A07	King's Indian Attack: Keres Variation	1. Nf3 d5 2. g3 Bg4 3. Bg2 Nd7	85032	46.9	7.42	45.68
+A07	King's Indian Attack: Keres Variation	1. Nf3 d5 2. g3 c6 3. Bg2 Bg4 4. O-O Nd7	211261	48.75	6.02	45.23
+A07	King's Indian Attack: Keres Variation	1. Nf3 d5 2. g3 c6 3. Bg2 Bg4 4. O-O Nd7 5. d4 Ngf6 6. c4 e6 7. cxd5 exd5 8. Nc3 Bd6	22248	45.6	6.79	47.61
+A07	King's Indian Attack: Omega-Delta Gambit	1. Nf3 d5 2. g3 e5	652667	53.56	3.53	42.91
+A07	King's Indian Attack: Pachman System	1. Nf3 d5 2. g3 g6 3. Bg2 Bg7 4. O-O e5 5. d3 Ne7	70628	46.32	6.17	47.51
+A07	King's Indian Attack: Sicilian Variation	1. Nf3 d5 2. g3 c5	3233782	53.3	4.56	42.14
+A07	King's Indian Attack: Yugoslav Variation	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bg4	1152504	50.25	5.71	44.04
+A08	King's Indian Attack: French Variation	1. Nf3 d5 2. g3 c5 3. Bg2 Nc6	3283303	52.84	4.51	42.65
+A08	King's Indian Attack: Sicilian Variation	1. e4 e6 2. d3 d5 3. Nd2 Nf6 4. Ngf3 c5 5. g3 Nc6 6. Bg2 Be7 7. O-O O-O 8. Re1	410391	54.3	4.82	40.87
+A08	King's Indian Attack: Sicilian Variation	1. Nf3 d5 2. g3 c5 3. Bg2	3843363	53.42	4.57	42.01
+A08	King's Indian Attack: Sicilian Variation	1. Nf3 d5 2. g3 c5 3. Bg2 Nf6 4. O-O e6 5. d3	878306	55.02	4.52	40.46
+A08	Zukertort Opening: Reversed Grünfeld	1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. d4	752913	56.63	5.85	37.52
+A08	Zukertort Opening: Reversed Grünfeld	1. Nf3 d5 2. g3 c5 3. Bg2 Nc6 4. d4 Nf6	240041	53.05	5.57	41.37
+A09	Réti Opening	1. Nf3 d5 2. c4	11114721	53.52	4.39	42.09
+A09	Réti Opening: Advance Variation	1. Nf3 d5 2. c4 d4	2183941	52.74	3.69	43.58
+A09	Réti Opening: Advance Variation, Michel Gambit	1. Nf3 d5 2. c4 d4 3. b4 c5	72610	49.49	4.19	46.32
+A09	Réti Opening: Reversed Blumenfeld Gambit	1. Nf3 d5 2. c4 d4 3. e3 c5 4. b4	220400	54.08	3.39	42.53
+A09	Réti Opening: Réti Accepted	1. Nf3 d5 2. c4 dxc4	3121844	56.02	3.76	40.23
+A09	Réti Opening: Réti Gambit, Keres Variation	1. Nf3 d5 2. c4 dxc4 3. e3 Be6	100968	53.33	3.77	42.9
+A10	English Opening	1. c4	253658767	50.77	4.16	45.07
+A10	English Opening: Adorjan Defense	1. c4 g6 2. e4 e5	8442	48.47	5.11	46.42
+A10	English Opening: Anglo-Dutch Defense, Hickmann Gambit	1. c4 f5 2. e4	37913	51.22	4.06	44.72
+A10	English Opening: Anglo-Dutch Variation, Chabanon Gambit	1. c4 f5 2. Nf3 d6 3. e4	422	50.71	3.08	46.21
+A10	English Opening: Anglo-Dutch Variation, Ferenc Gambit	1. c4 f5 2. Nc3 Nf6 3. e4	35222	50.34	3.54	46.12
+A10	English Opening: Anglo-Scandinavian Defense	1. c4 d5	24292062	52.4	3.59	44.01
+A10	English Opening: Anglo-Scandinavian Defense, Löhn Gambit	1. c4 d5 2. cxd5 e6	460349	53.59	3.32	43.1
+A10	English Opening: Anglo-Scandinavian Defense, Malvinas Variation	1. c4 d5 2. cxd5 Qxd5 3. Nc3 Qa5	2040419	53.12	3.58	43.3
+A10	English Opening: Anglo-Scandinavian Defense, Schulz Gambit	1. c4 d5 2. cxd5 Nf6	1783014	51.44	3.9	44.66
+A10	English Opening: Great Snake Variation	1. c4 g6	15211777	49.45	4.22	46.33
+A10	English Opening: King's English Variation, Botvinnik System, Prickly Pawn Pass System	1. c4 g6 2. Nc3 Bg7 3. g3 Nf6 4. Bg2 O-O 5. e4 d6 6. Nge2 e5 7. O-O c6 8. d3 a6	6738	49.96	5.46	44.58
+A10	English Opening: Myers Gambit	1. c4 g5 2. d4 Bg7	158523	50.94	2.85	46.21
+A10	English Opening: Porcupine Variation	1. c4 f5 2. Nc3 Nf6 3. e4 fxe4 4. g4	1955	54.37	4.25	41.38
+A11	English Opening: Caro-Kann Defensive System	1. c4 c6	15646926	48.46	4.63	46.91
+A11	Réti Opening: Anglo-Slav Variation, Gurevich System	1. c4 c6 2. Nf3 d5 3. e3	1023239	51.76	5.36	42.88
+A11	Réti Opening: Anglo-Slav Variation, Gurevich System	1. c4 c6 2. Nf3 d5 3. e3 Nf6 4. Qc2	29234	54.21	4.85	40.94
+A11	Réti Opening: Anglo-Slav Variation, Gurevich System	1. c4 c6 2. Nf3 d5 3. e3 Nf6 4. Nc3 Nbd7 5. Qc2	4168	55.88	4.7	39.42
+A11	Réti Opening: Anglo-Slav Variation, Gurevich System	1. c4 c6 2. Nf3 d5 3. e3 Nf6 4. Nc3 Nbd7 5. b3 e5	5891	47.31	4.31	48.38
+A11	Réti Opening: Anglo-Slav Variation, Gurevich System	1. c4 c6 2. Nf3 d5 3. e3 Nf6 4. Nc3 e6 5. b3 Bd6	50717	53.96	5.55	40.49
+A11	Réti Opening: Anglo-Slav Variation, with g3	1. c4 c6 2. Nf3 d5 3. g3 Nf6 4. b3 g6	15992	50.29	7.56	42.15
+A11	Réti Opening: Anglo-Slav Variation, with g3	1. c4 c6 2. Nf3 d5 3. g3 Nf6 4. Bg2	634148	51.47	6.41	42.12
+A11	Réti Opening: Anglo-Slav Variation, with g3	1. c4 c6 2. Nf3 d5 3. g3 Nf6 4. Bg2 dxc4	137929	51.53	5.58	42.88
+A11	Réti Opening: Anglo-Slav Variation, with g3	1. c4 c6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Bf5	369285	50.32	6.65	43.03
+A11	Réti Opening: Anglo-Slav Variation, with g3	1. c4 c6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Bf5 5. O-O e6 6. d3	65146	53.13	6.17	40.7
+A11	Réti Opening: Anglo-Slav Variation, with g3	1. Nf3 Nf6 2. g3 d5 3. Bg2 c6 4. O-O Bf5 5. d3 h6 6. c4 e6	31892	54.51	6.59	38.9
+A12	Réti Opening: Anglo-Slav Variation	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3	46725	50.95	6.58	42.47
+A12	Réti Opening: Anglo-Slav Variation, Bled Variation	1. Nf3 d5 2. b3 Nf6 3. Bb2 g6 4. c4 c6	3954	52.18	7.16	40.67
+A12	Réti Opening: Anglo-Slav Variation, Bogoljubow Variation	1. Nf3 d5 2. c4 c6 3. b3	458083	51.13	5.7	43.17
+A12	Réti Opening: Anglo-Slav Variation, Bogoljubow Variation	1. Nf3 d5 2. c4 c6 3. b3 Bg4	33664	49.15	5.16	45.69
+A12	Réti Opening: Anglo-Slav Variation, Bogoljubow Variation	1. Nf3 d5 2. c4 c6 3. b3 Bf5	45166	51.1	5.52	43.38
+A12	Réti Opening: Anglo-Slav Variation, Bogoljubow Variation	1. Nf3 d5 2. c4 c6 3. b3 Bf5 4. Bb2	31845	51.59	5.65	42.75
+A12	Réti Opening: Anglo-Slav Variation, Capablanca Variation	1. c4 Nf6 2. Nf3 c6 3. b3 d5 4. Bb2 Bg4	53723	48.66	5.68	45.66
+A12	Réti Opening: Anglo-Slav Variation, Capablanca Variation	1. c4 Nf6 2. Nf3 c6 3. b3 d5 4. Bb2 Bg4 5. e3	16157	49.24	6.04	44.72
+A12	Réti Opening: Anglo-Slav Variation, Capablanca Variation	1. c4 Nf6 2. Nf3 c6 3. b3 d5 4. Bb2 Bg4 5. d3	3931	49.76	4.73	45.51
+A12	Réti Opening: Anglo-Slav Variation, London Defensive System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bf5	29682	49.13	6.68	44.19
+A12	Réti Opening: Anglo-Slav Variation, London Defensive System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bf5 5. Bg2	18129	49.21	6.48	44.32
+A12	Réti Opening: Anglo-Slav Variation, London Defensive System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bf5 5. Bg2 e6 6. Bb2	18387	48.51	6.43	45.06
+A12	Réti Opening: Anglo-Slav Variation, London Defensive System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bf5 5. Bb2	11165	50.23	6.97	42.8
+A12	Réti Opening: Anglo-Slav Variation, New York System	1. Nf3 Nf6 2. c4 c6 3. b3 d5 4. Bb2 Bf5	98785	48.6	6.48	44.92
+A12	Réti Opening: Anglo-Slav Variation, New York System	1. Nf3 Nf6 2. c4 c6 3. b3 d5 4. Bb2 Bf5 5. e3	15930	48.21	6.53	45.25
+A12	Réti Opening: Anglo-Slav Variation, New York System	1. Nf3 Nf6 2. c4 c6 3. b3 d5 4. Bb2 Bf5 5. d3	26609	48.96	6.15	44.89
+A12	Réti Opening: Anglo-Slav Variation, Torre System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bg4	18710	49.42	6.27	44.31
+A12	Réti Opening: Anglo-Slav Variation, Torre System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bg4 5. Bg2	16126	49.84	6.19	43.97
+A12	Réti Opening: Anglo-Slav Variation, Torre System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bg4 5. Bg2 e6 6. Bb2	8122	49.82	6.94	43.24
+A12	Réti Opening: Anglo-Slav Variation, Torre System	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 Bg4 5. Bb2	1573	49.14	6.42	44.44
+A12	Réti Opening: Anglo-Slav Variation, with dxc4	1. c4 Nf6 2. g3 c6 3. Nf3 d5 4. b3 dxc4	3591	53.75	5.01	41.24
+A13	English Opening: Agincourt Defense	1. c4 e6	27763057	50.11	4.29	45.59
+A13	English Opening: Agincourt Defense	1. c4 e6 2. Nf3	1602698	51.68	5.3	43.02
+A13	English Opening: Agincourt Defense	1. c4 e6 2. Nf3 d5	2346255	51.98	5.01	43.01
+A13	English Opening: Agincourt Defense	1. c4 e6 2. Nf3 d5 3. b3 Nf6 4. Bb2 Be7 5. e3 O-O 6. d4	44943	49.66	5.69	44.65
+A13	English Opening: Agincourt Defense, Bogoljubow Defense	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Bd6	80885	54.13	5.44	40.43
+A13	English Opening: Agincourt Defense, Catalan Defense	1. c4 e6 2. Nf3 d5 3. g3 c5	68865	53.79	5.91	40.3
+A13	English Opening: Agincourt Defense, Catalan Defense Accepted	1. c4 e6 2. Nf3 Nf6 3. g3 d5 4. Bg2 dxc4	312079	52.57	5.96	41.47
+A13	English Opening: Agincourt Defense, Catalan Defense, Semi-Slav Defense	1. c4 e6 2. Nf3 Nf6 3. g3 d5 4. Bg2 c6	440364	54.45	5.77	39.78
+A13	English Opening: Agincourt Defense, Kurajica Defense	1. c4 e6 2. Nf3 d5 3. g3 c6	157591	55.22	5.48	39.31
+A13	English Opening: Agincourt Defense, Tarrasch Defense	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 c5 5. b3 Nc6 6. O-O Be7	28157	52.06	5.66	42.28
+A13	English Opening: Agincourt Defense, Wimpy System	1. c4 e6 2. Nf3 Nf6 3. b3 d5 4. Bb2 c5 5. e3	28083	50.43	6.03	43.54
+A13	English Opening: Neo-Catalan	1. c4 e6 2. Nf3 d5 3. g3 Nf6	632594	52.42	6.64	40.95
+A13	English Opening: Neo-Catalan Declined	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Be7	902541	50.1	7.37	42.53
+A13	English Opening: Romanishin Gambit	1. c4 Nf6 2. Nf3 e6 3. g3 a6 4. Bg2 b5	9323	42.72	8.78	48.49
+A14	English Opening: Agincourt Defense, Keres Defense	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Be7 5. O-O c5 6. cxd5 Nxd5 7. Nc3 Nc6	1896	48.68	6.86	44.46
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Be7 5. O-O O-O 6. b3	409467	50.89	7.51	41.61
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined	1. Nf3 d5 2. g3 Nf6 3. Bg2 e6 4. O-O Be7 5. c4 O-O 6. b3 c5	121489	50.46	8.03	41.51
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined	1. Nf3 d5 2. g3 Nf6 3. Bg2 e6 4. O-O Be7 5. c4 O-O 6. b3 c5 7. e3	22159	49.77	7.44	42.79
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined	1. Nf3 d5 2. g3 Nf6 3. Bg2 e6 4. O-O Be7 5. c4 O-O 6. b3 c5 7. e3 d4	2575	48.04	6.33	45.63
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined	1. Nf3 d5 2. g3 Nf6 3. Bg2 e6 4. O-O Be7 5. c4 O-O 6. b3 c5 7. e3 Nc6	18086	49.87	7.44	42.68
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined, Early b3	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Be7 5. b3	38520	49.63	7.41	42.95
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined, Early b3	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Be7 5. b3 b6	1610	47.33	8.63	44.04
+A14	English Opening: Agincourt Defense, Neo-Catalan Declined, Early b3	1. c4 e6 2. Nf3 d5 3. g3 Nf6 4. Bg2 Be7 5. b3 c5	1971	49.82	7.56	42.62
+A14	Réti Opening: Anglo-Slav Variation	1. Nf3 d5 2. c4 c6 3. g3 Nf6 4. Bg2 e6 5. b3 Be7 6. Bb2	40505	54.14	6.61	39.24
+A14	Réti Opening: Anglo-Slav Variation, Bogoljubow Variation, Stonewall Line	1. Nf3 d5 2. c4 e6 3. g3 Nf6 4. Bg2 Be7 5. O-O O-O 6. b3 c6 7. Bb2	231754	55.15	6.15	38.7
+A15	English Opening: Anglo-Indian Defense	1. c4 Nf6	41021195	49.66	4.66	45.68
+A15	English Opening: Anglo-Indian Defense, Anti-Anti-Grünfeld	1. c4 Nf6 2. Nc3 g6 3. Nf3 Bg7 4. e4	703616	52.37	5.97	41.66
+A15	English Opening: Anglo-Indian Defense, Grünfeld Formation	1. c4 Nf6 2. Nf3 g6 3. g3 d5	17217	50.95	5.83	43.22
+A15	English Opening: Anglo-Indian Defense, King's Indian Formation	1. c4 Nf6 2. Nf3 g6	3618246	49.68	5.93	44.39
+A15	English Opening: Anglo-Indian Defense, King's Indian Formation, Double Fianchetto	1. c4 Nf6 2. Nf3 g6 3. g3 b6 4. Bg2 Bb7	2926	49.45	7.83	42.72
+A15	English Opening: Anglo-Indian Defense, King's Knight Variation	1. c4 Nf6 2. Nf3	2184484	50.64	5.34	44.02
+A15	English Opening: Anglo-Indian Defense, Old Indian Formation	1. c4 Nf6 2. Nf3 d6	559228	51.18	5.14	43.68
+A15	English Opening: Anglo-Indian Defense, Queen's Indian Formation	1. c4 Nf6 2. Nf3 b6	218358	49.48	6.83	43.69
+A15	English Opening: Anglo-Indian Defense, Queen's Indian Formation	1. c4 e6 2. Nf3 Nf6 3. g3 b6 4. Bg2 Bb7	143528	51.35	7.33	41.32
+A15	English Opening: Anglo-Indian Defense, Scandinavian Defense	1. c4 Nf6 2. Nf3 d5	552712	53.55	4.61	41.84
+A15	English Opening: Anglo-Indian Defense, Scandinavian Defense, Exchange Variation	1. c4 Nf6 2. Nf3 d5 3. cxd5 Nxd5	836782	55.92	4.43	39.65
+A15	English Opening: Anglo-Indian Defense, Slav Formation	1. c4 Nf6 2. Nf3 g6 3. g3 c6	8986	49.21	7.67	43.12
+A15	English Orangutan	1. c4 Nf6 2. Nf3 g6 3. b4	114357	50.6	6.25	43.15
+A16	English Opening: Anglo-Grünfeld Defense	1. c4 Nf6 2. Nc3 d5	1788257	48.91	5.09	46.0
+A16	English Opening: Anglo-Indian Defense, Anglo-Grünfeld Variation	1. c4 Nf6 2. Nc3 d5 3. cxd5 Nxd5 4. Nf3	343960	52.02	5.27	42.71
+A16	English Opening: Anglo-Indian Defense, Anglo-Grünfeld Variation	1. c4 Nf6 2. Nc3 d5 3. cxd5 Nxd5 4. Nf3 g6	86941	48.08	7.16	44.76
+A16	English Opening: Anglo-Indian Defense, Anglo-Grünfeld Variation	1. c4 Nf6 2. Nc3 d5 3. cxd5 Nxd5 4. g3 g6 5. Bg2 Nb6	41598	45.91	6.62	47.47
+A16	English Opening: Anglo-Indian Defense, Anglo-Grünfeld Variation	1. c4 Nf6 2. Nc3 d5 3. cxd5 Nxd5 4. g3 g6 5. Bg2 Nxc3	109026	47.79	6.83	45.38
+A16	English Opening: Anglo-Indian Defense, Queen's Knight Variation	1. c4 Nf6 2. Nc3	24371790	50.0	4.7	45.3
+A17	English Opening: Anglo-Indian Defense	1. c4 Nf6 2. Nc3 d5 3. cxd5 Nxd5 4. Nf3 c5 5. e3 e6	7589	48.75	6.11	45.13
+A17	English Opening: Anglo-Indian Defense, Hedgehog System	1. c4 Nf6 2. Nc3 e6	6646555	50.15	4.63	45.22
+A17	English Opening: Anglo-Indian Defense, Nimzo-English	1. c4 Nf6 2. Nc3 e6 3. Nf3 Bb4	265592	50.75	4.81	44.44
+A17	English Opening: Anglo-Indian Defense, Queen's Indian Formation	1. c4 e6 2. Nc3 Nf6 3. Nf3 b6	144442	49.97	5.38	44.65
+A17	English Opening: Anglo-Indian Defense, Queen's Indian Variation	1. c4 e6 2. Nc3 Nf6 3. Nf3 b6 4. e4 Bb7 5. Bd3	6057	52.52	4.38	43.11
+A18	English Opening: Mikenas-Carls Variation	1. c4 e6 2. Nc3 Nf6 3. e4	2166430	53.68	4.53	41.8
+A18	English Opening: Mikenas-Carls Variation	1. c4 e6 2. Nc3 Nf6 3. e4 Nc6	74208	51.98	4.12	43.91
+A18	English Opening: Mikenas-Carls Variation	1. c4 e6 2. Nc3 Nf6 3. e4 d5 4. e5	579597	52.48	4.96	42.56
+A19	English Opening: Anglo-Indian Defense, Flohr-Mikenas-Carls Variation, Nei Gambit	1. c4 e6 2. Nc3 Nf6 3. e4 c5 4. e5 Ng8	154315	51.41	4.39	44.19
+A19	English Opening: Mikenas-Carls, Sicilian	1. c4 e6 2. Nc3 Nf6 3. e4 c5	223000	51.14	4.77	44.08
+A20	English Opening: King's English Variation	1. c4 e5	74216514	51.47	3.9	44.64
+A20	English Opening: King's English Variation, Kahiko-Hula Gambit	1. c4 e5 2. e3 Nf6 3. f4 exf4 4. Nf3	214	45.79	4.21	50.0
+A20	English Opening: King's English Variation, Nimzowitsch Variation	1. c4 e5 2. Nf3	2024413	50.51	3.93	45.56
+A20	English Opening: King's English Variation, Nimzowitsch-Flohr Variation	1. c4 e5 2. Nf3 e4	500179	48.77	3.43	47.8
+A21	English Opening: King's English Variation	1. c4 e5 2. Nc3 d6 3. Nf3	1020898	53.38	4.2	42.41
+A21	English Opening: King's English Variation, Keres Defense	1. c4 e5 2. Nc3 d6 3. g3 c6	194540	51.97	4.06	43.96
+A21	English Opening: King's English Variation, Kramnik-Shirov Counterattack	1. c4 e5 2. Nc3 Bb4	2647271	50.62	4.16	45.22
+A21	English Opening: King's English Variation, Reversed Sicilian	1. c4 e5 2. Nc3	44436158	52.08	3.93	43.98
+A21	English Opening: King's English Variation, Smyslov Defense	1. c4 e5 2. Nc3 d6 3. Nf3 Bg4	66431	54.68	3.84	41.49
+A21	English Opening: King's English Variation, Troger Defense	1. c4 e5 2. Nc3 Nc6 3. g3 d6 4. Bg2 Be6	233164	51.75	4.19	44.06
+A22	English Opening: Carls-Bremen System	1. c4 e5 2. Nc3 Nf6 3. g3	6727596	52.0	4.25	43.75
+A22	English Opening: King's English Variation, Adhiban Gambit	1. c4 e5 2. Nc3 Nf6 3. Nf3 e4 4. Ng5 c6	32622	48.29	4.78	46.93
+A22	English Opening: King's English Variation, Bellon Gambit	1. c4 e5 2. Nc3 Nf6 3. Nf3 e4 4. Ng5 b5	17653	49.01	5.01	45.99
+A22	English Opening: King's English Variation, Two Knights Variation	1. c4 e5 2. Nc3 Nf6	15707900	51.49	4.18	44.34
+A22	English Opening: King's English Variation, Two Knights Variation, Reversed Dragon	1. c4 e5 2. Nc3 Nf6 3. g3 d5	1573089	50.48	4.53	44.99
+A22	English Opening: King's English Variation, Two Knights Variation, Smyslov System	1. c4 e5 2. Nc3 Nf6 3. g3 Bb4	1185960	49.94	4.2	45.87
+A23	English Opening: King's English Variation, Two Knights Variation, Keres Variation	1. c4 e5 2. Nc3 Nf6 3. g3 c6	885089	49.85	4.56	45.58
+A23	English Opening: King's English Variation, Two Knights Variation, Keres Variation	1. c4 e5 2. Nc3 Nf6 3. g3 Bc5 4. Bg2 c6	336887	52.65	4.11	43.24
+A24	English Opening: King's English Variation, Two Knights Variation, Fianchetto Line	1. c4 e5 2. Nc3 Nf6 3. g3 g6	158651	52.8	4.72	42.48
+A25	English Opening: Closed, Taimanov Variation	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. e3 d6 6. Nge2 Nh6	1322	44.63	5.22	50.15
+A25	English Opening: King's English Variation, Bremen-Hort Variation	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. e3 d6 6. Nge2 Be6	25599	44.25	5.11	50.64
+A25	English Opening: King's English Variation, Closed System	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. d3	78736	47.67	5.93	46.4
+A25	English Opening: King's English Variation, Hungarian Attack	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Rb1	7939	51.1	6.68	42.22
+A25	English Opening: King's English Variation, Reversed Closed Sicilian	1. c4 e5 2. Nc3 Nc6	8909957	51.56	3.99	44.45
+A25	English Opening: King's English Variation, Reversed Closed Sicilian	1. c4 e5 2. g3 Nf6 3. Bg2 Nc6 4. Nc3 Bb4 5. Nd5	235141	55.03	4.89	40.08
+A25	English Opening: King's English Variation, Reversed Closed Sicilian	1. c4 e5 2. g3 Nf6 3. Bg2 Nc6 4. Nc3 Bb4 5. e4 d6 6. Nge2	27637	52.35	4.19	43.46
+A25	English Opening: King's English Variation, Reversed Closed Sicilian	1. c4 e5 2. g3 Nf6 3. Bg2 Nc6 4. Nc3 Bb4 5. e4 d6 6. Nge2 Bg4	17615	51.58	3.81	44.61
+A25	English Opening: King's English Variation, Reversed Closed Sicilian	1. c4 e5 2. Nc3 Nf6 3. g3 Bb4 4. e4 O-O 5. Nge2 Nc6 6. Bg2	17914	57.13	4.45	38.42
+A25	English Opening: King's English Variation, Taimanov Variation	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7	294011	47.61	5.95	46.44
+A26	English Opening: King's English Variation, Botvinnik System	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. d3 d6 6. e4	28536	47.9	6.44	45.67
+A26	English Opening: King's English Variation, Closed System, Full Symmetry	1. c4 e5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. d3 d6	44774	46.08	5.99	47.93
+A27	English Opening: King's English Variation, Three Knights System	1. c4 e5 2. Nc3 Nc6 3. Nf3	2165319	52.24	4.35	43.41
+A28	English Opening: Four Knights System, Nimzowitsch Variation	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. e4	421899	51.19	4.91	43.9
+A28	English Opening: King's English Variation, Four Knights Variation	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6	2118283	51.93	5.09	42.98
+A28	English Opening: King's English Variation, Four Knights Variation	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. d4 exd4 5. Nxd4 Bb4 6. Bg5 h6 7. Bh4 Bxc3+ 8. bxc3 Ne5	942	46.6	5.31	48.09
+A28	English Opening: King's English Variation, Four Knights Variation, Bradley Beach Variation	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. d4 e4	108965	51.7	3.51	44.79
+A28	English Opening: King's English Variation, Four Knights Variation, Flexible Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. d3	415517	50.56	4.61	44.83
+A28	English Opening: King's English Variation, Four Knights Variation, Korchnoi Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. a3	122437	52.76	4.97	42.27
+A28	English Opening: King's English Variation, Four Knights Variation, Quiet Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. e3	847879	53.07	4.61	42.33
+A28	English Opening: King's English Variation, Four Knights Variation, Quiet Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. e3 Bb4 5. Qc2 Bxc3	40941	48.02	6.87	45.11
+A28	English Opening: King's English Variation, Four Knights Variation, Quiet Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. e3 Bb4 5. Qc2 O-O 6. Nd5 Re8 7. Qf5	4678	56.39	6.8	36.81
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3	1113486	52.61	4.8	42.58
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3 Bb4	262487	50.07	5.06	44.87
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line	1. c4 e5 2. g3 Nf6 3. Bg2 d5 4. cxd5 Nxd5 5. Nf3 Nc6	95987	53.55	6.48	39.97
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line	1. c4 e5 2. g3 Nf6 3. Bg2 d5 4. cxd5 Nxd5 5. Nf3 Nc6 6. d3	18627	52.56	4.76	42.68
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line, Delayed .. Nc6	1. c4 e5 2. Nc3 Nf6 3. g3 Bb4 4. Bg2 O-O 5. Nf3 Re8 6. O-O e4 7. Nd4 Nc6	1546	36.16	7.24	56.6
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line, with .. d6	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3 Bc5 5. d3 d6 6. Bg2	72288	51.07	4.2	44.73
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line, with .. d6, a6	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3 Bc5 5. d3 d6 6. Bg2 a6	16505	49.6	4.7	45.7
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line, with .. d6, h6	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3 Bc5 5. d3 d6 6. Bg2 h6	25130	47.49	4.98	47.54
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line, with Bc5	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3 d5 5. cxd5 Nxd5 6. Bg2 Bc5	11448	48.19	6.62	45.19
+A29	English Opening: King's English Variation, Four Knights Variation, Fianchetto Line, with Nb6	1. c4 e5 2. Nc3 Nf6 3. Nf3 Nc6 4. g3 d5 5. cxd5 Nxd5 6. Bg2 Nb6	58486	47.35	6.94	45.71
+A30	English Opening: Symmetrical Variation	1. c4 c5	28693433	50.95	4.44	44.61
+A30	English Opening: Symmetrical Variation	1. c4 c5 2. Nf3	2404977	52.09	5.13	42.77
+A30	English Opening: Symmetrical Variation, Hedgehog Defense	1. c4 e6 2. Nf3 Nf6 3. Nc3 c5 4. g3 b6 5. Bg2 Bb7 6. O-O Be7	145495	48.23	7.89	43.88
+A30	English Opening: Symmetrical Variation, Napolitano Gambit	1. c4 c5 2. Nf3 Nf6 3. b4	5230	44.7	4.19	51.11
+A30	English Opening: Symmetrical, Hedgehog, Flexible Formation	1. c4 e6 2. Nf3 c5 3. Nc3 Nf6 4. g3 b6 5. Bg2 Bb7 6. O-O Be7 7. d4 cxd4 8. Qxd4 d6 9. Rd1 a6 10. b3 Nbd7	4371	45.78	10.62	43.61
+A31	English Opening: Symmetrical Variation, Anti-Benoni Variation	1. c4 Nf6 2. d4 c5 3. Nf3	1967674	47.0	5.59	47.41
+A31	English Opening: Symmetrical Variation, Anti-Benoni Variation, Kasparov-Vaganian Gambit	1. d4 Nf6 2. c4 c5 3. Nf3 cxd4 4. Nxd4 e5 5. Nb5 d5	101448	47.18	5.07	47.75
+A32	English Opening: Symmetrical Variation, Anti-Benoni Variation, Spielmann Defense	1. c4 e6 2. d4 c5 3. Nf3 cxd4 4. Nxd4 Nf6	257674	48.43	4.1	47.47
+A33	English Opening: Symmetrical Variation, Anti-Benoni Variation, Geller Variation	1. c4 e6 2. Nf3 Nf6 3. Nc3 c5 4. d4 Nc6 5. g3 cxd4 6. Nxd4 Qb6	16566	43.22	6.17	50.62
+A33	English Opening: Symmetrical Variation, Anti-Benoni Variation, Spielmann Defense	1. c4 e6 2. Nf3 Nf6 3. Nc3 c5 4. d4 cxd4 5. Nxd4 Nc6	459466	47.87	5.06	47.06
+A34	English Opening: Symmetrical Variation	1. c4 c5 2. Nf3 Nf6 3. Nc3 Nc6 4. g3 d5 5. d4 cxd4	3012	53.05	12.25	34.69
+A34	English Opening: Symmetrical Variation, Fianchetto Variation	1. c4 Nf6 2. Nc3 c5 3. g3	1327830	50.96	5.02	44.02
+A34	English Opening: Symmetrical Variation, Normal Variation	1. c4 c5 2. Nc3	16674512	51.18	4.42	44.39
+A34	English Opening: Symmetrical Variation, Rubinstein Variation	1. c4 Nf6 2. Nc3 c5 3. g3 d5 4. cxd5 Nxd5 5. Bg2 Nc7	133315	45.1	6.15	48.75
+A34	English Opening: Symmetrical Variation, Rubinstein Variation	1. c4 c5 2. Nf3 Nf6 3. Nc3 d5 4. cxd5 Nxd5 5. g3 Nc6 6. Bg2 Nc7	46072	44.19	6.49	49.32
+A34	English Opening: Symmetrical Variation, Three Knights Variation	1. c4 c5 2. Nc3 Nf6 3. Nf3	837639	50.17	5.46	44.37
+A35	English Opening: Symmetrical Variation	1. c4 c5 2. Nc3 Nf6 3. Nf3 e5	8260	56.66	3.84	39.5
+A35	English Opening: Symmetrical Variation, Four Knights Variation	1. c4 c5 2. Nf3 Nf6 3. Nc3 Nc6	637404	51.81	6.14	42.05
+A35	English Opening: Symmetrical Variation, Four Knights Variation, Keres-Parma System	1. c4 c5 2. Nf3 Nf6 3. Nc3 Nc6 4. g3 e6	115637	52.2	5.33	42.47
+A35	English Opening: Symmetrical Variation, Two Knights Variation	1. c4 c5 2. Nc3 Nc6	8734133	51.08	4.57	44.35
+A36	English Opening: Symmetrical Variation, Botvinnik System	1. c4 c5 2. e4 Nc6 3. Nc3 g6 4. g3 Bg7 5. Bg2	317006	48.53	5.96	45.5
+A36	English Opening: Symmetrical Variation, Botvinnik System Reversed, with e3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. e3 e5	76906	47.94	6.3	45.76
+A36	English Opening: Symmetrical Variation, Two Knights, Fianchetto Variation	1. c4 c5 2. Nc3 Nc6 3. g3	3582161	51.86	4.81	43.34
+A36	English Opening: Symmetrical Variation, Ultra-Symmetrical Variation	1. c4 c5 2. g3 g6 3. Bg2 Bg7 4. Nc3 Nc6	604456	48.94	6.04	45.03
+A37	English Opening: Symmetrical Variation, Botvinnik System Reversed, with Nf3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 e5	144927	47.53	6.65	45.82
+A37	English Opening: Symmetrical Variation, Botvinnik System Reversed, with Nf3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 e5 6. O-O d6	45915	49.09	6.71	44.21
+A37	English Opening: Symmetrical Variation, Botvinnik System Reversed, with Nf3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 e5 6. O-O Nge7	154915	48.38	7.0	44.62
+A37	English Opening: Symmetrical Variation, Botvinnik System Reversed, with Nf3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 e5 6. O-O Nge7 7. a3	18769	52.91	7.45	39.65
+A37	English Opening: Symmetrical Variation, Botvinnik System Reversed, with Nf3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 e5 6. O-O Nge7 7. d3	79206	48.33	6.93	44.74
+A37	English Opening: Symmetrical Variation, Botvinnik System Reversed, with Nf3	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 e5 6. O-O Nge7 7. d3 d6	42554	47.47	6.86	45.67
+A37	English Opening: Symmetrical Variation, Three Knights, Fianchetto Variation	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3	753253	49.37	5.8	44.83
+A37	English Opening: Symmetrical Variation, Three Knights, Fianchetto Variation	1. c4 c5 2. Nf3 Nc6 3. g3 g6 4. Bg2 Bg7 5. O-O d6 6. Nc3	205043	49.82	6.06	44.11
+A37	English Opening: Symmetrical Variation, Three Knights, Fianchetto Variation	1. c4 c5 2. Nf3 Nc6 3. g3 g6 4. Bg2 Bg7 5. O-O e6 6. Nc3	145687	47.96	6.49	45.55
+A38	English Opening: Symmetrical Variation, Double Fianchetto	1. c4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2 Bg7 5. Nf3 Nf6 6. O-O O-O 7. b3	75899	50.02	7.17	42.81
+A38	English Opening: Symmetrical Variation, Duchamp Variation	1. c4 Nf6 2. Nf3 g6 3. g3 Bg7 4. Bg2 O-O 5. O-O c5 6. Nc3 Nc6 7. d3	333194	49.98	6.2	43.83
+A38	English Opening: Symmetrical Variation, Full Symmetry Line	1. c4 Nf6 2. Nf3 c5 3. Nc3 Nc6 4. g3 g6 5. Bg2 Bg7	434834	51.18	6.29	42.53
+A39	English Opening: Symmetrical Variation, Mecking Variation	1. c4 Nf6 2. Nf3 c5 3. Nc3 Nc6 4. g3 g6 5. Bg2 Bg7 6. O-O O-O 7. d4	518588	53.1	6.99	39.91
+A40	Benoni Defense: Franco-Sicilian Hybrid	1. d4 e6 2. c4 c5 3. d5 exd5 4. cxd5 d6 5. Nc3 g6 6. e4 Bg7 7. Nf3 Ne7	30775	50.85	3.45	45.7
+A40	English Defense	1. d4 e6 2. c4 b6	4243595	49.63	3.69	46.68
+A40	English Defense: Hartlaub Gambit Accepted	1. c4 e6 2. d4 b6 3. Nc3 Bb7 4. e4 f5 5. exf5 Nf6	2036	50.2	3.44	46.37
+A40	English Defense: Hartlaub Gambit Declined	1. c4 e6 2. d4 b6 3. Nc3 Bb7 4. e4 f5 5. d5	4695	45.92	2.96	51.12
+A40	English Defense: Perrin Variation	1. d4 e6 2. c4 b6 3. e4 Bb7 4. Bd3 Nc6	47749	51.94	3.16	44.9
+A40	English Defense: Poli Gambit	1. d4 e6 2. c4 b6 3. e4 Bb7 4. f3 f5 5. exf5 Nh6	1953	40.5	3.58	55.91
+A40	Englund Gambit	1. d4 e5	126343613	49.4	3.34	47.26
+A40	Englund Gambit Declined	1. d4 e5 2. d5	9960723	48.69	3.01	48.29
+A40	Englund Gambit Declined: Diemer Counterattack	1. d4 e5 2. d5 Bc5 3. e4 Qh4	74494	37.7	3.14	59.16
+A40	Englund Gambit Declined: Reversed Alekhine	1. d4 e5 2. Nf3	10480215	49.38	3.2	47.42
+A40	Englund Gambit Declined: Reversed Brooklyn	1. d4 e5 2. Nf3 e4 3. Ng1	552157	48.6	2.97	48.43
+A40	Englund Gambit Declined: Reversed French	1. d4 e5 2. e3	9837624	49.92	3.37	46.71
+A40	Englund Gambit Declined: Reversed Krebs	1. d4 e5 2. Nf3 e4	5200461	47.42	2.71	49.87
+A40	Englund Gambit Declined: Reversed Mokele Mbembe	1. d4 e5 2. Nf3 e4 3. Ne5	865896	45.05	2.66	52.29
+A40	Englund Gambit: Felbecker Gambit	1. d4 e5 2. dxe5 Nc6 3. Nf3 Bc5	1895645	52.1	3.16	44.74
+A40	Englund Gambit: Hartlaub-Charlick Gambit	1. d4 e5 2. dxe5 d6	12354590	48.2	3.66	48.14
+A40	Englund Gambit: Main Line	1. d4 e5 2. dxe5 Nc6 3. Nf3 Qe7	13317142	47.59	3.33	49.08
+A40	Englund Gambit: Mosquito Gambit	1. d4 e5 2. dxe5 Qh4	425077	60.42	3.47	36.11
+A40	Englund Gambit: Soller Gambit	1. d4 e5 2. dxe5 f6	4991239	51.19	3.24	45.57
+A40	Englund Gambit: Soller Gambit Deferred	1. d4 e5 2. dxe5 Nc6 3. Nf3 f6	1194726	51.32	3.3	45.38
+A40	Englund Gambit: Stockholm Variation	1. d4 e5 2. dxe5 Nc6 3. Nf3 Qe7 4. Qd5	1305508	50.18	4.27	45.55
+A40	Englund Gambit: Zilbermints Gambit	1. d4 e5 2. dxe5 Nc6 3. Nf3 Nge7	853122	49.57	3.71	46.72
+A40	Horwitz Defense	1. d4 e6	195193934	51.2	3.8	45.0
+A40	Kangaroo Defense: Keres Defense, Transpositional Variation	1. d4 e6 2. c4 Bb4+ 3. Nc3	915674	54.81	3.55	41.64
+A40	Mikenas Defense: Cannstatter Variation	1. d4 Nc6 2. c4 e5 3. d5 Nd4	302177	55.38	2.75	41.87
+A40	Mikenas Defense: Lithuanian Variation	1. d4 Nc6 2. c4 e5 3. d5 Nce7	1034434	41.75	3.17	55.08
+A40	Mikenas Defense: Pozarek Gambit	1. d4 Nc6 2. c4 e5 3. dxe5 Nxe5 4. Nc3 Nxc4	48063	55.73	3.04	41.23
+A40	Modern Defense: Beefeater Variation	1. d4 g6 2. c4 Bg7 3. Nc3 c5 4. d5 Bxc3+ 5. bxc3 f5	213161	43.41	4.55	52.04
+A40	Modern Defense: Lizard Defense, Pirc-Diemer Gambit	1. d4 g6 2. h4 Nf6 3. h5	26710	49.54	3.53	46.93
+A40	Montevideo Defense	1. d4 Nc6 2. d5 Nb8	294142	52.74	3.63	43.63
+A40	Polish Defense: Spassky Gambit Accepted	1. d4 b5 2. e4 Bb7 3. Bxb5	86162	45.19	3.35	51.46
+A40	Pterodactyl Defense: Central, Benoni Beefeater Pterodactyl	1. d4 g6 2. c4 Bg7 3. Nc3 c5 4. d5 d6 5. e4 Bxc3+ 6. bxc3 Qa5	14291	48.67	3.95	47.39
+A40	Pterodactyl Defense: Central, Benoni Pterodactyl	1. d4 g6 2. c4 Bg7 3. e4 c5 4. d5 Qa5+	18435	48.68	3.2	48.13
+A40	Pterodactyl Defense: Fianchetto, Queen Benoni Pterodactyl	1. d4 g6 2. c4 Bg7 3. Nc3 c5 4. d5 Qa5	33283	52.78	2.75	44.48
+A40	Pterodactyl Defense: Fianchetto, Queen Pteranodon	1. d4 g6 2. c4 Bg7 3. Nc3 c5 4. d5 Bxc3+ 5. bxc3 Qa5	59749	46.49	3.77	49.73
+A40	Pterodactyl Defense: Fianchetto, Queen Pterodactyl	1. d4 g6 2. Nf3 Bg7 3. g3 c5 4. Bg2 Qa5+	1645	50.03	3.53	46.44
+A40	Pterodactyl Defense: Queen Pterodactyl, Quiet Line	1. d4 g6 2. c4 Bg7 3. Nc3 c5 4. e3	435783	45.79	4.58	49.63
+A40	Queen's Pawn Game	1. d4	1962650864	50.45	4.06	45.5
+A40	Queen's Pawn Game: Anglo-Slav Opening	1. d4 c6 2. c4 d6	2781755	48.15	3.7	48.15
+A40	Queen's Pawn Game: Modern Defense	1. d4 g6	95939872	48.97	3.88	47.15
+A40	Slav Indian: Kudischewitsch Gambit	1. d4 c6 2. Nf3 Nf6 3. c4 b5	5648	50.57	4.9	44.53
+A40	Zaire Defense	1. d4 Nc6 2. d5 Nb8 3. e4 Nf6 4. e5 Ng8	18022	56.87	3.22	39.91
+A41	Modern Defense	1. d4 g6 2. c4 Bg7 3. Nc3 d6	6875045	48.1	4.08	47.82
+A41	Modern Defense: Neo-Modern Defense	1. d4 g6 2. c4 Bg7 3. e4 e5	120220	51.08	3.68	45.24
+A41	Old Indian Defense	1. d4 d6 2. c4	26080155	49.17	3.93	46.9
+A41	Queen's Pawn Game	1. d4 d6	76408599	49.21	4.0	46.79
+A41	Queen's Pawn Game: Rossolimo Variation	1. d4 d6 2. Nf3 g6	2802051	48.91	4.6	46.48
+A41	Rat Defense: English Rat	1. d4 d6 2. c4 e5	3327781	47.27	5.21	47.51
+A41	Rat Defense: English Rat, Lisbon Gambit	1. d4 d6 2. c4 e5 3. dxe5 Nc6	571325	44.8	3.02	52.18
+A41	Rat Defense: English Rat, Pounds Gambit	1. d4 d6 2. c4 e5 3. dxe5 Be6	32181	47.96	2.8	49.24
+A41	Robatsch Defense: Rossolimo Variation	1. d4 d6 2. Nf3 g6 3. c4 Bg7 4. e4 Bg4	385185	46.32	4.27	49.41
+A41	Wade Defense	1. d4 d6 2. Nf3 Bg4	944741	50.58	5.13	44.3
+A41	Zukertort Opening: Wade Defense, Chigorin Plan	1. d4 d6 2. Nf3 Bg4 3. c4 Nd7 4. Qb3 Rb8	2654	47.17	6.74	46.08
+A42	Modern Defense: Averbakh System	1. d4 g6 2. c4 Bg7 3. Nc3 d6 4. e4	5031955	48.7	4.08	47.22
+A42	Modern Defense: Averbakh Variation, Pseudo-Sämisch	1. d4 g6 2. c4 Bg7 3. e4 d6 4. Be3 Nf6 5. f3	28565	49.35	3.85	46.79
+A42	Modern Defense: Kotov Variation	1. d4 g6 2. c4 Bg7 3. Nc3 d6 4. e4 Nc6	1410422	45.59	4.4	50.0
+A42	Pterodactyl Defense	1. Nf3 c5 2. c4 g6 3. d4 Bg7 4. e4 Qa5+ 5. Nc3 d6	1909	39.03	5.97	55.0
+A42	Pterodactyl Defense: Central, Bogolubovia	1. d4 g6 2. c4 Bg7 3. e4 d6 4. Nc3 c5 5. Nge2 Qa5	213	51.64	4.69	43.66
+A43	Benoni Defense: Benoni Gambit Accepted	1. d4 c5 2. dxc5	14276242	46.53	3.49	49.98
+A43	Benoni Defense: Benoni-Indian Defense	1. d4 c5 2. d5 Nf6	3958311	48.72	3.76	47.53
+A43	Benoni Defense: Benoni-Indian Defense, Kingside Move Order	1. d4 c5 2. d5 Nf6 3. Nf3	100748	48.19	4.09	47.73
+A43	Benoni Defense: Benoni-Staunton Gambit	1. d4 c5 2. d5 f5 3. e4	13574	53.56	3.96	42.49
+A43	Benoni Defense: Cormorant Gambit	1. d4 c5 2. dxc5 b6	271166	52.06	3.86	44.08
+A43	Benoni Defense: French Benoni	1. e4 e6 2. d4 c5 3. d5	6288019	51.35	3.32	45.33
+A43	Benoni Defense: Hawk Variation	1. d4 Nf6 2. Nf3 c5 3. d5 c4	11625	52.87	3.4	43.73
+A43	Benoni Defense: Old Benoni	1. d4 c5	92229824	47.82	3.63	48.55
+A43	Benoni Defense: Old Benoni	1. d4 c5 2. d5	23506509	49.85	3.59	46.57
+A43	Benoni Defense: Old Benoni	1. d4 c5 2. d5 d6	9231340	49.87	3.58	46.56
+A43	Benoni Defense: Old Benoni, Mujannah Formation	1. d4 c5 2. d5 f5	198055	48.84	4.26	46.9
+A43	Benoni Defense: Old Benoni, Schmid Variation	1. d4 c5 2. d5 d6 3. Nc3 g6	176099	51.8	4.01	44.19
+A43	Benoni Defense: Woozle	1. d4 c5 2. d5 Nf6 3. Nc3 Qa5	44584	50.64	3.36	46.0
+A43	Benoni Defense: Zilbermints-Benoni Gambit, Tamarkin Countergambit	1. d4 c5 2. Nf3 cxd4 3. b4 e5	252	44.84	4.76	50.4
+A43	Indian Defense: Pseudo-Benko	1. d4 Nf6 2. Nf3 c5 3. d5 b5	249748	46.96	5.17	47.87
+A43	Queen's Pawn Game: Liedmann Gambit	1. d4 c5 2. c4 cxd4 3. e3	914891	47.88	3.39	48.73
+A44	Benoni Defense: Old Benoni	1. d4 c5 2. d5 e5	2604105	48.05	4.19	47.76
+A44	Benoni Defense: Semi-Benoni	1. d4 c5 2. d5 e5 3. e4 d6	531068	49.0	4.42	46.58
+A45	Indian Defense	1. d4 Nf6	369517965	48.71	4.54	46.75
+A45	Indian Defense: Accelerated London System	1. d4 Nf6 2. Bf4	54286380	48.79	4.27	46.93
+A45	Indian Defense: Gedult Attack	1. d4 Nf6 2. f3 d5 3. g4	95381	45.13	3.69	51.18
+A45	Indian Defense: Gibbins-Weidenhagen Gambit Accepted	1. d4 Nf6 2. g4 Nxg4	108093	47.67	3.62	48.71
+A45	Indian Defense: Gibbins-Weidenhagen Gambit, Maltese Falcon	1. d4 Nf6 2. g4 Nxg4 3. f3 Nf6 4. e4	7142	46.0	3.14	50.87
+A45	Indian Defense: Gibbins-Weidenhagen Gambit, Oshima Defense	1. d4 Nf6 2. g4 e5	1593	46.08	2.89	51.04
+A45	Indian Defense: Gibbins-Weidenhagen Gambit, Stummer Gambit	1. d4 Nf6 2. g4 Nxg4 3. e4 d6 4. Be2 Nf6 5. Nc3	5044	51.78	4.0	44.21
+A45	Indian Defense: Lazard Gambit	1. d4 Nf6 2. Nd2 e5	13210	43.55	3.49	52.96
+A45	Indian Defense: Maddigan Gambit	1. d4 Nf6 2. Nc3 e5	405510	51.79	3.22	44.99
+A45	Indian Defense: Omega Gambit, Arafat Gambit	1. d4 Nf6 2. e4 Nxe4 3. Bd3 Nf6 4. Bg5	39935	43.83	3.31	52.86
+A45	Indian Defense: Paleface Attack, Blackmar-Diemer Gambit Deferred	1. d4 Nf6 2. f3 d5 3. e4	363301	47.3	3.94	48.76
+A45	Indian Defense: Reversed Chigorin Defense	1. d4 Nf6 2. Nc3 c5	1485397	46.91	3.84	49.25
+A45	Indian Defense: Tartakower Attack	1. d4 Nf6 2. g3	2826919	48.51	4.87	46.62
+A45	Queen's Pawn Game: Chigorin Variation	1. d4 Nf6 2. Nc3 d5	8891682	48.54	4.26	47.21
+A45	Queen's Pawn Game: Veresov, Richter Attack	1. d4 Nf6 2. f3 d5 3. Nc3	214898	45.08	3.72	51.2
+A45	Trompowsky Attack	1. d4 Nf6 2. Bg5	15192553	49.13	4.62	46.25
+A45	Trompowsky Attack: Borg Variation	1. d4 Nf6 2. Bg5 Ne4 3. Bf4 g5	184544	55.72	3.43	40.85
+A45	Trompowsky Attack: Classical Defense	1. d4 Nf6 2. Bg5 e6	4321799	49.1	4.63	46.27
+A45	Trompowsky Attack: Classical Defense, Big Center Variation	1. d4 Nf6 2. Bg5 e6 3. e4	1443739	49.91	4.68	45.42
+A45	Trompowsky Attack: Edge Variation	1. d4 Nf6 2. Bg5 Ne4 3. Bh4	790065	49.82	3.97	46.21
+A45	Trompowsky Attack: Edge Variation, Hergert Gambit	1. d4 Nf6 2. Bg5 Ne4 3. Bh4 c6 4. Nd2 Qa5 5. c3 Nxd2 6. Qxd2 d5 7. e4	9	33.33	11.11	55.56
+A45	Trompowsky Attack: Edge Variation, Hergert Gambit	1. d4 Nf6 2. Bg5 Ne4 3. Bh4 d5 4. f3 Nf6 5. Nc3 Bf5 6. e4	416	49.52	4.09	46.39
+A45	Trompowsky Attack: Poisoned Pawn Variation	1. d4 Nf6 2. Bg5 c5 3. d5 Qb6 4. Nc3	58192	52.67	4.1	43.23
+A45	Trompowsky Attack: Raptor Variation	1. d4 Nf6 2. Bg5 Ne4 3. h4	418267	50.48	5.22	44.3
+A45	Trompowsky Attack: Raptor Variation, Hergert Gambit	1. d4 Nf6 2. Bg5 Ne4 3. h4 Nxg5 4. hxg5 e5	22932	52.52	4.64	42.85
+A46	Indian Defense: Czech-Indian	1. d4 Nf6 2. Nf3 c6	942809	51.18	4.64	44.18
+A46	Indian Defense: Knights Variation	1. d4 Nf6 2. Nf3	71278495	49.25	5.04	45.71
+A46	Indian Defense: London System	1. d4 Nf6 2. Nf3 e6 3. Bf4	4966505	50.66	4.94	44.4
+A46	Indian Defense: Spielmann-Indian	1. d4 Nf6 2. Nf3 c5	6015316	46.95	5.14	47.91
+A46	Indian Defense: Wade-Tartakower Defense	1. d4 Nf6 2. Nf3 d6	5237630	49.31	4.6	46.09
+A46	Queen's Pawn Game: Torre Attack, Breyer Variation	1. d4 Nf6 2. Nf3 e6 3. Bg5 d5 4. e3 c5 5. c3 Qb6	18632	46.77	5.7	47.53
+A46	Queen's Pawn Game: Veresov Attack, Classical Defense	1. d4 Nf6 2. Nf3 e6 3. Nc3 d5 4. Bg5	2686153	47.7	4.21	48.09
+A46	Torre Attack: Classical Defense	1. d4 Nf6 2. Nf3 e6 3. Bg5	3874013	50.09	4.97	44.94
+A46	Torre Attack: Classical Defense, Nimzowitsch Variation	1. d4 Nf6 2. Nf3 e6 3. Bg5 h6	395152	48.71	5.2	46.09
+A46	Torre Attack: Classical Defense, Petrosian Gambit	1. d4 Nf6 2. Nf3 e6 3. Bg5 c5 4. e3 b6 5. d5	1751	57.22	7.54	35.24
+A46	Torre Attack: Wagner Gambit	1. d4 Nf6 2. Nf3 e6 3. Bg5 c5 4. e4	32632	44.84	3.46	51.7
+A46	Yusupov-Rubinstein System	1. d4 Nf6 2. Nf3 e6 3. e3	4455865	50.46	4.51	45.04
+A47	Marienbad System	1. d4 Nf6 2. Nf3 b6 3. g3 Bb7 4. Bg2 c5	17697	45.13	7.23	47.64
+A47	Marienbad System: Berg Variation	1. d4 Nf6 2. Nf3 b6 3. g3 Bb7 4. Bg2 c5 5. c4 cxd4 6. Qxd4	2801	47.8	6.46	45.73
+A47	Pseudo Queen's Indian Defense	1. d4 Nf6 2. Nf3 b6	1476009	49.05	5.27	45.68
+A47	Pseudo Queen's Indian Defense	1. d4 Nf6 2. Nf3 b6 3. e3 Bb7 4. Bd3 e6 5. Nbd2 c5 6. b3 Be7	6023	45.16	5.69	49.14
+A48	East Indian Defense	1. d4 Nf6 2. Nf3 g6	27279775	48.0	5.12	46.87
+A48	Indian Defense: Colle System, King's Indian Variation	1. d4 Nf6 2. Nf3 g6 3. e3 Bg7 4. Bd3 d6	709127	44.57	4.15	51.27
+A48	London System	1. d4 Nf6 2. Nf3 g6 3. Bf4	5333844	48.38	5.02	46.6
+A48	London System	1. d4 Nf6 2. Nf3 g6 3. Bf4 Bg7 4. e3	5572057	47.27	4.68	48.05
+A48	London System	1. d4 Nf6 2. Nf3 g6 3. Bf4 Bg7 4. e3 d6	2944780	46.71	4.46	48.83
+A48	London System, with Bd3	1. d4 Nf6 2. Nf3 g6 3. Bf4 Bg7 4. e3 d6 5. Bd3	2156809	43.35	3.8	52.85
+A48	London System, with Be2	1. d4 Nf6 2. Nf3 g6 3. Bf4 Bg7 4. e3 d6 5. Be2	1225387	49.13	5.01	45.86
+A48	London System, with Be2	1. d4 Nf6 2. Nf3 g6 3. Bf4 Bg7 4. e3 d6 5. h3 c5 6. Be2	5135	50.87	5.41	43.72
+A48	Queen's Pawn Game: Barry Attack	1. d4 Nf6 2. Nf3 g6 3. Nc3 d5 4. Bf4	381017	47.57	5.13	47.3
+A48	Queen's Pawn Game: Barry Attack	1. d4 Nf6 2. Nf3 g6 3. Nc3 d5 4. Bf4 Bg7	555747	47.89	4.68	47.43
+A48	Queen's Pawn Game: Barry Attack, Grünfeld Variation	1. d4 Nf6 2. Nf3 g6 3. Nc3 d5 4. Bf4 Bg7 5. e3 O-O 6. Be2	104339	47.24	5.79	46.97
+A48	Queen's Pawn Game: Barry Attack, Tarzan Attack	1. d4 Nf6 2. Nf3 g6 3. Nc3 d5 4. Bf4 Bg7 5. Qd2	214190	49.72	4.52	45.76
+A48	Torre Attack: Fianchetto Defense	1. d4 Nf6 2. Nf3 g6 3. Bg5	3341529	48.5	4.95	46.55
+A48	Torre Attack: Fianchetto Defense, Euwe Variation	1. d4 Nf6 2. Nf3 g6 3. Bg5 Bg7 4. Nbd2 c5	23677	48.6	6.97	44.43
+A49	Indian Defense: Przepiorka Variation	1. d4 Nf6 2. Nf3 g6 3. g3	3552030	49.06	5.97	44.97
+A50	Indian Defense: Normal Variation	1. d4 Nf6 2. c4	151730375	48.69	4.64	46.67
+A50	Mexican Defense	1. d4 Nf6 2. c4 Nc6	1483706	49.97	3.95	46.08
+A50	Mexican Defense: Horsefly Gambit	1. d4 Nf6 2. c4 Nc6 3. d5 Ne5 4. f4	27955	49.29	3.07	47.64
+A50	Slav Indian	1. d4 Nf6 2. c4 c6	2716790	50.6	4.49	44.92
+A51	Indian Defense: Budapest Gambit	1. d4 Nf6 2. c4 e5	12571352	47.91	4.3	47.79
+A51	Indian Defense: Budapest Gambit Accepted	1. d4 Nf6 2. c4 e5 3. dxe5	6902251	49.18	4.61	46.21
+A51	Indian Defense: Budapest Gambit Accepted, Fajarowicz Defense	1. d4 Nf6 2. c4 e5 3. dxe5 Ne4	911501	47.3	4.95	47.75
+A51	Indian Defense: Budapest Gambit Accepted, Fajarowicz Defense, Bonsdorf Variation	1. d4 Nf6 2. c4 e5 3. dxe5 Ne4 4. a3	101660	50.86	4.43	44.7
+A51	Indian Defense: Budapest Gambit Accepted, Fajarowicz Defense, Steiner Variation	1. d4 Nf6 2. c4 e5 3. dxe5 Ne4 4. Qc2	48849	49.0	4.35	46.65
+A52	Indian Defense: Budapest Gambit Accepted, Main Line	1. d4 Nf6 2. c4 e5 3. dxe5 Ng4	5916195	49.34	4.57	46.09
+A52	Indian Defense: Budapest Gambit Accepted, Main Line, Adler Variation	1. d4 Nf6 2. c4 e5 3. dxe5 Ng4 4. Nf3	3116964	47.51	4.68	47.81
+A52	Indian Defense: Budapest Gambit Accepted, Main Line, Alekhine Variation	1. d4 Nf6 2. c4 e5 3. dxe5 Ng4 4. e4	418256	52.55	4.29	43.16
+A52	Indian Defense: Budapest Gambit Accepted, Main Line, Alekhine Variation, Abonyi Variation	1. d4 Nf6 2. c4 e5 3. dxe5 Ng4 4. e4 Nxe5	331154	51.73	4.56	43.71
+A52	Indian Defense: Budapest Gambit Accepted, Main Line, Alekhine Variation, Tartakower Defense	1. d4 Nf6 2. c4 e5 3. dxe5 Ng4 4. e4 d6	38697	48.56	3.92	47.53
+A52	Indian Defense: Budapest Gambit Accepted, Main Line, Rubinstein Variation	1. d4 Nf6 2. c4 e5 3. dxe5 Ng4 4. Bf4	1215345	52.9	5.31	41.8
+A53	Old Indian Defense	1. d4 Nf6 2. c4 d6	8319197	48.83	4.26	46.91
+A53	Old Indian Defense: Czech Variation, with Nc3	1. d4 Nf6 2. c4 d6 3. Nc3 c6	1091114	49.35	3.84	46.81
+A53	Old Indian Defense: Czech Variation, with Nf3	1. d4 Nf6 2. c4 d6 3. Nf3 c6	414767	49.88	4.41	45.71
+A53	Old Indian Defense: Janowski Variation	1. d4 Nf6 2. c4 d6 3. Nc3 Bf5	423369	50.17	4.07	45.77
+A53	Old Indian Defense: Janowski Variation, Fianchetto Variation	1. d4 Nf6 2. c4 d6 3. Nc3 Bf5 4. g3	19777	52.13	4.42	43.45
+A53	Old Indian Defense: Janowski Variation, Grinberg Gambit	1. d4 Nf6 2. c4 d6 3. Nc3 Bf5 4. e4	24674	49.09	3.25	47.66
+A53	Old Indian Defense: Janowski Variation, Main Line	1. d4 Nf6 2. c4 d6 3. Nc3 Bf5 4. f3	105600	51.35	4.36	44.29
+A54	Old Indian Defense: Duz-Khotimirsky Variation	1. d4 Nf6 2. c4 d6 3. Nc3 e5 4. e3 Nbd7 5. Bd3	20520	45.68	3.65	50.67
+A54	Old Indian Defense: Tartakower-Indian	1. d4 Nf6 2. c4 d6 3. Nf3 Bg4	323638	51.17	4.58	44.26
+A54	Old Indian Defense: Two Knights Variation	1. d4 Nf6 2. c4 d6 3. Nc3 e5 4. Nf3	137951	50.07	5.14	44.79
+A54	Old Indian Defense: Ukrainian Variation	1. d4 Nf6 2. c4 d6 3. Nc3 e5	724193	46.01	5.57	48.42
+A55	Old Indian Defense: Normal Variation	1. d4 Nf6 2. c4 d6 3. Nc3 Nbd7 4. e4 e5 5. Nf3	160927	47.22	4.76	48.02
+A56	Benoni Defense	1. d4 Nf6 2. c4 c5	15617579	45.77	4.85	49.38
+A56	Benoni Defense: Czech Benoni Defense	1. d4 Nf6 2. c4 c5 3. d5 e5	604694	45.55	4.61	49.84
+A56	Benoni Defense: Hromádka System	1. d4 Nf6 2. c4 c5 3. d5 d6	1571558	49.08	3.92	47.01
+A56	Benoni Defense: King's Indian System	1. d4 Nf6 2. c4 c5 3. d5 e5 4. Nc3 d6 5. e4 g6	101348	48.85	4.53	46.62
+A56	Benoni Defense: Weenink Variation	1. d4 Nf6 2. c4 c5 3. dxc5 e6	198828	44.21	5.79	50.0
+A56	Grünfeld Defense: Three Knights Variation, Burille Variation, Reversed Tarrasch	1. d4 Nf6 2. c4 c5 3. e3 g6 4. Nc3 Bg7 5. Nf3 O-O 6. Be2 cxd4 7. exd4 d5 8. O-O Nc6	141047	42.79	6.64	50.57
+A56	Vulture Defense	1. d4 Nf6 2. c4 c5 3. d5 Ne4	106610	42.95	4.58	52.46
+A57	Benko Gambit	1. d4 Nf6 2. c4 c5 3. d5 b5	5991523	44.68	4.95	50.37
+A57	Benko Gambit Accepted	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6	3152991	45.55	5.58	48.88
+A57	Benko Gambit Accepted: Dlugy Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. f3	93700	50.11	5.49	44.4
+A57	Benko Gambit Accepted: Modern Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. e3	373604	47.14	5.81	47.05
+A57	Benko Gambit Accepted: Pawn Return Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. b6	480864	47.63	5.19	47.18
+A57	Benko Gambit Declined: Main Line	1. d4 Nf6 2. c4 c5 3. d5 b5 4. Nf3	210183	48.32	5.09	46.59
+A57	Benko Gambit Declined: Quiet Line	1. d4 Nf6 2. c4 c5 3. d5 b5 4. Nd2	87932	49.09	5.89	45.02
+A57	Benko Gambit Declined: Sosonko Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. a4	89456	48.28	5.11	46.61
+A57	Benko Gambit: Nescafe Frappe Attack	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. Nc3 axb5 6. e4 b4 7. Nb5 d6 8. Bc4	14056	55.82	4.35	39.83
+A57	Benko Gambit: Zaitsev System	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. Nc3	596565	44.52	4.78	50.69
+A57	Benko Gambit: Zaitsev Variation, Nescafe Frappe Attack	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. Nc3 axb5 6. e4 b4 7. Nb5	58901	59.07	3.76	37.17
+A58	Benko Gambit Accepted: Central Storming Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 g6 6. Nc3 Bxa6 7. f4	9455	55.28	5.15	39.57
+A58	Benko Gambit Accepted: Fianchetto Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 g6 6. Nc3 Bxa6 7. g3 d6 8. Bg2 Bg7 9. Nf3	118295	43.69	5.04	51.27
+A58	Benko Gambit Accepted: Fully Accepted Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6	1570640	44.73	5.98	49.29
+A58	Benko Gambit: Fianchetto Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 Bxa6 6. Nc3 d6 7. Nf3 g6 8. g3	96472	43.79	5.32	50.89
+A58	Benko Gambit: Nd2 Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 Bxa6 6. Nc3 d6 7. Nf3 g6 8. Nd2	8956	45.39	6.16	48.45
+A59	Benko Gambit	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 g6 6. Nc3 Bxa6 7. e4 Bxf1 8. Kxf1 d6 9. g3	172319	45.28	6.99	47.73
+A59	Benko Gambit Accepted: King Walk Variation	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 g6 6. Nc3 Bxa6 7. Nf3 d6 8. e4 Bxf1 9. Kxf1 Bg7 10. g3 O-O 11. Kg2	159555	46.88	7.16	45.95
+A59	Benko Gambit Accepted: Yugoslav	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 Bxa6 6. Nc3 d6 7. e4	298010	45.66	6.43	47.91
+A59	Benko Gambit Accepted: Yugoslav	1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. bxa6 g6 6. Nc3 Bxa6 7. e4 Bxf1 8. Kxf1 d6 9. Nge2	39051	39.18	5.71	55.11
+A60	Benoni Defense: Modern Variation	1. d4 Nf6 2. c4 c5 3. d5 e6	2990568	47.65	4.21	48.14
+A60	Benoni Defense: Modern Variation, Snake Variation	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 Bd6	223897	53.07	3.22	43.71
+A61	Benoni Defense	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6	865712	48.88	4.81	46.32
+A61	Benoni Defense: Fianchetto Variation	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. g3	114530	50.56	4.97	44.47
+A61	Benoni Defense: Knight's Tour Variation	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. Nd2	117167	52.92	4.82	42.26
+A61	Benoni Defense: Uhlmann Variation	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. Bg5	131179	44.84	4.13	51.03
+A63	Benoni Defense: Fianchetto Variation, Hastings Defense	1. d4 Nf6 2. c4 e6 3. g3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. Bg2 Bg7 8. Nf3 O-O 9. O-O Nbd7	25150	51.34	4.65	44.01
+A64	Benoni Defense: Fianchetto Variation, Hastings Defense, Main Line	1. d4 Nf6 2. c4 e6 3. g3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. Bg2 Bg7 8. Nf3 O-O 9. O-O a6 10. a4 Nbd7 11. Nd2 Re8	5759	48.12	5.0	46.88
+A65	Benoni Defense: King's Pawn Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4	3239515	49.75	3.71	46.54
+A65	Benoni Defense: King's Pawn Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f3 Bg7	103427	45.79	3.85	50.36
+A65	Benoni Defense: King's Pawn Line	1. d4 Nf6 2. c4 g6 3. f3 c5 4. d5 d6 5. e4 Bg7 6. Nc3 e6 7. Be3 O-O 8. Qd2 exd5 9. cxd5	65213	43.97	3.95	52.08
+A65	Benoni Defense: King's Pawn Line, with Be3	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f3 Bg7 8. Be3	28625	45.64	3.64	50.71
+A65	Benoni Defense: King's Pawn Line, with Bg5	1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f3 O-O 6. Bg5 c5 7. d5	88000	50.41	4.68	44.91
+A65	Benoni Defense: King's Pawn Line, with Bg5	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f3 Bg7 8. Bg5	24867	50.35	4.07	45.58
+A65	Benoni Defense: King's Pawn Line, with Bg5	1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f3 O-O 6. Bg5 c5 7. d5 e6 8. Qd2 exd5 9. exd5	669	44.84	3.74	51.42
+A65	Benoni Defense: King's Pawn Line, with Nge2	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f3 Bg7 8. Nge2	14234	49.42	4.22	46.37
+A65	Benoni Defense: King's Pawn Line, with Nge2	1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. f3 O-O 6. Nge2 c5 7. d5 e6 8. Ng3 exd5 9. cxd5	22389	53.33	4.8	41.86
+A66	Benoni Defense: Mikenas Variation	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. e5	41436	56.1	3.63	40.27
+A66	Benoni Defense: Pawn Storm Variation	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4	462711	50.1	4.14	45.75
+A67	Benoni Defense: Taimanov Variation	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. Bb5+	183316	52.91	4.52	42.57
+A68	Benoni Defense: Four Pawns Attack	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. Nf3 O-O 9. Be2	71001	52.56	4.29	43.15
+A69	Benoni Defense: Four Pawns Attack, Main Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. Nf3 O-O 9. Be2 Re8	167127	55.85	4.05	40.1
+A69	Benoni Defense: Four Pawns Attack, Main Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. Nf3 O-O 9. Be2 Nbd7 10. O-O Re8	10504	43.91	4.66	51.43
+A69	Benoni Defense: Four Pawns Attack, Main Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. Nf3 O-O 9. Be2 Nbd7 10. O-O Re8 11. Nd2	3524	45.35	5.16	49.49
+A69	Benoni Defense: Four Pawns Attack, Main Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. f4 Bg7 8. Nf3 O-O 9. Be2 a6 10. a4 Re8 11. Nd2	4082	54.8	3.97	41.23
+A70	Benoni Defense: Classical Variation	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. e4	319330	46.32	4.8	48.88
+A70	Benoni Defense: Classical Variation, New York Variation	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. e4 Bg7 8. h3	95840	51.11	5.15	43.73
+A70	Benoni Defense: Classical Variation, Traditional Variation	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. e4 Bg7 8. Be2	166712	46.84	4.65	48.5
+A71	Benoni Defense: Classical Variation, Averbakh-Grivas Attack	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. e4 Bg7 8. Bg5	78959	46.06	3.52	50.41
+A74	Benoni Defense: Classical Variation, Full Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. Nf3 Bg7 8. Be2 O-O 9. O-O a6 10. a4	43730	48.66	5.09	46.26
+A75	Benoni Defense: Classical Variation, Argentine Counterattack	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. e4 Bg7 8. Be2 O-O 9. O-O a6 10. a4 Bg4	21584	45.83	5.72	48.45
+A76	Benoni Defense: Classical Variation, Czerniak Defense	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. Nf3 Bg7 8. Be2 O-O 9. O-O Re8	102169	47.3	4.24	48.46
+A77	Benoni Defense: Classical Variation, Czerniak Defense, Tal Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. Nf3 Bg7 8. Be2 O-O 9. O-O Re8 10. Nd2	45716	49.87	4.29	45.84
+A77	Benoni Defense: Classical Variation, Czerniak Defense, Tal Line	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. Nf3 Bg7 8. Be2 O-O 9. O-O Re8 10. Nd2 Nbd7	17413	50.39	4.44	45.17
+A78	Benoni Defense: Classical Variation, Czerniak Defense	1. d4 Nf6 2. c4 e6 3. Nf3 c5 4. d5 exd5 5. cxd5 d6 6. Nc3 g6 7. e4 Bg7 8. Be2 O-O 9. O-O Re8 10. Nd2 Na6	15923	47.05	4.8	48.14
+A79	Benoni Defense: Classical Variation, Czerniak Defense	1. d4 Nf6 2. c4 c5 3. d5 e6 4. Nc3 exd5 5. cxd5 d6 6. e4 g6 7. Nf3 Bg7 8. Be2 O-O 9. O-O Re8 10. Nd2 Na6 11. f3	5141	52.11	5.37	42.52
+A80	Dutch Defense: Barcza Variation	1. d4 f5 2. Nf3 Nf6 3. c3	152712	49.37	4.61	46.02
+A80	Dutch Defense: Hopton Attack	1. d4 f5 2. Bg5	1439843	54.56	3.84	41.6
+A80	Dutch Defense: Janzen-Korchnoi Gambit	1. d4 f5 2. h3 Nf6 3. g4	114732	59.71	3.27	37.01
+A80	Dutch Defense: Kingfisher Gambit	1. d4 f5 2. Nc3 d5 3. e4	24191	53.36	4.07	42.57
+A80	Dutch Defense: Krejcik Gambit, Tate Gambit	1. d4 f5 2. g4 fxg4 3. e4 d5 4. Nc3	924	45.45	4.55	50.0
+A80	Dutch Defense: Manhattan Gambit, Anti-Classical Line	1. d4 f5 2. Qd3 e6 3. g4	12706	54.42	3.63	41.96
+A80	Dutch Defense: Manhattan Gambit, Anti-Leningrad	1. d4 f5 2. Qd3 g6 3. g4	3203	53.98	3.56	42.46
+A80	Dutch Defense: Manhattan Gambit, Anti-Modern	1. d4 f5 2. Qd3 d6 3. g4	7366	53.37	4.17	42.47
+A80	Dutch Defense: Manhattan Gambit, Anti-Stonewall	1. d4 f5 2. Qd3 d5 3. g4	9352	47.83	4.95	47.22
+A80	Dutch Defense: Omega-Isis Gambit	1. d4 f5 2. Nf3 e5	20667	60.35	3.0	36.65
+A80	Dutch Defense: Raphael Variation	1. d4 f5 2. Nc3	2953168	51.29	3.92	44.79
+A80	Queen's Pawn Game: Veresov Attack, Dutch System	1. d4 f5 2. Nc3 d5	161451	49.56	4.81	45.62
+A81	Dutch Defense: Blackburne Variation	1. d4 f5 2. g3 Nf6 3. Bg2 e6 4. Nh3	44105	55.04	5.26	39.69
+A81	Dutch Defense: Fianchetto Attack	1. d4 f5 2. g3	901180	51.29	5.49	43.22
+A81	Dutch Defense: Leningrad Variation, Carlsbad Variation	1. d4 f5 2. g3 g6 3. Bg2 Bg7 4. Nh3	2825	53.49	5.31	41.2
+A81	Dutch Defense: Leningrad, Basman System	1. d4 f5 2. g3 c6 3. Bg2 g6 4. Nf3 Bg7 5. O-O Nh6	213	43.19	8.92	47.89
+A81	Dutch Defense: Semi-Leningrad Variation	1. d4 f5 2. g3 Nf6 3. Bg2 g6	227067	49.2	6.27	44.53
+A82	Dutch Defense: Blackmar's Second Gambit	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. f3	199995	54.41	3.55	42.04
+A82	Dutch Defense: Staunton Gambit	1. d4 f5 2. e4	1561974	54.51	4.05	41.44
+A82	Dutch Defense: Staunton Gambit Accepted	1. d4 f5 2. e4 fxe4	1243956	52.44	4.18	43.38
+A82	Dutch Defense: Staunton Gambit, Tartakower Variation	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. g4	13192	54.35	4.02	41.63
+A83	Dutch Defense: Staunton Gambit	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. Bg5	556782	53.97	5.21	40.82
+A83	Dutch Defense: Staunton Gambit, Alekhine Variation	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. Bg5 g6 5. h4	14542	53.83	4.6	41.57
+A83	Dutch Defense: Staunton Gambit, Chigorin Variation	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. Bg5 c6	42452	46.25	6.92	46.83
+A83	Dutch Defense: Staunton Gambit, Lasker Variation	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. Bg5 g6 5. f3	27315	53.34	5.01	41.64
+A83	Dutch Defense: Staunton Gambit, Nimzowitsch Variation	1. d4 f5 2. e4 fxe4 3. Nc3 Nf6 4. Bg5 b6	8922	50.13	5.35	44.52
+A84	Dutch Defense	1. d4 f5 2. c4	11943525	48.86	3.95	47.19
+A84	Dutch Defense: Bellon Gambit	1. d4 f5 2. c4 e6 3. e4	73930	50.05	4.07	45.88
+A84	Dutch Defense: Bladel Variation	1. d4 f5 2. c4 g6 3. Nc3 Nh6	13479	44.76	3.66	51.58
+A84	Dutch Defense: Classical Variation	1. d4 f5 2. c4 e6	1992351	48.86	3.92	47.22
+A84	Dutch Defense: Krause Variation	1. d4 f5 2. c4 Nf6 3. Nc3 d6 4. Nf3 Nc6	27241	52.72	3.87	43.41
+A84	Dutch Defense: Normal Variation	1. d4 f5 2. c4 Nf6	9112220	48.32	4.01	47.66
+A84	Dutch Defense: Rubinstein Variation	1. d4 f5 2. c4 e6 3. Nc3	3153892	47.74	4.23	48.03
+A85	Dutch Defense: Queen's Knight Variation	1. d4 f5 2. c4 Nf6 3. Nc3	6403329	48.23	3.98	47.78
+A86	Dutch Defense: Fianchetto Variation	1. d4 f5 2. c4 Nf6 3. g3	373041	51.06	5.09	43.85
+A86	Dutch Defense: Hort-Antoshin System	1. d4 f5 2. c4 Nf6 3. g3 d6 4. Bg2 c6 5. Nc3 Qc7	2225	48.81	4.36	46.83
+A86	Dutch Defense: Leningrad Variation	1. d4 f5 2. c4 Nf6 3. g3 g6	123062	48.65	5.54	45.81
+A87	Dutch Defense: Leningrad Variation	1. d4 f5 2. c4 Nf6 3. g3 g6 4. Bg2 Bg7 5. Nf3	68475	49.11	5.66	45.23
+A88	Dutch Defense: Leningrad Variation, Warsaw Variation	1. d4 f5 2. g3 Nf6 3. Bg2 g6 4. Nf3 Bg7 5. O-O O-O 6. c4 d6 7. Nc3 c6	224964	48.36	6.25	45.39
+A89	Dutch Defense: Leningrad Variation, Matulovic Variation	1. d4 f5 2. g3 Nf6 3. Bg2 g6 4. Nf3 Bg7 5. O-O O-O 6. c4 d6 7. Nc3 Nc6	219779	46.11	6.19	47.7
+A90	Dutch Defense: Classical Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2	461359	51.31	5.72	42.97
+A90	Dutch Defense: Classical Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 d5 5. Nf3	61337	49.29	6.61	44.11
+A90	Dutch Defense: Nimzo-Dutch Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Bb4+	96856	51.84	5.58	42.58
+A90	Dutch Defense: Nimzo-Dutch Variation, Alekhine Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Bb4+ 5. Bd2 Be7	7081	49.3	5.9	44.8
+A90	Dutch Defense: Stonewall Variation, Modern Variation	1. d4 f5 2. c4 e6 3. Nf3 Nf6 4. g3 c6 5. Bg2 d5 6. O-O Bd6	501191	50.42	5.94	43.64
+A91	Dutch Defense: Classical Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7	200949	51.58	5.39	43.04
+A91	Dutch Defense: Classical Variation, Blackburne Attack	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nh3	23239	54.05	5.22	40.74
+A92	Dutch Defense: Alekhine Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O Ne4	14153	52.07	5.6	42.34
+A92	Dutch Defense: Stonewall Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d5 7. Nc3	36021	51.39	5.89	42.72
+A92	Dutch Defense: Stonewall Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d5	42142	50.78	6.32	42.9
+A93	Dutch Defense: Stonewall Variation, Botvinnik Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d5 7. b3	15446	51.91	7.61	40.48
+A94	Dutch Defense: Stonewall Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d5 7. b3 c6 8. Ba3	35909	54.07	7.86	38.07
+A95	Dutch Defense: Stonewall Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d5 7. Nc3 c6	47856	50.05	6.2	43.76
+A95	Dutch Defense: Stonewall Variation, Chekhover Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d5 7. Nc3 c6 8. Qc2 Qe8 9. Bg5	22	50.0	4.55	45.45
+A96	Dutch Defense: Classical Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6	212754	50.29	5.79	43.92
+A96	Dutch Defense: Classical Variation, Buenos Aires Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6 7. Nc3 a5	38968	49.35	5.77	44.88
+A96	Dutch Defense: Classical Variation, Huisl Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6 7. Nc3 Ne4	126366	46.56	6.67	46.77
+A97	Dutch Defense: Classical Variation, Ilyin-Zhenevsky Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6 7. Nc3 Qe8	90152	50.32	4.96	44.72
+A97	Dutch Defense: Classical Variation, Ilyin-Zhenevsky Variation, Winter Variation	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6 7. Nc3 Qe8 8. Re1	27230	50.9	5.08	44.02
+A98	Dutch Defense: Classical Variation, Ilyin-Zhenevsky Variation, Alatortsev-Lisitsyn Line	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6 7. Nc3 Qe8 8. Qc2	16776	48.46	5.03	46.51
+A99	Dutch Defense: Classical Variation, Ilyin-Zhenevsky Variation, Modern Main Line	1. d4 f5 2. c4 Nf6 3. g3 e6 4. Bg2 Be7 5. Nf3 O-O 6. O-O d6 7. Nc3 Qe8 8. b3	13693	52.33	4.97	42.7

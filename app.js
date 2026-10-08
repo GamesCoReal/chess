@@ -49,12 +49,12 @@ let replayOriginalPositionScores = new Map();
 let replayLineVersion = 0;
 let replayOriginalPgn = "";
 
+const NEUTRAL_MOTIF_IDS = new Set(["stalemate", "insufficient_material"]);
 const NEGATIVE_MOTIF_IDS = new Set([
   "hangs", "loses_castling", "bishop_pair_lost", "bad_bishop", "knight_on_rim",
   "iqp_self", "hanging_pawns_self", "color_complex_self", "doubled_pawns_self",
   "backward_pawn_self", "isolated_pawn", "trades_when_behind",
 ]);
-const NEUTRAL_MOTIF_IDS = new Set(["stalemate", "insufficient_material"]);
 
 const MOVE_ICONS = {
   brilliant: "./images/brilliant.png",
@@ -110,7 +110,7 @@ function updateModeBadge() {
   if (inPuzzleMode) {
     el.textContent = "Puzzle";
   } else if (inDrillMode) {
-    el.textContent = currentDrillCategory === "endgame" ? "Endgame" : "Opening";
+    el.textContent = "Opening";
   } else {
     el.textContent = currentMode === "rated" ? "Ranked" : "Puzzle";
   }
@@ -390,6 +390,8 @@ async function clearAllSavedData() {
     request.onblocked = () => resolve();
   })));
 
+  localStorage.clear();
+  sessionStorage.clear();
   alert("Saved data and offline downloads cleared. Reloading to download them again...");
   location.reload();
 }
@@ -698,6 +700,56 @@ function useHint() {
 
 window.useHint = useHint;
 
+function undoDrillMove() {
+  if (!inDrillMode || !drillGame || drillAwaitingReply) return;
+
+  if (drillOutOfLine) {
+    if (!drillGame.undo()) return;
+    drillOutOfLine = false;
+    selectedSquare = null;
+    hintSquares = [];
+    puzzleHintStage = 0;
+    const history = drillGame.history({ verbose: true });
+    const lastMove = history[history.length - 1];
+    lastMoveFrom = lastMove ? lastMove.from : null;
+    lastMoveTo = lastMove ? lastMove.to : null;
+    analyzeNextOpeningDrillMove();
+    renderBoard();
+    renderMoveList();
+    statusEl.textContent = openingDrillInstruction();
+    return;
+  }
+
+  let undone = false;
+  while (
+    drillGame.history().length > drillStartPly
+    && drillSolutionIndex > drillStartSolutionIndex
+  ) {
+    const move = drillGame.undo();
+    if (!move) break;
+    drillSolutionIndex--;
+    undone = true;
+    if (drillGame.turn() === drillPlayerColor) break;
+  }
+
+  if (!undone) return;
+
+  drillLocked = false;
+  selectedSquare = null;
+  hintSquares = [];
+  puzzleHintStage = 0;
+  const history = drillGame.history({ verbose: true });
+  const lastMove = history[history.length - 1];
+  lastMoveFrom = lastMove ? lastMove.from : null;
+  lastMoveTo = lastMove ? lastMove.to : null;
+  analyzeNextOpeningDrillMove();
+  renderBoard();
+  renderMoveList();
+  statusEl.textContent = openingDrillInstruction();
+}
+
+window.undoDrillMove = undoDrillMove;
+
 
 // ---------- Puzzle rating formula ----------
 // Rating change = K * (performance - expected), Elo-style, where "performance" (S)
@@ -821,6 +873,9 @@ async function autoNextPuzzle() {
 async function enterPuzzleMode() {
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   if (maiaThinking) return;
+  if (document.querySelector(".container").classList.contains("openings-mode")) {
+    leaveOpeningsMode();
+  }
   premoves = [];
   selectedSquare = null;
   if (inDrillMode) {
@@ -1003,31 +1058,173 @@ async function onPuzzleSquareClick(sq) {
   }
 }
 
-// ---------- Openings & Endgame drills ----------
+// ---------- Opening line browser and drills ----------
 
-// Real ECO opening database (105 families, 3575 verified variations), loaded from data/openings.json
+// ECO opening lines are loaded progressively from the five alphabetic TSV files.
 let OPENINGS_DATA = [];
+const OPENING_TSV_FILES = ["a", "b", "c", "d", "e"].map(
+  (letter) => `./data/openings_${letter}.tsv`
+);
+let openingDataLoadComplete = false;
+const openingLoadErrors = [];
 
 async function loadOpeningsData() {
-  try {
-    const res = await fetch("./data/openings.json");
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) throw new Error("Empty or invalid openings data");
-    OPENINGS_DATA = data;
-  } catch (err) {
-    console.error("Failed to load openings.json — opening drills will be unavailable:", err);
-    OPENINGS_DATA = [];
+  const entries = [];
+  for (const file of OPENING_TSV_FILES) {
+    try {
+      const res = await fetch(file);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      entries.push(...parseOpeningTsv(text));
+      OPENINGS_DATA = buildOpeningTree(entries);
+      if (!document.getElementById("drill-picker-overlay").classList.contains("hidden")) {
+        renderOpeningCatalog();
+      }
+    } catch (err) {
+      openingLoadErrors.push(`${file}: ${err.message}`);
+      console.error(`Failed to load ${file}:`, err);
+    }
+  }
+  openingDataLoadComplete = true;
+  if (!document.getElementById("drill-picker-overlay").classList.contains("hidden")) {
+    renderOpeningCatalog();
   }
 }
 
-const DRILLS = {
-  endgame: [
-    { name: "Rook Ladder Mate", fen: "7k/1R6/8/8/8/8/8/R3K3 w - - 0 1", playerColor: "w", solution: ["a1a8"] },
-    { name: "King & Queen Mate", fen: "7k/Q4K2/8/8/8/8/8/8 w - - 0 1", playerColor: "w", solution: ["a7g7"] },
-    { name: "Back-Rank Mate", fen: "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1", playerColor: "w", solution: ["e1e8"] },
-  ],
-};
+function parseOpeningTsv(text) {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.length);
+  const header = (lines.shift() || "").split("\t").map((column) => column.trim().toLowerCase());
+  if (header[0] !== "eco" || header[1] !== "name" || header[2] !== "pgn") {
+    throw new Error("Expected TSV columns eco, name, and pgn.");
+  }
+  const columnIndex = (name) => header.indexOf(name);
+
+  return lines.map((line, index) => {
+    const columns = line.split("\t");
+    const [eco, name, pgn] = columns;
+    if (!eco || !name || !pgn) {
+      throw new Error(`Invalid row ${index + 2}: ECO, name, and PGN are required.`);
+    }
+    const solution = openingSearchToUci(pgn);
+    if (!solution?.length) {
+      throw new Error(`Could not parse the move line on row ${index + 2} (${name}).`);
+    }
+    const value = (column) => {
+      const index = columnIndex(column);
+      return index < 0 ? "" : columns[index] || "";
+    };
+    return {
+      eco,
+      fullName: name,
+      playercount: value("playercount"),
+      win: value("win"),
+      draw: value("draw"),
+      loss: value("loss"),
+      solution,
+    };
+  });
+}
+
+function compareOpeningNames(a, b) {
+  return a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
+}
+
+function buildOpeningTree(entries) {
+  const rootMap = new Map();
+  const entriesByRoot = new Map();
+  for (const entry of entries) {
+    const colon = entry.fullName.indexOf(":");
+    const rootName = colon < 0 ? entry.fullName : entry.fullName.slice(0, colon).trim();
+    const suffix = colon < 0 ? "" : entry.fullName.slice(colon + 1).trim();
+    const parts = suffix ? suffix.split(",").map((part) => part.trim()).filter(Boolean) : [];
+    if (!entriesByRoot.has(rootName)) entriesByRoot.set(rootName, []);
+    entriesByRoot.get(rootName).push({ entry, rootName, parts });
+  }
+
+  for (const [rootName, rootEntries] of entriesByRoot) {
+    const root = {
+      name: rootName,
+      rootName,
+      parent: null,
+      children: [],
+      variations: [],
+    };
+    rootMap.set(rootName, root);
+    const rootsByLowerName = new Map();
+    for (const { parts } of rootEntries) {
+      if (parts.length) rootsByLowerName.set(parts[0].toLocaleLowerCase(), parts[0]);
+    }
+
+    const nodeMaps = new Map();
+    for (const { entry, parts } of rootEntries) {
+      let parent = root;
+      const expandedParts = [];
+      for (const part of parts) {
+        // Some labels extend an existing branch without a comma, such as "Budapest Gambit Accepted".
+        const ancestors = [...rootsByLowerName.values()]
+          .filter((candidate) =>
+            candidate.length < part.length
+            && part.toLocaleLowerCase().startsWith(`${candidate.toLocaleLowerCase()} `)
+          )
+          .sort((a, b) => a.length - b.length);
+        expandedParts.push(...ancestors, part);
+      }
+
+      const path = [];
+      for (const part of expandedParts) {
+        if (path[path.length - 1] === part) continue;
+        path.push(part);
+        const pathKey = path.map((segment) => segment.toLocaleLowerCase()).join("\u0000");
+        if (!nodeMaps.has(pathKey)) {
+          const node = {
+            name: part,
+            rootName,
+            parent,
+            children: [],
+            variations: [],
+          };
+          parent.children.push(node);
+          nodeMaps.set(pathKey, node);
+        }
+        parent = nodeMaps.get(pathKey);
+      }
+      parent.variations.push({
+        eco: entry.eco,
+        name: entry.fullName === rootName ? rootName : entry.fullName.slice(rootName.length + 2),
+        fullName: entry.fullName,
+        playercount: entry.playercount,
+        win: entry.win,
+        draw: entry.draw,
+        loss: entry.loss,
+        solution: entry.solution,
+      });
+    }
+  }
+
+  const compareOpeningBranchesByPlayerCount = (a, b) =>
+    (b.playercount || 0) - (a.playercount || 0)
+    || compareOpeningNames(a.name, b.name);
+  const finalize = (node) => {
+    node.variations.sort(compareOpeningVariationsByPlayerCount);
+    node.allVariations = [...node.variations];
+    let descendantPlayerCount = 0;
+    for (const child of node.children) {
+      finalize(child);
+      node.allVariations.push(...child.allVariations);
+      descendantPlayerCount = Math.max(descendantPlayerCount, child.playercount || 0);
+    }
+    const directPlayerCount = node.variations.reduce(
+      (count, variation) => Math.max(count, Number(variation.playercount) || 0),
+      0
+    );
+    node.playercount = directPlayerCount || descendantPlayerCount;
+    node.children.sort(compareOpeningBranchesByPlayerCount);
+    return node;
+  };
+  return [...rootMap.values()]
+    .map(finalize)
+    .sort(compareOpeningBranchesByPlayerCount);
+}
 
 let inDrillMode = false;
 let drillGame = null;
@@ -1036,117 +1233,517 @@ let drillSolutionIndex = 0;
 let drillPlayerColor = "w";
 let drillLocked = false;
 let drillAwaitingReply = false;
+let drillOutOfLine = false;
+let drillMistakesThisAttempt = false;
 let currentDrill = null;
-let currentDrillCategory = "opening";
+let openingDrillPlayerColor = "w";
+let selectedOpeningFamily = null;
+let openingRenderGeneration = 0;
+let openingDrillStageMarkers = [];
+let openingDrillPageActive = false;
+let drillStartPly = 0;
+let drillStartSolutionIndex = 0;
+let openingDrillInsightsMarker = null;
+let openingDrillInsightsWasHidden = true;
+let openingDrillAnalysisRun = 0;
+let openingDrillDisplayedMoveIndex = null;
+let openingDrillMoveMotifs = new Map();
+const OPENING_PROGRESS_KEY = "chess_opening_variant_progress";
+
+function loadOpeningProgress() {
+  try {
+    const stored = localStorage.getItem(OPENING_PROGRESS_KEY);
+    if (!stored) return {};
+    const progress = JSON.parse(stored);
+    if (!progress || typeof progress !== "object" || Array.isArray(progress)) {
+      throw new Error("Opening progress data must be an object.");
+    }
+    return progress;
+  } catch (error) {
+    console.error("Could not load opening progress:", error);
+    return {};
+  }
+}
+
+let openingProgress = loadOpeningProgress();
+
+function openingVariationProgressKey(family, variation) {
+  return JSON.stringify([
+    family.rootName || family.name,
+    variation.eco || "",
+    variation.fullName || variation.name,
+    "w",
+    (variation.solution || []).join(","),
+  ]);
+}
+
+function getOpeningProgressStatus(progressKey) {
+  const progress = openingProgress[progressKey];
+  if (progress?.mastered) return "mastered";
+  if (progress?.hasMistake) return "mistake";
+  return "incomplete";
+}
+
+function saveOpeningProgress() {
+  try {
+    localStorage.setItem(OPENING_PROGRESS_KEY, JSON.stringify(openingProgress));
+  } catch (error) {
+    console.error("Could not save opening progress:", error);
+  }
+}
+
+function recordOpeningProgress(progressKey, result) {
+  if (!progressKey) return;
+  const previous = openingProgress[progressKey] || {};
+  openingProgress[progressKey] = {
+    mastered: previous.mastered === true || result === "mastered",
+    hasMistake: previous.hasMistake === true || result === "mistake",
+  };
+  saveOpeningProgress();
+}
+
+function getFamilyMastery(family) {
+  const variations = family.allVariations || family.variations || [];
+  const mastered = variations.filter(
+    (variation) => getOpeningProgressStatus(openingVariationProgressKey(family, variation)) === "mastered"
+  ).length;
+  return { mastered, total: variations.length };
+}
+
+function compareOpeningVariationsByPlayerCount(a, b) {
+  const countDifference = (Number(b.playercount) || 0) - (Number(a.playercount) || 0);
+  return countDifference || a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
+}
+
+function getOpeningResultRates(variation) {
+  if (variation.win === "" || variation.draw === "") return null;
+  const win = Number(variation.win);
+  const draw = Number(variation.draw);
+  if (!Number.isFinite(win) || !Number.isFinite(draw)) return null;
+  const loss = variation.loss !== "" && Number.isFinite(Number(variation.loss))
+    ? Number(variation.loss)
+    : 100 - win - draw;
+  return { win, draw, loss };
+}
+
+function getFamilyAverageResultRates(family) {
+  const rates = (family.allVariations || family.variations || [])
+    .map(getOpeningResultRates)
+    .filter(Boolean);
+  if (!rates.length) return null;
+  const totals = rates.reduce((average, result) => ({
+    win: average.win + result.win,
+    draw: average.draw + result.draw,
+    loss: average.loss + result.loss,
+  }), { win: 0, draw: 0, loss: 0 });
+  return {
+    win: totals.win / rates.length,
+    draw: totals.draw / rates.length,
+    loss: totals.loss / rates.length,
+  };
+}
+
+function createOpeningRatesElement(rates, prefix = "") {
+  const element = document.createElement("div");
+  element.className = "opening-result-bar";
+  element.setAttribute("role", "img");
+  if (!rates) {
+    element.setAttribute("aria-label", `${prefix}Win, draw, and loss rates unavailable`);
+    return element;
+  }
+
+  const results = [
+    { name: "Win", value: Math.max(0, rates.win), className: "opening-result-win" },
+    { name: "Draw", value: Math.max(0, rates.draw), className: "opening-result-draw" },
+    { name: "Loss", value: Math.max(0, rates.loss), className: "opening-result-loss" },
+  ];
+  const total = results.reduce((sum, result) => sum + result.value, 0);
+  element.setAttribute(
+    "aria-label",
+    `${prefix}${results.map(({ name, value }) => `${name} ${value.toFixed(2)}%`).join(", ")}`
+  );
+  element.title = element.getAttribute("aria-label");
+  for (const result of results) {
+    const segment = document.createElement("span");
+    segment.className = result.className;
+    segment.style.width = `${total ? result.value / total * 100 : 100 / results.length}%`;
+    element.appendChild(segment);
+  }
+  return element;
+}
 
 function openDrillPicker() {
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
-  onDrillCategoryChange();
-  document.getElementById("drill-picker-overlay").classList.remove("hidden");
+  if (openingDrillPageActive) exitDrillMode();
+  document.querySelector(".container").classList.add("openings-mode");
+  openingDrillPlayerColor = "w";
+  boardFlipped = false;
+  document.getElementById("board-wrap").classList.remove("flipped");
+  const picker = document.getElementById("drill-picker-overlay");
+  picker.classList.remove("hidden");
+  picker.classList.remove("drill-active");
+  selectedOpeningFamily = null;
+  document.getElementById("variation-screen").classList.remove("active");
+  document.getElementById("variation-screen").classList.remove("hidden");
+  document.getElementById("openings-screen").classList.remove("hidden");
+  document.getElementById("openings-screen").style.display = "block";
+  document.getElementById("opening-drill-screen").style.display = "none";
+  renderOpeningCatalog();
 }
 window.openDrillPicker = openDrillPicker;
 
-function closeDrillPicker() {
+function leaveOpeningsMode() {
+  if (openingDrillPageActive) exitDrillMode();
   document.getElementById("drill-picker-overlay").classList.add("hidden");
+  document.querySelector(".container").classList.remove("openings-mode");
 }
-window.closeDrillPicker = closeDrillPicker;
+window.leaveOpeningsMode = leaveOpeningsMode;
 
-// Switches the picker form between "Opening" (family + variation + color) and
-// "Endgame" (a single flat drill list, fixed color per drill).
-function onDrillCategoryChange() {
-  const category = document.getElementById("drill-category").value;
-  const familyLabel = document.getElementById("drill-family-label");
-  const familySelect = document.getElementById("drill-family");
-  const variationLabel = document.getElementById("drill-variation-label");
-  const colorLabel = document.getElementById("drill-color-label");
-  const colorSelect = document.getElementById("drill-color");
+function moveGameStageIntoOpeningPage() {
+  const stage = document.getElementById("opening-game-stage");
+  const elements = [
+    statusEl,
+    document.getElementById("board-wrap"),
+    document.querySelector(".moves"),
+    gameControlsEl,
+    puzzleControlsEl,
+    document.getElementById("drill-controls"),
+    document.getElementById("history"),
+  ];
 
-  const isOpening = category === "opening";
-  familyLabel.classList.toggle("hidden", !isOpening);
-  familySelect.classList.toggle("hidden", !isOpening);
-  colorLabel.classList.toggle("hidden", !isOpening);
-  colorSelect.classList.toggle("hidden", !isOpening);
-  variationLabel.textContent = isOpening ? "Variation" : "Drill";
+  openingDrillStageMarkers = elements.filter(Boolean).map((element) => {
+    const marker = document.createComment(`original location for ${element.id || element.className}`);
+    element.parentNode.insertBefore(marker, element);
+    stage.appendChild(element);
+    return { element, marker };
+  });
+  const insightsPanel = document.getElementById("review-insights-panel");
+  openingDrillInsightsMarker = document.createComment("original location for review insights");
+  openingDrillInsightsWasHidden = insightsPanel.classList.contains("hidden");
+  insightsPanel.parentNode.insertBefore(openingDrillInsightsMarker, insightsPanel);
+  document.querySelector(".openings-topbar").appendChild(insightsPanel);
+  renderOpeningDrillInsightsPrompt();
+  openingDrillPageActive = true;
+  document.getElementById("drill-picker-overlay").classList.add("drill-active");
+  document.getElementById("opening-drill-screen").style.display = "block";
+}
 
-  if (isOpening) {
-    populateFamilyOptions();
-  } else {
-    populateEndgameOptions();
+function restoreGameStageFromOpeningPage() {
+  if (!openingDrillPageActive) return;
+  const insightsPanel = document.getElementById("review-insights-panel");
+  if (openingDrillInsightsMarker) {
+    openingDrillInsightsMarker.parentNode.insertBefore(insightsPanel, openingDrillInsightsMarker);
+    openingDrillInsightsMarker.remove();
+    openingDrillInsightsMarker = null;
   }
+  insightsPanel.classList.toggle("hidden", openingDrillInsightsWasHidden);
+  for (const { element, marker } of openingDrillStageMarkers) {
+    marker.parentNode.insertBefore(element, marker);
+    marker.remove();
+  }
+  openingDrillStageMarkers = [];
+  openingDrillPageActive = false;
+  document.getElementById("drill-picker-overlay").classList.remove("drill-active");
+  document.getElementById("opening-drill-screen").style.display = "none";
 }
-window.onDrillCategoryChange = onDrillCategoryChange;
 
-function populateFamilyOptions() {
-  const familySelect = document.getElementById("drill-family");
-  familySelect.innerHTML = "";
-  OPENINGS_DATA.forEach((family, i) => {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = family.name;
-    familySelect.appendChild(opt);
+const OPENING_PIECES = {
+  wp: "./images/pieces/pw.png", wn: "./images/pieces/nw.png",
+  wb: "./images/pieces/bw.png", wr: "./images/pieces/rw.png",
+  wq: "./images/pieces/qw.png", wk: "./images/pieces/kw.png",
+  bp: "./images/pieces/pb.png", bn: "./images/pieces/nb.png",
+  bb: "./images/pieces/bb.png", br: "./images/pieces/rb.png",
+  bq: "./images/pieces/qb.png", bk: "./images/pieces/kb.png",
+};
+
+function openingPreviewBoard(solution = []) {
+  const preview = new Chess();
+  for (const uci of solution) {
+    if (typeof uci !== "string" || uci.length < 4) break;
+    const move = preview.move({
+      from: uci.slice(0, 2),
+      to: uci.slice(2, 4),
+      promotion: uci[4] || "q",
+    });
+    if (!move) break;
+  }
+  return preview.board();
+}
+
+function createOpeningCard({ family, variation = null }) {
+  const card = document.createElement("article");
+  card.className = "opening-card";
+  card.tabIndex = 0;
+  card.setAttribute("role", "button");
+  card.setAttribute("aria-label", variation
+    ? `${family.name}, ${variation.name}. ${getOpeningProgressStatus(openingVariationProgressKey(family, variation))} progress. Start opening drill.`
+    : `${family.name}. ${family.children.length ? "Show nested openings." : "Show lines."}`);
+
+  const boardWrap = document.createElement("div");
+  boardWrap.className = "opening-board-wrap";
+  const board = document.createElement("div");
+  board.className = "opening-board";
+  const boardData = openingPreviewBoard(variation?.solution);
+  for (let row = 0; row < 8; row++) {
+    for (let file = 0; file < 8; file++) {
+      const square = document.createElement("div");
+      square.className = `opening-square ${(row + file) % 2 === 0 ? "light" : "dark"}`;
+      const piece = boardData[row][file];
+      if (piece) {
+        const image = document.createElement("img");
+        image.className = "opening-piece";
+        image.src = OPENING_PIECES[piece.color + piece.type];
+        image.alt = "";
+        image.draggable = false;
+        square.appendChild(image);
+      }
+      board.appendChild(square);
+    }
+  }
+  boardWrap.appendChild(board);
+  if (variation) {
+    const status = getOpeningProgressStatus(openingVariationProgressKey(family, variation));
+    const flag = document.createElement("span");
+    flag.className = `opening-progress-flag is-${status}`;
+    flag.textContent = "⚑";
+    flag.setAttribute("aria-label", `Variant ${status}`);
+    flag.title = status === "mastered"
+      ? "Mastered without mistakes"
+      : status === "mistake"
+        ? "Mistakes made"
+        : "Incomplete";
+    boardWrap.appendChild(flag);
+  }
+  card.appendChild(boardWrap);
+
+  const info = document.createElement("div");
+  info.className = "opening-info";
+  if (variation) {
+    const openingName = document.createElement("div");
+    openingName.className = "opening-result-name";
+    openingName.textContent = family.rootName || family.name;
+    info.appendChild(openingName);
+  }
+  const title = document.createElement("h2");
+  title.className = "opening-title";
+  title.textContent = variation
+    ? `${variation.eco ? `${variation.eco} — ` : ""}${variation.name}`
+    : family.name;
+  info.appendChild(title);
+  if (variation) {
+    info.appendChild(createOpeningRatesElement(getOpeningResultRates(variation)));
+  } else {
+    const mastery = getFamilyMastery(family);
+    const progress = document.createElement("div");
+    progress.className = "opening-family-progress";
+    progress.textContent = `${mastery.mastered}/${mastery.total} mastered`;
+    info.appendChild(progress);
+    info.appendChild(createOpeningRatesElement(getFamilyAverageResultRates(family), "Avg. "));
+  }
+  card.appendChild(info);
+
+  const activate = () => {
+    if (variation) {
+      if (maiaThinking) return;
+      if (inReplayMode) exitReplay();
+      selectedOpeningFamily = family;
+      moveGameStageIntoOpeningPage();
+      document.getElementById("openings-screen").style.display = "none";
+      document.getElementById("variation-screen").classList.remove("active");
+      document.getElementById("openings-screen").classList.add("hidden");
+      document.getElementById("variation-screen").classList.add("hidden");
+      document.getElementById("drill-picker-overlay").classList.remove("hidden");
+      loadDrill({
+        name: `${variation.eco ? `${variation.eco} — ` : ""}${variation.fullName || `${family.name} — ${variation.name}`}`,
+        playerColor: openingDrillPlayerColor,
+        solution: variation.solution,
+        progressKey: openingVariationProgressKey(family, variation),
+      });
+    } else {
+      showOpeningVariations(family);
+    }
+  };
+  card.addEventListener("click", activate);
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      activate();
+    }
   });
-  populateVariationOptions();
+  return card;
 }
 
-function populateVariationOptions() {
-  const familyIdx = parseInt(document.getElementById("drill-family").value, 10);
-  const family = OPENINGS_DATA[familyIdx];
-  const select = document.getElementById("drill-select");
-  select.innerHTML = "";
-  if (!family) return;
-  family.variations.forEach((variation, i) => {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = (variation.eco ? variation.eco + " — " : "") + variation.name;
-    select.appendChild(opt);
-  });
-}
-window.populateVariationOptions = populateVariationOptions;
-
-function populateEndgameOptions() {
-  const select = document.getElementById("drill-select");
-  select.innerHTML = "";
-  DRILLS.endgame.forEach((drill, i) => {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = drill.name;
-    select.appendChild(opt);
-  });
+function appendOpeningCardsInBatches(grid, items, createCard, renderGeneration) {
+  let index = 0;
+  const renderBatch = () => {
+    if (renderGeneration !== openingRenderGeneration) return;
+    const fragment = document.createDocumentFragment();
+    for (let count = 0; count < 12 && index < items.length; count++, index++) {
+      fragment.appendChild(createCard(items[index]));
+    }
+    grid.appendChild(fragment);
+    if (index < items.length) requestAnimationFrame(renderBatch);
+  };
+  renderBatch();
 }
 
-function startSelectedDrill() {
-  const category = document.getElementById("drill-category").value;
+function tokenizeOpeningSearch(value) {
+  return value
+    .replace(/\d+\.(\.\.)?/g, " ")
+    .replace(/\{[^}]*\}/g, " ")
+    .replace(/[!?+#]+/g, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
 
-  if (category === "endgame") {
-    const idx = parseInt(document.getElementById("drill-select").value, 10);
-    const drill = DRILLS.endgame[idx];
-    currentDrillCategory = "endgame";
-    closeDrillPicker();
-    loadDrill(drill);
+function openingSearchToUci(value) {
+  const tokens = tokenizeOpeningSearch(value);
+  if (!tokens.length) return null;
+  const searchGame = new Chess();
+  const moves = [];
+  for (const token of tokens) {
+    let move;
+    if (/^[a-h][1-8][a-h][1-8][qrbn]?$/i.test(token)) {
+      move = searchGame.move({
+        from: token.slice(0, 2).toLowerCase(),
+        to: token.slice(2, 4).toLowerCase(),
+        ...(token[4] ? { promotion: token[4].toLowerCase() } : {}),
+      });
+    } else {
+      move = searchGame.move(token, { sloppy: true });
+    }
+    if (!move) return null;
+    moves.push(move.from + move.to + (move.promotion || ""));
+  }
+  return moves;
+}
+
+function variationContainsLine(variation, line) {
+  const solution = (variation.solution || []).map((move) => move.toLowerCase());
+  return solution.some((_, start) =>
+    line.every((move, offset) => solution[start + offset] === move)
+  );
+}
+
+function showOpeningVariations(family) {
+  selectedOpeningFamily = family;
+  document.getElementById("openings-screen").style.display = "none";
+  document.getElementById("openings-screen").classList.add("hidden");
+  const screen = document.getElementById("variation-screen");
+  screen.classList.remove("hidden");
+  screen.classList.add("active");
+  renderOpeningCatalog();
+}
+
+function renderOpeningCatalog() {
+  const renderGeneration = ++openingRenderGeneration;
+  const query = document.getElementById("opening-search").value.trim();
+  const normalizedQuery = query.toLowerCase();
+  const moveSequence = openingSearchToUci(query);
+  const openingsGrid = document.getElementById("openings-grid");
+  const variationsGrid = document.getElementById("variation-grid");
+  const inVariations = !!selectedOpeningFamily;
+  openingsGrid.replaceChildren();
+  variationsGrid.replaceChildren();
+
+  if (inVariations) {
+    const family = selectedOpeningFamily;
+    const matchesVariation = (variation) => {
+      if (!normalizedQuery) return true;
+      return `${variation.eco || ""} ${variation.fullName || variation.name || ""}`.toLowerCase().includes(normalizedQuery)
+        || (!!moveSequence && variationContainsLine(variation, moveSequence));
+    };
+    const matchingChildren = family.children.filter((child) =>
+      (child.allVariations || []).some(matchesVariation)
+    );
+    const variations = family.variations.filter(matchesVariation);
+    const items = [
+      ...matchingChildren.map((child) => ({ family: child, playercount: child.playercount })),
+      ...variations.map((variation) => ({ family, variation, playercount: variation.playercount })),
+    ].sort((a, b) =>
+      (Number(b.playercount) || 0) - (Number(a.playercount) || 0)
+      || compareOpeningNames(a.variation?.name || a.family.name, b.variation?.name || b.family.name)
+    );
+    const back = document.getElementById("opening-back");
+    back.textContent = `← ${family.parent ? family.parent.name : "All openings"}`;
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.className = "openings-empty";
+      empty.textContent = "No matching openings or variations found.";
+      variationsGrid.appendChild(empty);
+    } else {
+      appendOpeningCardsInBatches(
+        variationsGrid,
+        items,
+        ({ family: itemFamily, variation }) => createOpeningCard({ family: itemFamily, variation }),
+        renderGeneration
+      );
+    }
+    if (openingLoadErrors.length) {
+      const warning = document.createElement("div");
+      warning.className = "openings-empty";
+      warning.setAttribute("role", "alert");
+      warning.textContent = `Some opening files could not be loaded: ${openingLoadErrors.join("; ")}`;
+      variationsGrid.prepend(warning);
+    }
     return;
   }
 
-  const familyIdx = parseInt(document.getElementById("drill-family").value, 10);
-  const variationIdx = parseInt(document.getElementById("drill-select").value, 10);
-  const color = document.getElementById("drill-color").value;
-  const family = OPENINGS_DATA[familyIdx];
-  if (!family) return;
-  const variation = family.variations[variationIdx];
-  if (!variation) return;
+  if (!OPENINGS_DATA.length) {
+    const empty = document.createElement("div");
+    empty.className = "openings-empty";
+    empty.textContent = openingDataLoadComplete
+      ? `Opening lines are unavailable. ${openingLoadErrors.join("; ") || "Please check your connection and try again."}`
+      : "Loading opening lines…";
+    openingsGrid.appendChild(empty);
+    return;
+  }
 
-  const drill = {
-    name: family.name + " — " + variation.name,
-    playerColor: color,
-    solution: variation.solution,
-  };
-  currentDrillCategory = "opening";
-  closeDrillPicker();
-  loadDrill(drill);
+  const families = OPENINGS_DATA.filter((family) =>
+    (family.allVariations || []).some((variation) => {
+      if (!normalizedQuery) return true;
+      return family.name.toLowerCase().includes(normalizedQuery)
+        || `${variation.eco || ""} ${variation.fullName || variation.name || ""}`.toLowerCase().includes(normalizedQuery)
+        || (!!moveSequence && variationContainsLine(variation, moveSequence));
+    })
+  );
+  for (const family of families) openingsGrid.appendChild(createOpeningCard({ family }));
+  if (openingLoadErrors.length) {
+    const warning = document.createElement("div");
+    warning.className = "openings-empty";
+    warning.setAttribute("role", "alert");
+    warning.textContent = `Some opening files could not be loaded: ${openingLoadErrors.join("; ")}`;
+    openingsGrid.prepend(warning);
+  }
+  if (!openingsGrid.childElementCount) {
+    const empty = document.createElement("div");
+    empty.className = "openings-empty";
+    empty.textContent = "No openings or variations found.";
+    openingsGrid.appendChild(empty);
+  }
 }
-window.startSelectedDrill = startSelectedDrill;
 
+document.getElementById("opening-search").addEventListener("input", renderOpeningCatalog);
+document.getElementById("opening-back").addEventListener("click", () => {
+  selectedOpeningFamily = selectedOpeningFamily?.parent || null;
+  const atRoot = !selectedOpeningFamily;
+  document.getElementById("variation-screen").classList.toggle("active", !atRoot);
+  document.getElementById("openings-screen").style.display = atRoot ? "block" : "none";
+  renderOpeningCatalog();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !document.getElementById("drill-picker-overlay").classList.contains("hidden")) {
+    leaveOpeningsMode();
+  }
+});
 function loadDrill(drill) {
   if (maiaThinking) return;
+  if (inReplayMode) exitReplay();
+  openingDrillAnalysisRun++;
+  openingDrillDisplayedMoveIndex = null;
+  openingDrillMoveMotifs.clear();
+  renderOpeningDrillInsightsPrompt();
   premoves = [];
   selectedSquare = null;
   if (inPuzzleMode) {
@@ -1169,6 +1766,8 @@ function loadDrill(drill) {
   drillPlayerColor = drill.playerColor;
   drillLocked = false;
   drillAwaitingReply = false;
+  drillOutOfLine = false;
+  drillMistakesThisAttempt = false;
   selectedSquare = null;
   hintSquares = [];
   puzzleHintStage = 0;
@@ -1186,14 +1785,17 @@ function loadDrill(drill) {
     drillSolutionIndex++;
   }
 
+  drillStartPly = drillGame.history().length;
+  drillStartSolutionIndex = drillSolutionIndex;
   boardFlipped = drillPlayerColor === "b";
   document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
 
   clearTurnTags();
   renderBoard();
   renderMoveList();
-  statusEl.textContent = `${drill.name} — find the next move for ${drillPlayerColor === "w" ? "White" : "Black"}.`;
+  statusEl.textContent = openingDrillInstruction();
   statusEl.classList.remove("status-hidden");
+  analyzeNextOpeningDrillMove();
 }
 
 function restartCurrentDrill() {
@@ -1204,8 +1806,18 @@ function restartCurrentDrill() {
 }
 window.restartCurrentDrill = restartCurrentDrill;
 
+function openingDrillInstruction() {
+  return drillPlayerColor === "b"
+    ? `Defend the opening — ${currentDrill.name}`
+    : `Use the opening — ${currentDrill.name}`;
+}
+
 function exitDrillMode() {
+  const returnToOpeningBrowser = openingDrillPageActive;
+  openingDrillAnalysisRun++;
   inDrillMode = false;
+  drillOutOfLine = false;
+  openingDrillDisplayedMoveIndex = null;
   hintSquares = [];
   puzzleHintStage = 0;
   updateModeBadge();
@@ -1219,11 +1831,23 @@ function exitDrillMode() {
   renderMoveList();
   updateClockDisplays();
   if (!isGameLocked()) updateStatusForTurn();
+  if (returnToOpeningBrowser) {
+    restoreGameStageFromOpeningPage();
+    const browser = document.getElementById("drill-picker-overlay");
+    browser.classList.remove("hidden");
+    browser.classList.remove("drill-active");
+    document.getElementById("opening-drill-screen").style.display = "none";
+    document.getElementById("openings-screen").classList.add("hidden");
+    document.getElementById("openings-screen").style.display = "none";
+    document.getElementById("variation-screen").classList.remove("hidden");
+    document.getElementById("variation-screen").classList.add("active");
+    renderOpeningCatalog();
+  }
 }
 window.exitDrillMode = exitDrillMode;
 
 async function onDrillSquareClick(sq) {
-  if (drillLocked || drillAwaitingReply) return;
+  if (drillLocked || drillAwaitingReply || drillOutOfLine) return;
   if (drillGame.turn() !== drillPlayerColor) return;
 
   if (selectedSquare === null) {
@@ -1259,9 +1883,16 @@ async function onDrillSquareClick(sq) {
   const expectedUci = drillSolution[drillSolutionIndex];
 
   if (playedUci !== expectedUci) {
-    drillGame.load(preFen);
+    drillOutOfLine = true;
+    drillMistakesThisAttempt = true;
+    recordOpeningProgress(currentDrill.progressKey, "mistake");
+    lastMoveFrom = from;
+    lastMoveTo = to;
+    playGameSound(soundForMove(drillGame, moveResult));
     renderBoard();
-    statusEl.textContent = "Not the drill line — try again.";
+    renderMoveList();
+    renderOpeningDrillInsightsPrompt();
+    statusEl.textContent = "Outside of this specific opening line.";
     return;
   }
 
@@ -1273,8 +1904,7 @@ async function onDrillSquareClick(sq) {
   drillSolutionIndex++;
 
   if (drillSolutionIndex >= drillSolution.length) {
-    drillLocked = true;
-    statusEl.textContent = `Drill complete! Hit Restart to try it again.`;
+    completeOpeningDrill();
     return;
   }
 
@@ -1293,38 +1923,64 @@ async function onDrillSquareClick(sq) {
   drillAwaitingReply = false;
 
   if (drillSolutionIndex >= drillSolution.length) {
-    drillLocked = true;
-    statusEl.textContent = `Drill complete! Hit Restart to try it again.`;
+    completeOpeningDrill();
   } else {
-    statusEl.textContent = `${currentDrill.name} — find the next move.`;
+    statusEl.textContent = openingDrillInstruction();
+    analyzeNextOpeningDrillMove();
   }
+}
+
+function completeOpeningDrill() {
+  drillLocked = true;
+  statusEl.textContent = "Variation complete.";
+  if (drillMistakesThisAttempt) {
+    recordOpeningProgress(currentDrill.progressKey, "mistake");
+  } else {
+    recordOpeningProgress(currentDrill.progressKey, "mastered");
+  }
+  renderOpeningDrillInsightsPrompt();
 }
 
 // ---------- Status / turn tags ----------
+
 function updateStatusForTurn() {
+
   if (inPuzzleMode || isGameLocked()) return;
-  whiteTurnTag.textContent = "Your move";
-  blackTurnTag.textContent = "Maia's move";
+
   if (game.turn() === playerColor) {
+
     statusEl.textContent = "Your move.";
     statusEl.classList.remove("status-hidden");
+
   } else {
+
     statusEl.classList.add("status-hidden");
+
   }
-  whiteTurnTag.classList.toggle("active", game.turn() === playerColor);
-  blackTurnTag.classList.toggle("active", game.turn() !== playerColor);
 }
 
 function clearTurnTags() {
-  whiteTurnTag.classList.remove("active");
-  blackTurnTag.classList.remove("active");
+  // Turn tags were removed from the HTML.
 }
 
 function toggleFlip() {
+  if (inDrillMode && drillAwaitingReply) return;
   boardFlipped = !boardFlipped;
-  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+
+  document
+    .getElementById("board-wrap")
+    .classList.toggle("flipped", boardFlipped);
+
+  if (inDrillMode && currentDrill) {
+    openingDrillPlayerColor = boardFlipped ? "b" : "w";
+    currentDrill = { ...currentDrill, playerColor: openingDrillPlayerColor };
+    restartCurrentDrill();
+    return;
+  }
+
   renderBoard();
 }
+
 window.toggleFlip = toggleFlip;
 
 // ---------- Clocks ----------
@@ -1336,8 +1992,8 @@ function formatClock(totalSeconds) {
   const r = s % 60;
   const base = m + ":" + String(r).padStart(2, "0");
   if (remaining < 10) {
-    const millis = Math.floor((remaining - s) * 1000);
-    return `${base}.${String(millis).padStart(3, "0")}`;
+    const tenths = Math.floor((remaining - s) * 10);
+    return `${base}.${tenths}`;
   }
   return base;
 }
@@ -1372,8 +2028,7 @@ function resetClocks() {
   blackTime = STARTING_CLOCK_SECONDS;
   moveClockHistory = [];
 
-  // White starts the game, so White's clock starts immediately.
-  whiteClockStarted = true;
+  whiteClockStarted = false;
   blackClockStarted = false;
   clockLastTick = performance.now();
 
@@ -1383,13 +2038,8 @@ function resetClocks() {
 function updateClockUnlocks() {
   const len = game.history().length;
 
-  // White's clock starts immediately.
-  whiteClockStarted = true;
-
-  // Black's clock starts as soon as White has made the opening move.
-  if (len >= 1) {
-    blackClockStarted = true;
-  }
+  whiteClockStarted = len >= 2;
+  blackClockStarted = len >= 3;
 }
 
 const LOWTIME_THRESHOLDS = [60, 10, 3];
@@ -1567,6 +2217,7 @@ function openPastGame(entry) {
 
   // Show replay controls.
   createReplayControls();
+  updateReplayControls();
   analyzeReplayPlayedMoves(motifRunId);
   analyzeReplayMoves(entry.pgn);
 
@@ -1635,27 +2286,18 @@ function createReplayControls() {
   }
 
   replayControlsEl = document.createElement("div");
-
+  replayControlsEl.className = "controls replay-controls";
   replayControlsEl.id = "replay-controls";
-
-  replayControlsEl.style.display = "flex";
-  replayControlsEl.style.justifyContent = "center";
-  replayControlsEl.style.alignItems = "center";
-  replayControlsEl.style.gap = "8px";
-  replayControlsEl.style.marginTop = "10px";
-  replayControlsEl.style.marginBottom = "10px";
-  replayControlsEl.style.flexWrap = "wrap";
-
   replayControlsEl.innerHTML = `
     <button type="button" id="replay-exit">
       Exit Replay
     </button>
 
-    <button type="button" id="replay-start">
+    <button type="button" id="replay-start" aria-label="Go to start" title="Go to start">
       ⏮
     </button>
 
-    <button type="button" id="replay-previous">
+    <button type="button" id="replay-previous" aria-label="Previous move" title="Previous move">
       ◀
     </button>
 
@@ -1663,12 +2305,16 @@ function createReplayControls() {
       0 / 0
     </span>
 
-    <button type="button" id="replay-next">
+    <button type="button" id="replay-next" aria-label="Next move" title="Next move">
       ▶
     </button>
 
-    <button type="button" id="replay-end">
+    <button type="button" id="replay-end" aria-label="Go to end" title="Go to end">
       ⏭
+    </button>
+
+    <button type="button" id="replay-return-line" class="replay-return-line hidden">
+      ↩ Return to Line
     </button>
   `;
 
@@ -1684,29 +2330,103 @@ function createReplayControls() {
     document.body.appendChild(replayControlsEl);
   }
 
-  document
-    .getElementById("replay-exit")
-    .addEventListener("click", exitReplay);
+document
+  .getElementById("replay-exit")
+  .addEventListener("click", exitReplay);
 
-  document
-    .getElementById("replay-start")
-    .addEventListener("click", replayStart);
+document
+  .getElementById("replay-start")
+  .addEventListener("click", replayStart);
 
-  document
-    .getElementById("replay-previous")
-    .addEventListener("click", replayPrevious);
+document
+  .getElementById("replay-previous")
+  .addEventListener("click", replayPrevious);
 
-  document
-    .getElementById("replay-next")
-    .addEventListener("click", replayNext);
+document
+  .getElementById("replay-next")
+  .addEventListener("click", replayNext);
 
-  document
-    .getElementById("replay-end")
-    .addEventListener("click", replayEnd);
+document
+  .getElementById("replay-end")
+  .addEventListener("click", replayEnd);
 
-  updateReplayControls();
+document
+  .getElementById("replay-return-line")
+  .addEventListener("click", () => {
+    const returnIndex =
+      replayBranchStart !== null
+        ? replayBranchStart
+        : replayIndex;
+
+    restoreOriginalReplayLine(returnIndex);
+
+    lastMoveFrom = null;
+    lastMoveTo = null;
+    selectedSquare = null;
+
+    renderBoard();
+    renderMoveList();
+    updateClockDisplays();
+    updateReplayControls();
+    analyzeReplayPosition();
+  });
+
+// Keyboard controls
+document.addEventListener("keydown", (event) => {
+  if (!inReplayMode) return;
+
+  // Don't hijack keyboard controls while typing.
+  if (
+    event.target.tagName === "INPUT" ||
+    event.target.tagName === "TEXTAREA" ||
+    event.target.isContentEditable
+  ) {
+    return;
+  }
+
+  switch (event.key) {
+    case "ArrowLeft":
+      event.preventDefault();
+      replayPrevious();
+      break;
+
+    case "ArrowRight":
+      event.preventDefault();
+      replayNext();
+      break;
+
+    case "ArrowUp":
+      event.preventDefault();
+      replayStart();
+      break;
+
+    case "ArrowDown":
+      event.preventDefault();
+      replayEnd();
+      break;
+
+    case "/":
+      event.preventDefault();
+
+      if (replayBranchStart !== null) {
+        const returnIndex = replayBranchStart;
+
+        restoreOriginalReplayLine(returnIndex);
+
+        lastMoveFrom = null;
+        lastMoveTo = null;
+        selectedSquare = null;
+
+        renderBoard();
+        renderMoveList();
+        updateClockDisplays();
+        updateReplayControls();
+        analyzeReplayPosition();
+      }
+      break;
+  }
+});
 }
-
 
 // ------------------------------------------------------------
 // Update replay counter
@@ -1716,10 +2436,24 @@ function updateReplayControls() {
   const position =
     document.getElementById("replay-position");
 
-  if (!position) return;
+  const returnLineButton =
+    document.getElementById("replay-return-line");
 
-  position.textContent =
-    replayIndex + " / " + replayMoves.length;
+  if (position) {
+    position.textContent =
+      replayIndex + " / " + replayMoves.length;
+  }
+
+  if (returnLineButton) {
+    const offOriginalLine =
+      replayBranchStart !== null;
+
+    returnLineButton.classList.toggle(
+      "hidden",
+      !offOriginalLine
+    );
+  }
+
   renderReplayMoveInsights();
 }
 
@@ -1968,7 +2702,6 @@ function renderReplayAnalysisPanel(completed = replayAnalysis.length, total = re
     </div>`;
 }
 
-
 // ------------------------------------------------------------
 // Go to beginning
 // ------------------------------------------------------------
@@ -2010,7 +2743,6 @@ function replayStart() {
   analyzeReplayPosition();
 }
 
-
 // ------------------------------------------------------------
 // Previous move
 // ------------------------------------------------------------
@@ -2051,7 +2783,6 @@ function replayPrevious() {
   analyzeReplayPosition();
 }
 
-
 // ------------------------------------------------------------
 // Next move
 // ------------------------------------------------------------
@@ -2086,7 +2817,6 @@ function replayNext() {
   updateReplayControls();
   analyzeReplayPosition();
 }
-
 
 // ------------------------------------------------------------
 // Go to end
@@ -2125,7 +2855,6 @@ function replayEnd() {
   analyzeReplayPosition();
 }
 
-
 // ------------------------------------------------------------
 // Exit replay
 // ------------------------------------------------------------
@@ -2145,8 +2874,6 @@ function exitReplay() {
   }
   if (replayReturnBoardFlipped !== null) {
     boardFlipped = replayReturnBoardFlipped;
-    document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
-    document.getElementById("board-wrap").classList.remove("replay-mode");
     replayReturnBoardFlipped = null;
   }
 
@@ -2183,6 +2910,7 @@ function exitReplay() {
     replayAnalysisPanelEl = null;
   }
 
+  renderReplayMoveInsights();
   renderBoard();
   renderMoveList();
   updateStatusForTurn();
@@ -2190,7 +2918,6 @@ function exitReplay() {
 
   console.log("Exited replay mode.");
 }
-
 
 // ------------------------------------------------------------
 // Make functions available globally
@@ -2302,6 +3029,9 @@ function selectMode(mode) {
   if (mode === "unrated") mode = "rated";
   if (mode !== "rated" && mode !== "puzzles") return;
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
+  if (document.querySelector(".container").classList.contains("openings-mode")) {
+    leaveOpeningsMode();
+  }
   if (inPuzzleMode) exitPuzzleMode();
   if (inDrillMode) exitDrillMode();
   if (mode === currentMode) return;
@@ -2456,9 +3186,23 @@ function renderBoard() {
     ? activeGame.moves({ square: selectedSquare, verbose: true }).map((m) => m.to)
     : [];
 
-  const rankOrder = boardFlipped ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
-  const fileOrder = boardFlipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
+  const rankOrder = boardFlipped
+    ? [1, 2, 3, 4, 5, 6, 7, 8]
+    : [8, 7, 6, 5, 4, 3, 2, 1];
 
+  const fileOrder = boardFlipped
+    ? [7, 6, 5, 4, 3, 2, 1, 0]
+    : [0, 1, 2, 3, 4, 5, 6, 7];
+
+  console.log(
+    "FLIP:",
+    boardFlipped,
+    "first square:",
+    squareId(fileOrder[0], rankOrder[0]),
+    "last square:",
+    squareId(fileOrder[7], rankOrder[7])
+  );
+  
   for (const displayRank of rankOrder) {
     for (const fileIdx of fileOrder) {
       const sq = squareId(fileIdx, displayRank);
@@ -2466,8 +3210,21 @@ function renderBoard() {
       const piece = boardData[rowIdx][fileIdx];
 
       const cell = document.createElement("div");
-      cell.className = "square " + (((fileIdx + displayRank) % 2 === 0) ? "dark" : "light");
+      cell.className = "square " + (((fileIdx + displayRank) % 2 === 0) ? "light" : "dark");
       cell.dataset.square = sq;
+
+      if (fileIdx === fileOrder[0]) {
+        const rankLabel = document.createElement("span");
+        rankLabel.className = "square-coordinate rank-label";
+        rankLabel.textContent = String(displayRank);
+        cell.appendChild(rankLabel);
+      }
+      if (displayRank === rankOrder[rankOrder.length - 1]) {
+        const fileLabel = document.createElement("span");
+        fileLabel.className = "square-coordinate file-label";
+        fileLabel.textContent = sq[0];
+        cell.appendChild(fileLabel);
+      }
       
       if (sq === selectedSquare) cell.classList.add("selected");
       if (premoves.some((move) => sq === move.from || sq === move.to)) {
@@ -2533,57 +3290,62 @@ function renderReplayEvalBar() {
   meter.style.display = visible ? "flex" : "none";
 }
 
-let capturedPieceTrays = null;
-
 function renderCapturedPieces() {
-  if (!capturedPieceTrays) {
-    capturedPieceTrays = {
-      w: document.createElement("span"),
-      b: document.createElement("span"),
-    };
-    capturedPieceTrays.w.className = "capture-slot white-capture-tray";
-    capturedPieceTrays.b.className = "capture-slot black-capture-tray";
-  }
+  const topTray = document.getElementById("capture-top");
+  const bottomTray = document.getElementById("capture-bottom");
+  if (!topTray || !bottomTray) return;
 
-  const displayPlayerColor = inReplayMode ? replayPlayerColor : playerColor;
-  const whiteRow = document.getElementById(displayPlayerColor === "w" ? "your-player" : "maia-player");
-  const blackRow = document.getElementById(displayPlayerColor === "b" ? "your-player" : "maia-player");
-  if (inPuzzleMode || inDrillMode || !whiteRow || !blackRow) {
-    capturedPieceTrays.w.remove();
-    capturedPieceTrays.b.remove();
+  if (inPuzzleMode || inDrillMode) {
+    topTray.replaceChildren();
+    bottomTray.replaceChildren();
     return;
   }
 
-  const capturedBy = { w: [], b: [] };
+  const capturedBy = { w: new Map(), b: new Map() };
   const captureHistory = (inReplayMode ? replayGame : game).history({ verbose: true });
   for (const move of captureHistory) {
     if (move.captured) {
-      capturedBy[move.color].push({
-        type: move.captured,
-        color: move.color === "w" ? "b" : "w",
-      });
+      capturedBy[move.color].set(
+        move.captured,
+        (capturedBy[move.color].get(move.captured) || 0) + 1
+      );
     }
   }
 
   const pieceValue = { p: 1, n: 2, b: 3, r: 4, q: 5 };
   for (const color of ["w", "b"]) {
-    capturedBy[color].sort((a, b) => pieceValue[a.type] - pieceValue[b.type]);
-  }
+    const capturedPieceColor = color === "w" ? "b" : "w";
+    const colorName = capturedPieceColor === "w" ? "White" : "Black";
+    const entries = [...capturedBy[color].entries()]
+      .sort(([typeA], [typeB]) => pieceValue[typeA] - pieceValue[typeB]);
+    const items = [];
+    for (const [type, count] of entries) {
+      const pieceName = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen" }[type];
+      const item = document.createElement("div");
+      item.className = `captured-piece-count piece-${capturedPieceColor === "w" ? "white" : "black"}`;
+      item.title = `${count} ${colorName} ${pieceName}${count === 1 ? "" : "s"} captured`;
 
-  for (const color of ["w", "b"]) {
-    const tray = capturedPieceTrays[color];
-    tray.replaceChildren(...capturedBy[color].map((piece) => {
       const image = document.createElement("img");
-      image.src = pieceImage(piece);
-      image.alt = `${piece.color === "w" ? "White" : "Black"} ${piece.type} captured`;
-      image.title = image.alt;
+      image.src = pieceImage({ type, color: capturedPieceColor });
+      image.alt = `${colorName} ${pieceName} captured`;
       image.draggable = false;
-      return image;
-    }));
-  }
+      item.appendChild(image);
 
-  whiteRow.querySelector(".clock-capture-slot").appendChild(capturedPieceTrays.w);
-  blackRow.querySelector(".clock-capture-slot").appendChild(capturedPieceTrays.b);
+      if (count > 1) {
+        const countLabel = document.createElement("span");
+        countLabel.className = "count-badge";
+        countLabel.textContent = String(count);
+        countLabel.setAttribute("aria-label", String(count));
+        item.appendChild(countLabel);
+      }
+      items.push(item);
+    }
+
+    const target = color === (inReplayMode ? replayPlayerColor : playerColor)
+      ? bottomTray
+      : topTray;
+    target.replaceChildren(...items);
+  }
 }
 
 function updateReplayEvalBar(score, turn) {
@@ -3043,53 +3805,114 @@ function renderMoveList() {
 }
 
 function renderReplayMoveInsights() {
-  const yourInsights = document.getElementById("your-review-insights");
-  const maiaInsights = document.getElementById("maia-review-insights");
-  if (!yourInsights || !maiaInsights) return;
-
-  for (const element of [yourInsights, maiaInsights]) {
-    element.classList.remove("active");
-    element.replaceChildren();
-  }
-  if (!inReplayMode || replayIndex <= 0) return;
-
-  const moveIndex = replayIndex - 1;
-  const move = replayMoves[moveIndex];
-  if (!move) return;
-
-  const target = move.color === replayPlayerColor ? yourInsights : maiaInsights;
-  target.classList.add("active");
-  const moveLabel = document.createElement("span");
-  moveLabel.className = "review-insight-move";
-  moveLabel.textContent = move.san;
-  target.appendChild(moveLabel);
+  const panel = document.getElementById("review-insights-panel");
+  if (!panel) return;
+  panel.replaceChildren();
+  panel.classList.add("hidden");
+  if (!inReplayMode) return;
+  const moveIndex = replayIndex > 0 ? replayIndex - 1 : 0;
+  if (!replayMoves[moveIndex]) return;
   const motifs = replayMoveMotifs[moveIndex];
-  if (motifs === null || motifs === undefined) {
-    const status = document.createElement("span");
-    status.className = "review-insight-status";
-    status.textContent = "Analyzing...";
-    target.appendChild(status);
+  renderMotifInsightPanel(panel, motifs, motifs == null ? "Analyzing..." : "");
+}
+
+function renderMotifInsightPanel(panel, motifs, pendingText = "", errorText = "") {
+  const prosLine = document.createElement("div");
+  prosLine.className = "review-insight-pro";
+  const consLine = document.createElement("div");
+  consLine.className = "review-insight-con";
+
+  if (errorText) {
+    prosLine.textContent = "Pros: —";
+    consLine.textContent = `Cons: ${errorText}`;
+  } else if (pendingText) {
+    prosLine.textContent = `Pros: ${pendingText}`;
+    consLine.textContent = `Cons: ${pendingText}`;
+  } else if (Array.isArray(motifs)) {
+    const pros = [];
+    const cons = [];
+    for (const motif of motifs) {
+      if (NEUTRAL_MOTIF_IDS.has(motif.id)) continue;
+      const label = motif.id === "hangs"
+        ? (motif.phrase || motif.label || "Hangs").replace(/^Hangs:\s*/i, "")
+        : (motif.label || motif.id).replace(/:.*/, "").trim();
+      (NEGATIVE_MOTIF_IDS.has(motif.id) ? cons : pros).push(label);
+    }
+    prosLine.textContent = `Pros: ${pros.join(", ") || "None identified"}`;
+    consLine.textContent = `Cons: ${cons.join(", ") || "None identified"}`;
+  }
+
+  panel.replaceChildren(prosLine, consLine);
+  panel.classList.remove("hidden");
+}
+
+function renderOpeningDrillInsightsPrompt() {
+  const panel = document.getElementById("review-insights-panel");
+  if (!panel) return;
+  if (openingDrillDisplayedMoveIndex === null) {
+    renderMotifInsightPanel(panel, null, "Analyzing the next move...");
+  } else {
+    const result = openingDrillMoveMotifs.get(openingDrillDisplayedMoveIndex);
+    if (!result) {
+      renderMotifInsightPanel(panel, null, "Analyzing the next move...");
+    } else if (result.error) {
+      renderMotifInsightPanel(panel, null, "", "Next-move analysis unavailable.");
+    } else {
+      renderMotifInsightPanel(panel, result.motifs);
+    }
+  }
+  if (drillOutOfLine) {
+    const notice = panel.children[1];
+    if (notice) {
+      notice.textContent = "Outside of this specific opening line";
+      notice.classList.add("review-insight-out-of-line");
+    }
+  }
+}
+
+function analyzeNextOpeningDrillMove() {
+  if (!inDrillMode || !drillGame || drillAwaitingReply) return;
+  const solutionIndex = drillSolutionIndex;
+  const uci = drillSolution[solutionIndex];
+  if (!uci || drillGame.turn() !== drillPlayerColor) {
+    openingDrillDisplayedMoveIndex = null;
+    renderMotifInsightPanel(
+      document.getElementById("review-insights-panel"),
+      null,
+      "Variant complete."
+    );
     return;
   }
 
-  const pros = motifs.filter((motif) => !NEGATIVE_MOTIF_IDS.has(motif.id) && !NEUTRAL_MOTIF_IDS.has(motif.id));
-  const cons = motifs.filter((motif) => NEGATIVE_MOTIF_IDS.has(motif.id));
-  for (const [kind, list] of [["pro", pros], ["con", cons]]) {
-    list.forEach((motif) => {
-      const item = document.createElement("button");
-      item.type = "button";
-      item.className = `review-insight-link review-insight-${kind}`;
-      item.textContent = `${motif.label || motif.id}: ${motif.phrase}`;
-      item.title = "Open this motif in the glossary";
-      item.addEventListener("click", () => openMotifGlossary(motif.id));
-      target.appendChild(item);
-    });
-  }
-  if (!pros.length && !cons.length) {
-    const status = document.createElement("span");
-    status.className = "review-insight-status";
-    status.textContent = "No notable motifs detected";
-    target.appendChild(status);
+  openingDrillDisplayedMoveIndex = solutionIndex;
+  renderOpeningDrillInsightsPrompt();
+  if (openingDrillMoveMotifs.has(solutionIndex)) return;
+  void analyzeOpeningDrillMove(
+    drillGame.fen(),
+    uci,
+    solutionIndex,
+    openingDrillAnalysisRun
+  );
+}
+
+async function analyzeOpeningDrillMove(fen, uci, solutionIndex, analysisRun) {
+  try {
+    const result = await window.analyzePositionalChessMove(fen, uci);
+    if (analysisRun !== openingDrillAnalysisRun) return;
+    if (!result || result.error) {
+      throw new Error(result?.error || "The positional move analyzer returned no result.");
+    }
+    openingDrillMoveMotifs.set(solutionIndex, { motifs: result.motifs || [] });
+    if (inDrillMode && openingDrillDisplayedMoveIndex === solutionIndex) {
+      renderOpeningDrillInsightsPrompt();
+    }
+  } catch (error) {
+    if (analysisRun !== openingDrillAnalysisRun) return;
+    console.error("Could not analyze opening drill move:", error);
+    openingDrillMoveMotifs.set(solutionIndex, { error });
+    if (inDrillMode && openingDrillDisplayedMoveIndex === solutionIndex) {
+      renderOpeningDrillInsightsPrompt();
+    }
   }
 }
 
@@ -3452,6 +4275,7 @@ async function onSquareClick(sq) {
   }
 
   if (maiaThinking) {
+    handlePremoveClick(sq);
     return;
   }
 

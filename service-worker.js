@@ -1,5 +1,5 @@
-const CACHE_NAME = "chess-offline-v3";
-// Refresh replay branching and pros/cons styling in the app shell.
+const CACHE_NAME = "chess-offline-v24";
+// Refresh the app shell after static UI changes.
 const STATUS_URL = new URL("__offline_status__", self.registration.scope).href;
 
 const OFFLINE_FILES = [
@@ -10,7 +10,11 @@ const OFFLINE_FILES = [
   "./chess.min.js",
   "./data/puzzles-db.js",
   "./motifs.md",
-  "./data/openings.json",
+  "./data/openings_a.tsv",
+  "./data/openings_b.tsv",
+  "./data/openings_c.tsv",
+  "./data/openings_d.tsv",
+  "./data/openings_e.tsv",
   "./data/all_moves_maia3.json",
   "./data/all_moves_maia3_reversed.json",
   "./engines/maia3/maia-engine.js",
