@@ -149,9 +149,14 @@ animation:vstackGrow .3s cubic-bezier(.34,1.3,.64,1) forwards;
 .vstack button:nth-child(3){animation-delay:.72s}
 .vstack button:nth-child(4){animation-delay:.94s}
 .vstack button:nth-child(5){animation-delay:1.16s}
+.vstack button:nth-child(6){animation-delay:1.38s}
+.vstack button:nth-child(7){animation-delay:1.6s}
 
-.player{box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;width:min(100%,700px);margin:8px auto;font-size:clamp(15px,4.2vw,19px)}
-.player-name{display:flex;align-items:center;min-width:0;white-space:nowrap;flex:1}
+.player{box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(8ch,1fr);align-items:center;width:min(100%,700px);margin:8px auto;font-size:clamp(15px,4.2vw,19px)}
+.container.review-mode .player{width:calc(100% - 54px);margin:8px 16px 8px 38px}
+.player-name{grid-column:1;display:flex;align-items:center;min-width:0;white-space:nowrap}
+.player-opening-name{justify-self:center;max-width:100%;overflow:hidden;color:#c9a84c;font-size:.7em;text-align:center;text-overflow:ellipsis;white-space:nowrap}
+#your-clock,#maia-clock{grid-column:3}
 .capture-slot{display:flex;align-items:center;min-width:0;flex-shrink:1;gap:1px}
 .capture-slot:empty{display:none}
 .capture-slot img{width:18px;height:18px;flex:0 0 18px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
@@ -176,18 +181,6 @@ animation:vstackGrow .3s cubic-bezier(.34,1.3,.64,1) forwards;
 }
 
 /* Flipped */
-#board-wrap.flipped #maia-player{
-    order:3;
-}
-
-#board-wrap.flipped #board-with-eval{
-    order:2;
-}
-
-#board-wrap.flipped #your-player{
-    order:1;
-}
-
 /* Status line above the board — sits OUTSIDE board-wrap on purpose, so
    flipping the board never moves it. Used while Maia is loading, fades
    away when ready / it's not your turn. */
@@ -254,6 +247,21 @@ touch-action:none;
 .eval-bar-black{flex:0 0 50%;width:100%;background:#25262a}
 .eval-bar-white{flex:0 0 50%;width:100%;background:#eee}
 .review-insights-panel{box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:2px;width:min(100%,700px);height:42px;overflow:hidden;margin:6px auto 10px;padding:4px 10px;border:1px solid #45464a;border-radius:6px;background:#232427;font-size:12px;line-height:15px;text-align:center}
+.review-insights-panel.puzzle-insights{flex-direction:row;align-items:center;justify-content:center;gap:10px}
+.review-insights-copy{display:flex;flex:1;flex-direction:column;justify-content:center;min-width:0}
+.review-insights-panel.puzzle-insights>.review-insights-copy{height:auto;min-height:30px}
+.puzzle-side-indicator{flex:0 0 18px;width:18px;height:18px;border:1px solid #999;border-radius:2px}
+.puzzle-side-indicator.white{background:#f0f0f0}
+.puzzle-side-indicator.black{background:#171717}
+.study-progress{width:min(100%,700px);margin:5px auto 8px}
+.study-progress[hidden]{display:none}
+.study-progress-label{margin-bottom:3px;color:#bfc0c3;font-size:11px;text-align:center}
+.study-progress-track{height:5px;overflow:hidden;border-radius:4px;background:#414246}
+.study-progress-fill{height:100%;width:0;border-radius:4px;background:#c9a84c;transition:width .2s ease}
+.hc-puzzle-details{display:grid;gap:2px;padding:1px 2px}
+.hc-puzzle-details .hc-stat{overflow-wrap:anywhere}
+#history-title{margin:12px 0 4px;color:#aaa;font-size:12px;text-align:center}
+#history-title[hidden]{display:none}
 .review-insights-panel>div{height:15px;min-height:15px;overflow:hidden;text-align:center;text-overflow:ellipsis;white-space:nowrap}
 .review-insight-pro{color:#9bd5a3}
 .review-insight-con{color:#efa2a2}
@@ -317,7 +325,8 @@ scrollbar-width:none;
 .inner{width:max-content;padding:8px 0;white-space:nowrap;font-size:clamp(14px,4vw,18px)}
 .movenum{color:#888;margin-right:2px}
 .move{margin-right:14px}
-.piece-rating-badge{position:absolute;top:2px;right:2px;width:clamp(13px,40%,22px);height:auto;z-index:4;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+.move.replay-current-move{display:inline-block;margin-right:9px;padding:2px 6px;border-radius:999px;background:#fff;color:#111;font-weight:700}
+.piece-rating-badge{position:absolute;top:2px;right:2px;width:clamp(13px,40%,22px);height:auto;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
 .controls{display:flex;justify-content:center;gap:10px;margin:18px auto;flex-wrap:wrap}
 .controls button{
 flex:1 1 0;
@@ -326,10 +335,17 @@ background:#3a3b3e;border:none;color:#fff;font-size:clamp(14px,3.8vw,16px);
 padding:12px 10px;border-radius:22px;cursor:pointer;-webkit-user-select:none;user-select:none;
 }
 .controls button:active{background:#4c4d51}
-.replay-controls{width:min(100%,700px);gap:6px;margin:10px auto}
+.container.review-mode #game-controls{justify-content:flex-end;margin:4px auto 10px}
+.container.review-mode #game-controls #resign-button,
+.container.review-mode #game-controls #draw-button{display:none}
+.container.review-mode #game-controls #flip-button{flex:0 0 auto;min-width:76px}
+.replay-controls{width:min(100%,700px);gap:6px;margin:10px auto;flex-wrap:nowrap}
 .replay-controls button{flex:0 0 auto;min-width:42px;min-height:40px;padding:8px 12px;font-size:14px}
-.replay-controls #replay-exit{flex:1 1 auto}
-.replay-controls #replay-position{min-width:54px;color:#bfc0c3;font-size:12px;font-variant-numeric:tabular-nums;text-align:center}
+.replay-controls #replay-exit,
+.replay-controls #flip-button{flex:1 1 0;min-width:0;min-height:40px;padding:8px 6px}
+.replay-controls #replay-position{display:flex;flex-direction:column;justify-content:center;min-width:30px;color:#bfc0c3;font-size:12px;line-height:13px;font-variant-numeric:tabular-nums;text-align:center}
+.replay-position-current{font-weight:700}
+.replay-position-total{font-size:10px;font-weight:700;color:#888}
 .hidden{display:none}
 
 /* Game history: a 4-column grid of button-cards, same width as the controls
@@ -421,11 +437,15 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 .container.openings-mode>#game-controls,
 .container.openings-mode>#puzzle-controls,
 .container.openings-mode>#drill-controls,
-.container.openings-mode>#history{display:none!important}
+.container.openings-mode>#history,
+.container.openings-mode>#history-title{display:none!important}
 .openings-topbar{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:center;min-height:64px;padding:10px 18px;border-bottom:1px solid #3a3b3e;background:#202124}
 .openings-search-wrap{position:relative;width:min(100%,360px);height:40px}
 .openings-browser.drill-active .openings-search-wrap{display:none}
 .openings-topbar>.review-insights-panel{flex:1;width:100%;max-width:700px;height:42px;margin:0}
+.openings-browser.drill-active .openings-topbar{flex-direction:column;gap:6px;align-items:stretch;padding:8px 12px}
+.openings-browser.drill-active .openings-topbar>.review-insights-panel{flex:0 0 auto}
+.openings-topbar>.study-progress{width:min(100%,700px);margin:0 auto}
 .openings-search{width:100%;height:100%;padding:0 14px;border:1px solid #303947;border-radius:10px;outline:none;background:#0d1218;color:#e8edf3;font-size:13px}
 .openings-search::placeholder{color:#6f7b89}
 .openings-search:focus{border-color:#536174}
@@ -481,6 +501,17 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 .storage-header h2{margin:0;font-size:18px}
 .storage-close{width:34px;height:34px;border:0;border-radius:4px;background:#3a3b3e;color:#fff;font-size:22px;cursor:pointer}
 .storage-summary,.storage-note{font-size:12px;line-height:1.45;color:#bfc0c3;margin:6px 0}
+.opening-achievements-panel{width:min(760px,100%)}
+.opening-achievements-search{box-sizing:border-box;width:100%;margin:4px 0 8px;padding:10px;border:1px solid #555;border-radius:6px;background:#1d1e20;color:#fff;font-size:14px}
+.opening-achievements-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:min(62vh,620px);overflow:auto;padding:2px}
+.opening-achievement-card{display:flex;align-items:center;gap:9px;min-width:0;min-height:80px;padding:8px;border:1px solid #45464a;border-radius:7px;background:#1d1e20}
+.opening-achievement-icon{display:flex;flex:0 0 64px;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:#393a3e;color:#c9a84c;font-size:36px;font-weight:700}
+canvas.opening-achievement-icon{display:block}
+.opening-achievement-description{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:12px}
+.opening-achievement-description strong{overflow:hidden;color:#eee;text-overflow:ellipsis}
+.opening-achievement-description span{color:#9b9da2;font-size:10px}
+.opening-achievements-empty{grid-column:1/-1;padding:14px;text-align:center;color:#aaa;font-size:13px}
+.opening-achievement-toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:1200;width:max-content;max-width:calc(100vw - 28px);padding:11px 16px;transform:translateX(-50%);border:1px solid #c9a84c;border-radius:20px;background:#2b2c2f;color:#f5df9c;text-align:center;font-size:13px;font-weight:700;box-shadow:0 5px 18px rgba(0,0,0,.45)}
 .storage-group-title{margin:14px 0 4px;font-size:13px;font-weight:700;color:#e8e8e8}
 .storage-list{border-top:1px solid #45464a}
 .storage-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;min-height:54px;border-bottom:1px solid #393a3d;padding:7px 1px}
@@ -530,6 +561,7 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 <button id="settings-username-btn" onclick="setUsername()">Username: You</button>
 <button id="settings-sound-btn" onclick="toggleSound()">Sound: On</button>
 <button id="settings-defaultmode-btn" onclick="cycleDefaultMode()">Default: Ranked</button>
+<button id="settings-opening-achievements-btn" onclick="openOpeningAchievements()">Achievements</button>
 <button id="settings-glossary-btn" onclick="openMotifGlossary()">Motif Glossary</button>
 <button id="settings-storage-btn" onclick="openStorageManager()">Storage</button>
 <button onclick="clearAllSavedData()">Clear Saved Data</button>
@@ -564,6 +596,10 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 </section>
 
 <div id="review-insights-panel" class="review-insights-panel hidden" aria-live="polite"></div>
+<div id="study-progress" class="study-progress" hidden>
+<div id="study-progress-label" class="study-progress-label"></div>
+<div class="study-progress-track"><div id="study-progress-fill" class="study-progress-fill"></div></div>
+</div>
 
 <div id="status">Loading...</div>
 
@@ -585,8 +621,19 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 </section>
 </div>
 
+<div id="opening-achievements-overlay" class="storage-overlay hidden" onclick="closeOpeningAchievements(event)">
+<section class="storage-panel opening-achievements-panel" role="dialog" aria-modal="true" aria-labelledby="opening-achievements-title" onclick="event.stopPropagation()">
+<header class="storage-header"><h2 id="opening-achievements-title">Achievements</h2><button type="button" class="storage-close" aria-label="Close opening achievements" onclick="closeOpeningAchievements()">&times;</button></header>
+<div id="opening-achievements-progress" class="storage-summary"></div>
+<input id="opening-achievements-search" class="opening-achievements-search" type="search" placeholder="Search openings" aria-label="Search opening achievements" oninput="searchOpeningAchievements(this.value)">
+<div id="opening-achievements-list" class="opening-achievements-list"></div>
+</section>
+</div>
+
+<div id="opening-achievement-toast" class="opening-achievement-toast hidden" aria-live="polite"></div>
+
 <div id="board-wrap">
-<div class="player" id="maia-player"><span class="player-name">Maia (<span id="maia-rating">250</span>)</span><span id="maia-clock">10:00</span></div>
+<div class="player" id="maia-player"><span class="player-name">Maia (<span id="maia-rating">250</span>)</span><span id="maia-opening-name" class="player-opening-name" hidden></span><span id="maia-clock">10:00</span></div>
 
 <div id="board-with-eval">
 <div id="capture-rail" aria-label="Captured pieces"><div id="capture-top" class="capture-rail-side"></div><div id="capture-bottom" class="capture-rail-side bottom"></div></div>
@@ -599,7 +646,7 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 </div>
 </div>
 
-<div class="player" id="your-player"><span class="player-name"><span id="your-name-label">You</span> (<span id="your-rating">250</span>)</span><span id="your-clock">10:00</span></div>
+<div class="player" id="your-player"><span class="player-name"><span id="your-name-label">You</span> (<span id="your-rating">250</span>)</span><span id="your-opening-name" class="player-opening-name" hidden></span><span id="your-clock">10:00</span></div>
 <div class="overlay hidden" id="game-over-overlay">
 <div class="overlay-card">
 <div class="overlay-title" id="overlay-title">Game Over</div>
@@ -621,14 +668,10 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 </div>
 </div>
 
-<div class="moves">
-<div class="inner" id="move-list"></div>
-</div>
-
 <div class="controls" id="game-controls">
-<button onclick="resign()">Resign</button>
-<button>Draw</button>
-<button onclick="toggleFlip()">Flip</button>
+<button id="resign-button" onclick="resign()">Resign</button>
+<button id="draw-button">Draw</button>
+<button id="flip-button" onclick="toggleFlip()">Flip</button>
 </div>
 
 <div class="controls hidden" id="puzzle-controls">
@@ -640,9 +683,15 @@ background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
 <button onclick="toggleFlip()" title="Flip the board and switch which side you play">Flip / Side</button>
 <button onclick="exitDrillMode()">Close Variant</button>
 <button id="drill-restart-btn" onclick="restartCurrentDrill()">Restart</button>
-<button onclick="undoDrillMove()">Undo</button>
+<button id="drill-undo-btn" onclick="undoDrillMove()">Undo</button>
+<button id="drill-return-line-btn" class="hidden" onclick="returnToOpeningLine()">Back to Line</button>
 </div>
 
+<div class="moves">
+<div class="inner" id="move-list"></div>
+</div>
+
+<div id="history-title" hidden></div>
 <div class="history" id="history">
 </div>
 </div>
@@ -667,7 +716,7 @@ document.querySelectorAll('.menu-item.open').forEach(function(item){item.classLi
 <script src="./engines/stockfish19/stockfish-evaluator.js?v=12" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js?v=4" defer></script>
-<script src="./app.js?v=70" defer></script>
+<script src="./app.js?v=85" defer></script>
 
 </body>
 </html>

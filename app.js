@@ -6,6 +6,9 @@ let maiaThinking = false;
 let engine = window.engine;        // Maia
 let stockfishEngine = null;       // Stockfish
 let boardFlipped = false;
+const NORMAL_BOARD_FLIP_KEY = "chess_normal_board_flipped";
+let normalBoardFlip = localStorage.getItem(NORMAL_BOARD_FLIP_KEY);
+normalBoardFlip = normalBoardFlip === "true" ? true : normalBoardFlip === "false" ? false : null;
 let lastMoveFrom = null;
 let lastMoveTo = null;
 let gameResigned = false;
@@ -84,6 +87,11 @@ MAIA_ELO = String(myRating);
 
 function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
+}
+
+function applyNormalBoardOrientation() {
+  boardFlipped = normalBoardFlip ?? playerColor === "b";
+  document.getElementById("board-wrap")?.classList.toggle("flipped", boardFlipped);
 }
 
 
@@ -651,6 +659,14 @@ let puzzleHintStage = 0; // 0 = nothing, 1 = show piece, 2 = show destination
 let hintSquares = [];
 let puzzleWrongAttempts = 0;
 let puzzleHintsUsed = 0;
+let puzzleRatingAtStart = puzzleRating;
+let currentPuzzleEntry = null;
+let puzzleInsightRun = 0;
+let puzzleMoveAnalysisRun = 0;
+let puzzleTargetMoveMotifs = null;
+let studyEvaluationRun = 0;
+let drillEditingLine = false;
+let drillLineSnapshot = null;
 function savePuzzleRating() {
   localStorage.setItem("chess_puzzle_rating", String(puzzleRating));
   PuzzleDB.manageForRating(puzzleRating).catch((error) => {
@@ -713,6 +729,8 @@ function undoDrillMove() {
     const lastMove = history[history.length - 1];
     lastMoveFrom = lastMove ? lastMove.from : null;
     lastMoveTo = lastMove ? lastMove.to : null;
+    updateStudyProgress();
+    updateStudyEvaluation(drillGame, "opening");
     analyzeNextOpeningDrillMove();
     renderBoard();
     renderMoveList();
@@ -742,6 +760,8 @@ function undoDrillMove() {
   const lastMove = history[history.length - 1];
   lastMoveFrom = lastMove ? lastMove.from : null;
   lastMoveTo = lastMove ? lastMove.to : null;
+  updateStudyProgress();
+  updateStudyEvaluation(drillGame, "opening");
   analyzeNextOpeningDrillMove();
   renderBoard();
   renderMoveList();
@@ -799,6 +819,15 @@ async function loadNextPuzzle() {
     recentPuzzleFens
   );
 
+  puzzleInsightRun++;
+  puzzleTargetMoveMotifs = null;
+  currentPuzzleEntry = {
+    id: puzzle.id || puzzle.puzzleId || puzzle.fen,
+    fen: puzzle.fen,
+    solution: puzzle.solution.slice(),
+    rating: puzzle.rating,
+    themes: Array.isArray(puzzle.themes) ? puzzle.themes.slice() : [],
+  };
   recentPuzzleFens.push(puzzle.fen);
   if (recentPuzzleFens.length > RECENT_PUZZLE_HISTORY) recentPuzzleFens.shift();
 
@@ -828,6 +857,7 @@ async function loadNextPuzzle() {
   }
 
   puzzlePlayerColor = puzzleGame.turn();
+  puzzleRatingAtStart = puzzleRating;
   puzzleAwaitingReply = false;
   puzzleLocked = false;
   puzzleMissedAlready = false;
@@ -845,11 +875,15 @@ async function loadNextPuzzle() {
   document.getElementById("maia-rating").textContent = puzzle.rating;
 
   clearTurnTags();
+  updatePuzzleInsights();
+  updateStudyProgress();
   renderBoard();
   renderMoveList();
+  updateStudyEvaluation(puzzleGame, "puzzle");
   updatePuzzleActionButton();
   statusEl.textContent = `Puzzle Rating ${puzzleRating} — find the best move for ${puzzlePlayerColor === "w" ? "White" : "Black"}.`;
   statusEl.classList.remove("status-hidden");
+  analyzeNextPuzzleMove();
 }
 
 function updatePuzzleActionButton() {
@@ -857,6 +891,147 @@ function updatePuzzleActionButton() {
   if (!btn) return;
 
   btn.textContent = "Give Up";
+}
+
+function updateStudyProgress() {
+  const progress = document.getElementById("study-progress");
+  const label = document.getElementById("study-progress-label");
+  const fill = document.getElementById("study-progress-fill");
+  if (!progress || !label || !fill) return;
+  if (inDrillMode) {
+    const total = drillSolution.length;
+    const current = Math.min(drillSolutionIndex, total);
+    progress.hidden = false;
+    label.textContent = `Opening line: ${current} / ${total} moves`;
+    fill.style.width = `${total ? current / total * 100 : 100}%`;
+  } else {
+    progress.hidden = true;
+    label.textContent = "";
+    fill.style.width = "0%";
+  }
+}
+
+function updatePuzzleInsights() {
+  const panel = document.getElementById("review-insights-panel");
+  if (!panel) return;
+  panel.replaceChildren();
+  panel.classList.add("hidden");
+  panel.classList.remove("puzzle-insights");
+  if (!inPuzzleMode) return;
+
+  const copy = document.createElement("div");
+  copy.className = "review-insights-copy";
+  const pending = currentPuzzleEntry?.solution?.length > 0 && puzzleTargetMoveMotifs === null;
+  renderMotifInsightPanel(
+    copy,
+    puzzleTargetMoveMotifs?.motifs || null,
+    pending ? "Analyzing next move..." : "",
+    puzzleTargetMoveMotifs?.error ? "Next-move analysis unavailable." : ""
+  );
+  const side = document.createElement("span");
+  side.className = `puzzle-side-indicator ${puzzlePlayerColor === "w" ? "white" : "black"}`;
+  side.title = `You are playing ${puzzlePlayerColor === "w" ? "White" : "Black"}`;
+  side.setAttribute("aria-label", side.title);
+  panel.classList.add("puzzle-insights");
+  panel.append(copy, side);
+  panel.classList.remove("hidden");
+}
+
+async function analyzeNextPuzzleMove() {
+  if (!inPuzzleMode || !puzzleGame || puzzleAwaitingReply || puzzleGame.turn() !== puzzlePlayerColor) return;
+  const uci = puzzleSolution[puzzleSolutionIndex];
+  if (!uci) return;
+  const fen = puzzleGame.fen();
+  const runId = puzzleInsightRun;
+  const analysisRun = ++puzzleMoveAnalysisRun;
+  puzzleTargetMoveMotifs = null;
+  updatePuzzleInsights();
+  if (typeof window.analyzePositionalChessMove !== "function") {
+    if (analysisRun !== puzzleMoveAnalysisRun || runId !== puzzleInsightRun) return;
+    puzzleTargetMoveMotifs = { error: true };
+    updatePuzzleInsights();
+    return;
+  }
+  try {
+    const result = await window.analyzePositionalChessMove(fen, uci);
+    if (analysisRun !== puzzleMoveAnalysisRun || runId !== puzzleInsightRun || !inPuzzleMode) return;
+    puzzleTargetMoveMotifs = result?.error
+      ? { error: true }
+      : { motifs: result?.motifs || [] };
+  } catch (error) {
+    if (analysisRun !== puzzleMoveAnalysisRun || runId !== puzzleInsightRun) return;
+    console.error("Could not analyze next puzzle move:", error);
+    puzzleTargetMoveMotifs = { error: true };
+  }
+  updatePuzzleInsights();
+}
+
+function updateStudyEvaluation(gameObj, mode) {
+  const evaluator = window.stockfishEvaluator;
+  const scoreLabel = document.getElementById("replay-eval-score");
+  if (!gameObj || !scoreLabel || !evaluator) {
+    if (scoreLabel && (mode === "puzzle" || mode === "opening")) scoreLabel.textContent = "SF !";
+    return;
+  }
+  const runId = ++studyEvaluationRun;
+  const fen = gameObj.fen();
+  const turn = gameObj.turn();
+  const isCurrent = () => runId === studyEvaluationRun
+    && ((mode === "puzzle" && inPuzzleMode && puzzleGame?.fen() === fen)
+      || (mode === "opening" && inDrillMode && drillGame?.fen() === fen));
+  scoreLabel.textContent = "…";
+  renderReplayEvalBar();
+  evaluator.evaluateFenMultiPv(fen, {
+    depth: 10,
+    count: 1,
+    onUpdate: (lines) => {
+      if (!isCurrent() || !lines?.length) return;
+      updateReplayEvalBar(lines[0], turn);
+    },
+  }).then((lines) => {
+    if (!isCurrent() || !lines?.length) return;
+    updateReplayEvalBar(lines[0], turn);
+  }).catch((error) => {
+    if (!isCurrent()) return;
+    console.error(`Could not evaluate ${mode} position with Stockfish:`, error);
+    scoreLabel.textContent = "SF !";
+    scoreLabel.title = error.message;
+  });
+}
+
+const PUZZLE_HISTORY_KEY = "chess_puzzle_history";
+
+function loadPuzzleHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PUZZLE_HISTORY_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch (error) {
+    console.error("Could not load past puzzles:", error);
+    return [];
+  }
+}
+
+function recordPuzzleHistory(result, ratingDelta) {
+  if (!currentPuzzleEntry || !puzzleGame) return;
+  const moves = puzzleGame.history();
+  const history = loadPuzzleHistory();
+  history.unshift({
+    puzzleId: currentPuzzleEntry.id,
+    fen: currentPuzzleEntry.fen,
+    solution: currentPuzzleEntry.solution,
+    pgn: puzzleGame.pgn(),
+    result,
+    rating: currentPuzzleEntry.rating,
+    playerRatingBefore: puzzleRatingAtStart,
+    playerRatingAfter: puzzleRating,
+    ratingDelta,
+    themes: currentPuzzleEntry.themes,
+    date: Date.now(),
+    moveline: moves.join(" ") || "(no moves)",
+    totalMoves: moves.length,
+    playerColor: puzzlePlayerColor,
+  });
+  localStorage.setItem(PUZZLE_HISTORY_KEY, JSON.stringify(history.slice(0, 100)));
 }
 
 async function handlePuzzleAction() {
@@ -874,7 +1049,7 @@ async function enterPuzzleMode() {
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   if (maiaThinking) return;
   if (document.querySelector(".container").classList.contains("openings-mode")) {
-    leaveOpeningsMode();
+    leaveOpeningsMode(false);
   }
   premoves = [];
   selectedSquare = null;
@@ -884,25 +1059,32 @@ async function enterPuzzleMode() {
   }
 
   inPuzzleMode = true;
+  document.querySelector(".container")?.classList.add("puzzle-mode");
   updateModeBadge();
   gameControlsEl.classList.add("hidden");
   puzzleControlsEl.classList.remove("hidden");
   console.log("Entered puzzle mode");
+  renderHistory();
   await loadNextPuzzle();
   console.log("Finished loadNextPuzzle");
 }
 window.enterPuzzleMode = enterPuzzleMode;
 
-function exitPuzzleMode() {
+function exitPuzzleMode(resumeGame = true) {
   inPuzzleMode = false;
+  puzzleInsightRun++;
+  puzzleMoveAnalysisRun++;
+  studyEvaluationRun++;
+  document.querySelector(".container")?.classList.remove("puzzle-mode");
+  document.getElementById("review-insights-panel")?.classList.add("hidden");
+  updateStudyProgress();
   hintSquares = [];
   puzzleHintStage = 0;
   updateModeBadge();
   puzzleControlsEl.classList.add("hidden");
   gameControlsEl.classList.remove("hidden");
   selectedSquare = null;
-  boardFlipped = playerColor === "b";
-  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+  applyNormalBoardOrientation();
 
   document.getElementById("your-rating").textContent = myRating;
   document.getElementById("maia-rating").textContent = MAIA_ELO;
@@ -911,10 +1093,12 @@ function exitPuzzleMode() {
   renderBoard();
   renderMoveList();
   updateClockDisplays();
+  renderHistory();
   if (isGameLocked()) {
     // popup will show if they reopen it; just leave board as-is
   } else {
     updateStatusForTurn();
+    if (resumeGame && game.turn() !== playerColor) runMaiaTurn();
   }
 }
 
@@ -939,8 +1123,10 @@ function giveUpPuzzle() {
   // Giving up scores like a worst-case attempt (S = -1) against this puzzle's Elo.
   const puzzleRatingValue = parseInt(document.getElementById("maia-rating").textContent, 10) || puzzleRating;
   const E = 1 / (1 + Math.pow(10, (puzzleRatingValue - puzzleRating) / 399));
-  const delta = Math.round(PUZZLE_RATING_K * (-1 - E));
-  puzzleRating = clamp(puzzleRating + delta, 399, 3000);  savePuzzleRating();
+  const requestedDelta = Math.round(PUZZLE_RATING_K * (-1 - E));
+  puzzleRating = clamp(puzzleRating + requestedDelta, 399, 3000);
+  const delta = requestedDelta;
+  savePuzzleRating();
   document.getElementById("your-rating").textContent = puzzleRating;
 
   const sanParts = [];
@@ -956,9 +1142,14 @@ function giveUpPuzzle() {
       playGameSound(soundForMove(puzzleGame, mv));
     }
   }
+  recordPuzzleHistory("gave-up", delta);
+  updatePuzzleInsights();
+  updateStudyProgress();
   renderBoard();
   renderMoveList();
+  updateStudyEvaluation(puzzleGame, "puzzle");
   updatePuzzleActionButton();
+  renderHistory();
   statusEl.textContent = `Solution: ${sanParts.join(" ")}  (${delta >= 0 ? "+" : ""}${delta} → Puzzle Rating ${puzzleRating})`;
   statusEl.classList.remove("status-hidden");
 }
@@ -1018,6 +1209,8 @@ async function onPuzzleSquareClick(sq) {
   renderBoard();
   renderMoveList();
   puzzleSolutionIndex++;
+  updatePuzzleInsights();
+  updateStudyEvaluation(puzzleGame, "puzzle");
 
   if (puzzleSolutionIndex >= puzzleSolution.length) {
     puzzleLocked = true;
@@ -1026,6 +1219,8 @@ async function onPuzzleSquareClick(sq) {
     savePuzzleRating();
     document.getElementById("your-rating").textContent = puzzleRating;
     statusEl.textContent = `Solved! ${delta >= 0 ? "+" : ""}${delta} → Puzzle Rating ${puzzleRating}`;
+    recordPuzzleHistory("solved", delta);
+    renderHistory();
     
     autoNextPuzzle();
     return;
@@ -1041,8 +1236,10 @@ async function onPuzzleSquareClick(sq) {
   lastMoveTo = rTo;
   playGameSound(soundForMove(puzzleGame, replyResult));
   puzzleSolutionIndex++;
+  updatePuzzleInsights();
   renderBoard();
   renderMoveList();
+  updateStudyEvaluation(puzzleGame, "puzzle");
   puzzleAwaitingReply = false;
 
   if (puzzleSolutionIndex >= puzzleSolution.length) {
@@ -1052,16 +1249,22 @@ async function onPuzzleSquareClick(sq) {
     savePuzzleRating();
     document.getElementById("your-rating").textContent = puzzleRating;
     statusEl.textContent = `Solved! ${delta >= 0 ? "+" : ""}${delta} → Puzzle Rating ${puzzleRating}`;
+    recordPuzzleHistory("solved", delta);
+    renderHistory();
     autoNextPuzzle();
   } else {
     statusEl.textContent = `Puzzle Rating ${puzzleRating} — find the best move.`;
+    analyzeNextPuzzleMove();
   }
 }
 
 // ---------- Opening line browser and drills ----------
 
-// ECO opening lines are loaded progressively from the five alphabetic TSV files.
+// Load the complete opening catalog from all five alphabetic TSV files.
 let OPENINGS_DATA = [];
+let openingCatalog = [];
+let openingBookPrefixes = new Set();
+let openingLinesBySignature = new Map();
 const OPENING_TSV_FILES = ["a", "b", "c", "d", "e"].map(
   (letter) => `./data/openings_${letter}.tsv`
 );
@@ -1069,26 +1272,348 @@ let openingDataLoadComplete = false;
 const openingLoadErrors = [];
 
 async function loadOpeningsData() {
-  const entries = [];
-  for (const file of OPENING_TSV_FILES) {
+  const fileEntries = await Promise.all(OPENING_TSV_FILES.map(async (file) => {
     try {
       const res = await fetch(file);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      entries.push(...parseOpeningTsv(text));
-      OPENINGS_DATA = buildOpeningTree(entries);
-      if (!document.getElementById("drill-picker-overlay").classList.contains("hidden")) {
-        renderOpeningCatalog();
-      }
+      return parseOpeningTsv(await res.text());
     } catch (err) {
       openingLoadErrors.push(`${file}: ${err.message}`);
       console.error(`Failed to load ${file}:`, err);
+      return [];
     }
-  }
+  }));
+  OPENINGS_DATA = buildOpeningTree(fileEntries.flat());
+  rebuildOpeningCatalogIndex();
   openingDataLoadComplete = true;
+  if (inDrillMode) {
+    updateDrillOpeningIndicators();
+  } else if (inReplayMode && replayGame) {
+    updateLiveOpeningIndicators(replayGame, replayPlayerColor);
+    replayAnalysis.forEach((_, index) => refreshReplayMoveRating(index));
+    renderMoveList();
+  } else {
+    updateLiveOpeningIndicators(game);
+  }
+  recordCompletedOpeningAchievements(game);
+  updateOpeningAchievementButton();
+  if (!document.getElementById("opening-achievements-overlay")?.classList.contains("hidden")) {
+    renderOpeningAchievements();
+  }
   if (!document.getElementById("drill-picker-overlay").classList.contains("hidden")) {
     renderOpeningCatalog();
   }
+}
+
+function getOpeningMoveSignature(moves) {
+  return moves.join(" ");
+}
+
+function openingAchievementId(variation) {
+  return JSON.stringify([
+    variation.eco || "",
+    variation.fullName || variation.name,
+    (variation.solution || []).join(" "),
+  ]);
+}
+
+function rebuildOpeningCatalogIndex() {
+  openingCatalog = OPENINGS_DATA.flatMap((root) => root.allVariations || [])
+    .slice()
+    .sort((a, b) => compareOpeningNames(a.fullName, b.fullName));
+  openingBookPrefixes = new Set();
+  openingLinesBySignature = new Map();
+  for (const variation of openingCatalog) {
+    const solution = variation.solution || [];
+    for (let length = 1; length <= solution.length; length++) {
+      const signature = getOpeningMoveSignature(solution.slice(0, length));
+      openingBookPrefixes.add(signature);
+    }
+    const signature = getOpeningMoveSignature(solution);
+    if (!openingLinesBySignature.has(signature)) openingLinesBySignature.set(signature, []);
+    openingLinesBySignature.get(signature).push(variation);
+  }
+}
+
+function getLiveGameUciHistory(gameObj) {
+  if (!gameObj || typeof gameObj.history !== "function") return [];
+  return gameObj.history({ verbose: true }).map(
+    (move) => move.from + move.to + (move.promotion || "")
+  );
+}
+
+function isOpeningBookMove(gameObj) {
+  const moves = getLiveGameUciHistory(gameObj);
+  return isOpeningBookSequence(moves);
+}
+
+function isOpeningBookSequence(moves) {
+  return moves.length > 0 && openingBookPrefixes.has(getOpeningMoveSignature(moves));
+}
+
+function updateLiveOpeningIndicators(gameObj, humanColor = playerColor) {
+  const playerOpeningEl = document.getElementById("your-opening-name");
+  const maiaOpeningEl = document.getElementById("maia-opening-name");
+  if (!playerOpeningEl || !maiaOpeningEl) return;
+
+  const moves = getLiveGameUciHistory(gameObj);
+  const history = gameObj?.history?.({ verbose: true }) || [];
+  const hasContinuation = moves.length > 0 && openingCatalog.some((variation) => {
+    const solution = variation.solution || [];
+    return solution.length > moves.length
+      && moves.every((move, index) => solution[index] === move);
+  });
+  const lineIsActive = hasContinuation
+    && openingBookPrefixes.has(getOpeningMoveSignature(moves));
+  const whiteHasMoved = history.some((move) => move.color === "w");
+  const blackHasMoved = history.some((move) => move.color === "b");
+  const openingNameForColor = (color) => {
+    if (!lineIsActive) return "";
+    for (let length = moves.length; length > 0; length--) {
+      if (history[length - 1]?.color !== color) continue;
+      const matches = openingLinesBySignature.get(
+        getOpeningMoveSignature(moves.slice(0, length))
+      );
+      if (matches?.length) return matches[0].fullName;
+    }
+    const possible = openingCatalog
+      .filter((variation) => {
+        const solution = variation.solution || [];
+        return solution.length >= moves.length
+          && moves.every((move, index) => solution[index] === move);
+      })
+      .sort((a, b) =>
+        (a.solution.length - b.solution.length)
+        || compareOpeningVariationsByPlayerCount(a, b)
+      );
+    return possible[0]?.fullName || "";
+  };
+  const setOpeningLabel = (element, name, hasMoved) => {
+    element.textContent = hasMoved ? name : "";
+    element.title = hasMoved ? name : "";
+    element.hidden = !hasMoved || !name;
+  };
+  setOpeningLabel(
+    playerOpeningEl,
+    openingNameForColor(humanColor),
+    humanColor === "w" ? whiteHasMoved : blackHasMoved
+  );
+  setOpeningLabel(
+    maiaOpeningEl,
+    openingNameForColor(humanColor === "w" ? "b" : "w"),
+    humanColor === "w" ? blackHasMoved : whiteHasMoved
+  );
+}
+
+function updateDrillOpeningIndicators() {
+  const playerOpeningEl = document.getElementById("your-opening-name");
+  const maiaOpeningEl = document.getElementById("maia-opening-name");
+  if (!playerOpeningEl || !maiaOpeningEl) return;
+  const name = currentDrill?.fullName || currentDrill?.name || "";
+  playerOpeningEl.textContent = name;
+  playerOpeningEl.title = name;
+  playerOpeningEl.hidden = !name;
+  maiaOpeningEl.textContent = "";
+  maiaOpeningEl.title = "";
+  maiaOpeningEl.hidden = true;
+}
+
+const OPENING_ACHIEVEMENTS_KEY = "chess_opening_achievements_v1";
+let openingAchievements = loadOpeningAchievements();
+let openingAchievementSearch = "";
+const openingPositionCache = new Map();
+const openingPieceImageCache = new Map();
+
+function loadOpeningAchievements() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(OPENING_ACHIEVEMENTS_KEY) || "[]");
+    return new Set(Array.isArray(saved) ? saved.filter((id) => typeof id === "string") : []);
+  } catch (error) {
+    console.error("Could not load achievements:", error);
+    return new Set();
+  }
+}
+
+function saveOpeningAchievements() {
+  try {
+    localStorage.setItem(OPENING_ACHIEVEMENTS_KEY, JSON.stringify([...openingAchievements]));
+  } catch (error) {
+    console.error("Could not save achievements:", error);
+  }
+}
+
+function recordCompletedOpeningAchievements(gameObj) {
+  const moves = getLiveGameUciHistory(gameObj);
+  const completed = openingLinesBySignature.get(getOpeningMoveSignature(moves)) || [];
+  const newlyUnlocked = [];
+  for (const variation of completed) {
+    const id = openingAchievementId(variation);
+    if (openingAchievements.has(id)) continue;
+    openingAchievements.add(id);
+    newlyUnlocked.push(variation);
+  }
+  if (newlyUnlocked.length) {
+    saveOpeningAchievements();
+    updateOpeningAchievementButton();
+    showOpeningAchievementToast(newlyUnlocked);
+    if (!document.getElementById("opening-achievements-overlay")?.classList.contains("hidden")) {
+      renderOpeningAchievements();
+    }
+  }
+}
+
+let openingAchievementToastTimer = null;
+
+function showOpeningAchievementToast(variations) {
+  const toast = document.getElementById("opening-achievement-toast");
+  if (!toast) return;
+  const names = variations.map((variation) => variation.fullName);
+  toast.textContent = `Achievement unlocked: ${names.join(", ")}`;
+  toast.classList.remove("hidden");
+  clearTimeout(openingAchievementToastTimer);
+  openingAchievementToastTimer = setTimeout(() => {
+    toast.classList.add("hidden");
+  }, 4500);
+}
+
+function updateOpeningAchievementButton() {
+  const button = document.getElementById("settings-opening-achievements-btn");
+  if (button) {
+    button.textContent = `Achievements (${openingAchievements.size}/${openingCatalog.length})`;
+  }
+}
+
+function openOpeningAchievements() {
+  document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
+  const overlay = document.getElementById("opening-achievements-overlay");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+  openingAchievementSearch = "";
+  const search = document.getElementById("opening-achievements-search");
+  if (search) search.value = "";
+  renderOpeningAchievements();
+}
+window.openOpeningAchievements = openOpeningAchievements;
+
+function searchOpeningAchievements(value) {
+  openingAchievementSearch = value;
+  renderOpeningAchievements();
+}
+window.searchOpeningAchievements = searchOpeningAchievements;
+
+function closeOpeningAchievements(event) {
+  if (event && event.target !== event.currentTarget) return;
+  document.getElementById("opening-achievements-overlay")?.classList.add("hidden");
+}
+window.closeOpeningAchievements = closeOpeningAchievements;
+
+function renderOpeningAchievements() {
+  const list = document.getElementById("opening-achievements-list");
+  const progress = document.getElementById("opening-achievements-progress");
+  if (!list || !progress) return;
+  const query = openingAchievementSearch.trim().toLocaleLowerCase();
+  const filtered = openingCatalog
+    .filter((variation) =>
+      !query || `${variation.fullName} ${variation.eco}`.toLocaleLowerCase().includes(query)
+    )
+    .sort((a, b) =>
+      Number(openingAchievements.has(openingAchievementId(b)))
+      - Number(openingAchievements.has(openingAchievementId(a)))
+      || compareOpeningNames(a.fullName, b.fullName)
+    );
+  progress.textContent = `${openingAchievements.size} / ${openingCatalog.length} achievements unlocked`;
+  list.replaceChildren();
+
+  for (const variation of filtered) {
+    const unlocked = openingAchievements.has(openingAchievementId(variation));
+    const card = document.createElement("article");
+    card.className = `opening-achievement-card${unlocked ? " unlocked" : " locked"}`;
+    const icon = unlocked ? document.createElement("canvas") : document.createElement("span");
+    icon.className = "opening-achievement-icon";
+    if (unlocked) {
+      icon.width = 64;
+      icon.height = 64;
+      icon.setAttribute("aria-label", `Board position for ${variation.fullName}`);
+      drawOpeningAchievementPosition(icon, variation);
+    } else {
+      icon.textContent = "?";
+      icon.setAttribute("aria-label", `Locked opening achievement: ${variation.fullName}`);
+    }
+    const description = document.createElement("div");
+    description.className = "opening-achievement-description";
+    const name = document.createElement("strong");
+    name.textContent = variation.fullName;
+    const eco = document.createElement("span");
+    eco.textContent = variation.eco;
+    description.append(name, eco);
+    card.append(icon, description);
+    list.appendChild(card);
+  }
+
+  if (!openingCatalog.length && !openingDataLoadComplete) {
+    const loading = document.createElement("div");
+    loading.className = "opening-achievements-empty";
+    loading.textContent = "Loading opening achievements…";
+    list.appendChild(loading);
+  } else if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "opening-achievements-empty";
+    empty.textContent = "No openings match your search.";
+    list.appendChild(empty);
+  }
+
+}
+
+function drawOpeningAchievementPosition(canvas, variation) {
+  const id = openingAchievementId(variation);
+  let board = openingPositionCache.get(id);
+  if (!board) {
+    const position = new Chess();
+    try {
+      for (const uci of variation.solution || []) {
+        const result = position.move({
+          from: uci.slice(0, 2),
+          to: uci.slice(2, 4),
+          promotion: uci[4] || "q",
+        });
+        if (!result) throw new Error(`Illegal opening move: ${uci}`);
+      }
+    } catch (error) {
+      console.error(`Could not build achievement board for ${variation.fullName}:`, error);
+      return;
+    }
+    board = position.board();
+    openingPositionCache.set(id, board);
+  }
+
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const size = canvas.width;
+  const squareSize = size / 8;
+  context.clearRect(0, 0, size, size);
+  board.forEach((rank, row) => rank.forEach((piece, column) => {
+    context.fillStyle = (row + column) % 2 === 0 ? "#f0d9b5" : "#b58863";
+    context.fillRect(column * squareSize, row * squareSize, squareSize, squareSize);
+    if (!piece) return;
+    const key = `${piece.type}${piece.color}`;
+    if (!openingPieceImageCache.has(key)) {
+      const image = new Image();
+      openingPieceImageCache.set(key, image);
+      image.onload = () => drawOpeningAchievementPosition(canvas, variation);
+      image.onerror = () => console.error(`Could not load opening achievement piece image: ${image.src}`);
+      image.src = pieceImage(piece);
+    }
+    const image = openingPieceImageCache.get(key);
+    if (image.complete && image.naturalWidth) {
+      context.drawImage(
+        image,
+        column * squareSize,
+        row * squareSize,
+        squareSize,
+        squareSize
+      );
+    }
+  }));
 }
 
 function parseOpeningTsv(text) {
@@ -1244,6 +1769,7 @@ let openingDrillPageActive = false;
 let drillStartPly = 0;
 let drillStartSolutionIndex = 0;
 let openingDrillInsightsMarker = null;
+let openingDrillProgressMarker = null;
 let openingDrillInsightsWasHidden = true;
 let openingDrillAnalysisRun = 0;
 let openingDrillDisplayedMoveIndex = null;
@@ -1375,6 +1901,8 @@ function createOpeningRatesElement(rates, prefix = "") {
 function openDrillPicker() {
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   if (openingDrillPageActive) exitDrillMode();
+  if (inPuzzleMode) exitPuzzleMode(false);
+  if (inReplayMode) exitReplay(false);
   document.querySelector(".container").classList.add("openings-mode");
   openingDrillPlayerColor = "w";
   boardFlipped = false;
@@ -1392,10 +1920,11 @@ function openDrillPicker() {
 }
 window.openDrillPicker = openDrillPicker;
 
-function leaveOpeningsMode() {
+function leaveOpeningsMode(resumeGame = true) {
   if (openingDrillPageActive) exitDrillMode();
   document.getElementById("drill-picker-overlay").classList.add("hidden");
   document.querySelector(".container").classList.remove("openings-mode");
+  if (resumeGame && !inPuzzleMode && !isGameLocked() && game.turn() !== playerColor) runMaiaTurn();
 }
 window.leaveOpeningsMode = leaveOpeningsMode;
 
@@ -1408,7 +1937,6 @@ function moveGameStageIntoOpeningPage() {
     gameControlsEl,
     puzzleControlsEl,
     document.getElementById("drill-controls"),
-    document.getElementById("history"),
   ];
 
   openingDrillStageMarkers = elements.filter(Boolean).map((element) => {
@@ -1421,7 +1949,13 @@ function moveGameStageIntoOpeningPage() {
   openingDrillInsightsMarker = document.createComment("original location for review insights");
   openingDrillInsightsWasHidden = insightsPanel.classList.contains("hidden");
   insightsPanel.parentNode.insertBefore(openingDrillInsightsMarker, insightsPanel);
-  document.querySelector(".openings-topbar").appendChild(insightsPanel);
+  const topbar = document.querySelector(".openings-topbar");
+  topbar.appendChild(insightsPanel);
+  const studyProgress = document.getElementById("study-progress");
+  openingDrillProgressMarker = document.createComment("original location for opening progress");
+  studyProgress.parentNode.insertBefore(openingDrillProgressMarker, studyProgress);
+  topbar.appendChild(studyProgress);
+  updateStudyProgress();
   renderOpeningDrillInsightsPrompt();
   openingDrillPageActive = true;
   document.getElementById("drill-picker-overlay").classList.add("drill-active");
@@ -1435,6 +1969,12 @@ function restoreGameStageFromOpeningPage() {
     openingDrillInsightsMarker.parentNode.insertBefore(insightsPanel, openingDrillInsightsMarker);
     openingDrillInsightsMarker.remove();
     openingDrillInsightsMarker = null;
+  }
+  const studyProgress = document.getElementById("study-progress");
+  if (openingDrillProgressMarker) {
+    openingDrillProgressMarker.parentNode.insertBefore(studyProgress, openingDrillProgressMarker);
+    openingDrillProgressMarker.remove();
+    openingDrillProgressMarker = null;
   }
   insightsPanel.classList.toggle("hidden", openingDrillInsightsWasHidden);
   for (const { element, marker } of openingDrillStageMarkers) {
@@ -1545,7 +2085,7 @@ function createOpeningCard({ family, variation = null }) {
   const activate = () => {
     if (variation) {
       if (maiaThinking) return;
-      if (inReplayMode) exitReplay();
+      if (inReplayMode) exitReplay(false);
       selectedOpeningFamily = family;
       moveGameStageIntoOpeningPage();
       document.getElementById("openings-screen").style.display = "none";
@@ -1739,7 +2279,7 @@ document.addEventListener("keydown", (event) => {
 });
 function loadDrill(drill) {
   if (maiaThinking) return;
-  if (inReplayMode) exitReplay();
+  if (inReplayMode) exitReplay(false);
   openingDrillAnalysisRun++;
   openingDrillDisplayedMoveIndex = null;
   openingDrillMoveMotifs.clear();
@@ -1767,6 +2307,8 @@ function loadDrill(drill) {
   drillLocked = false;
   drillAwaitingReply = false;
   drillOutOfLine = false;
+  drillEditingLine = false;
+  drillLineSnapshot = null;
   drillMistakesThisAttempt = false;
   selectedSquare = null;
   hintSquares = [];
@@ -1790,9 +2332,12 @@ function loadDrill(drill) {
   boardFlipped = drillPlayerColor === "b";
   document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
 
+  updateDrillLineControls();
+  updateStudyProgress();
   clearTurnTags();
   renderBoard();
   renderMoveList();
+  updateStudyEvaluation(drillGame, "opening");
   statusEl.textContent = openingDrillInstruction();
   statusEl.classList.remove("status-hidden");
   analyzeNextOpeningDrillMove();
@@ -1816,21 +2361,26 @@ function exitDrillMode() {
   const returnToOpeningBrowser = openingDrillPageActive;
   openingDrillAnalysisRun++;
   inDrillMode = false;
+  studyEvaluationRun++;
   drillOutOfLine = false;
+  drillEditingLine = false;
+  drillLineSnapshot = null;
   openingDrillDisplayedMoveIndex = null;
   hintSquares = [];
   puzzleHintStage = 0;
   updateModeBadge();
   document.getElementById("drill-controls").classList.add("hidden");
+  updateDrillLineControls();
+  updateStudyProgress();
   gameControlsEl.classList.remove("hidden");
   selectedSquare = null;
-  boardFlipped = playerColor === "b";
-  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+  applyNormalBoardOrientation();
   restoreLastMoveFromRealGame();
   renderBoard();
   renderMoveList();
   updateClockDisplays();
   if (!isGameLocked()) updateStatusForTurn();
+  if (!returnToOpeningBrowser && !isGameLocked() && game.turn() !== playerColor) runMaiaTurn();
   if (returnToOpeningBrowser) {
     restoreGameStageFromOpeningPage();
     const browser = document.getElementById("drill-picker-overlay");
@@ -1847,12 +2397,13 @@ function exitDrillMode() {
 window.exitDrillMode = exitDrillMode;
 
 async function onDrillSquareClick(sq) {
-  if (drillLocked || drillAwaitingReply || drillOutOfLine) return;
-  if (drillGame.turn() !== drillPlayerColor) return;
+  if (drillLocked || drillAwaitingReply) return;
+  if (!drillEditingLine && drillOutOfLine) return;
+  if (!drillEditingLine && drillGame.turn() !== drillPlayerColor) return;
 
   if (selectedSquare === null) {
     const piece = drillGame.get(sq);
-    if (piece && piece.color === drillPlayerColor) {
+    if (piece && piece.color === (drillEditingLine ? drillGame.turn() : drillPlayerColor)) {
       selectedSquare = sq;
       renderBoard();
     }
@@ -1873,8 +2424,18 @@ async function onDrillSquareClick(sq) {
 
   if (!moveResult) {
     const piece = drillGame.get(sq);
-    if (piece && piece.color === drillPlayerColor) selectedSquare = sq;
+    if (piece && piece.color === (drillEditingLine ? drillGame.turn() : drillPlayerColor)) selectedSquare = sq;
     renderBoard();
+    return;
+  }
+
+  if (drillEditingLine) {
+    lastMoveFrom = from;
+    lastMoveTo = to;
+    playGameSound(soundForMove(drillGame, moveResult));
+    renderBoard();
+    renderMoveList();
+    updateStudyEvaluation(drillGame, "opening");
     return;
   }
 
@@ -1884,14 +2445,18 @@ async function onDrillSquareClick(sq) {
 
   if (playedUci !== expectedUci) {
     drillOutOfLine = true;
+    drillEditingLine = true;
+    drillLineSnapshot = { fen: preFen, solutionIndex: drillSolutionIndex };
     drillMistakesThisAttempt = true;
     recordOpeningProgress(currentDrill.progressKey, "mistake");
+    updateDrillLineControls();
     lastMoveFrom = from;
     lastMoveTo = to;
     playGameSound(soundForMove(drillGame, moveResult));
     renderBoard();
     renderMoveList();
     renderOpeningDrillInsightsPrompt();
+    updateStudyEvaluation(drillGame, "opening");
     statusEl.textContent = "Outside of this specific opening line.";
     return;
   }
@@ -1902,6 +2467,8 @@ async function onDrillSquareClick(sq) {
   renderBoard();
   renderMoveList();
   drillSolutionIndex++;
+  updateStudyProgress();
+  updateStudyEvaluation(drillGame, "opening");
 
   if (drillSolutionIndex >= drillSolution.length) {
     completeOpeningDrill();
@@ -1918,8 +2485,10 @@ async function onDrillSquareClick(sq) {
   lastMoveTo = rTo;
   playGameSound(soundForMove(drillGame, drillReplyResult));
   drillSolutionIndex++;
+  updateStudyProgress();
   renderBoard();
   renderMoveList();
+  updateStudyEvaluation(drillGame, "opening");
   drillAwaitingReply = false;
 
   if (drillSolutionIndex >= drillSolution.length) {
@@ -1929,6 +2498,38 @@ async function onDrillSquareClick(sq) {
     analyzeNextOpeningDrillMove();
   }
 }
+
+function updateDrillLineControls() {
+  const undo = document.getElementById("drill-undo-btn");
+  const back = document.getElementById("drill-return-line-btn");
+  if (undo) undo.classList.toggle("hidden", drillEditingLine);
+  if (back) back.classList.toggle("hidden", !drillEditingLine);
+}
+
+function returnToOpeningLine() {
+  if (!inDrillMode || !drillEditingLine || !drillLineSnapshot || !drillGame) return;
+  drillGame.load(drillLineSnapshot.fen);
+  drillSolutionIndex = drillLineSnapshot.solutionIndex;
+  drillEditingLine = false;
+  drillOutOfLine = false;
+  drillLineSnapshot = null;
+  drillAwaitingReply = false;
+  drillLocked = false;
+  selectedSquare = null;
+  hintSquares = [];
+  const history = drillGame.history({ verbose: true });
+  const lastMove = history[history.length - 1];
+  lastMoveFrom = lastMove ? lastMove.from : null;
+  lastMoveTo = lastMove ? lastMove.to : null;
+  updateDrillLineControls();
+  updateStudyProgress();
+  analyzeNextOpeningDrillMove();
+  renderBoard();
+  renderMoveList();
+  updateStudyEvaluation(drillGame, "opening");
+  statusEl.textContent = openingDrillInstruction();
+}
+window.returnToOpeningLine = returnToOpeningLine;
 
 function completeOpeningDrill() {
   drillLocked = true;
@@ -1944,19 +2545,7 @@ function completeOpeningDrill() {
 // ---------- Status / turn tags ----------
 
 function updateStatusForTurn() {
-
-  if (inPuzzleMode || isGameLocked()) return;
-
-  if (game.turn() === playerColor) {
-
-    statusEl.textContent = "Your move.";
-    statusEl.classList.remove("status-hidden");
-
-  } else {
-
-    statusEl.classList.add("status-hidden");
-
-  }
+  statusEl.classList.add("status-hidden");
 }
 
 function clearTurnTags() {
@@ -1978,6 +2567,10 @@ function toggleFlip() {
     return;
   }
 
+  if (!inPuzzleMode && !inReplayMode) {
+    normalBoardFlip = boardFlipped;
+    localStorage.setItem(NORMAL_BOARD_FLIP_KEY, String(boardFlipped));
+  }
   renderBoard();
 }
 
@@ -2149,7 +2742,8 @@ function openPastGame(entry) {
     console.error("Past game has no PGN.");
     return;
   }
-  if (inReplayMode) exitReplay();
+  if (inPuzzleMode) exitPuzzleMode(false);
+  if (inReplayMode) exitReplay(false);
 
   // Save the current real game so we can return to it.
   replayReturnGame = game;
@@ -2204,6 +2798,7 @@ function openPastGame(entry) {
 
   // Enter replay mode.
   inReplayMode = true;
+  document.querySelector(".container")?.classList.add("review-mode");
   document.getElementById("board-wrap").classList.add("replay-mode");
   clearTurnTags();
   statusEl.classList.add("status-hidden");
@@ -2301,8 +2896,9 @@ function createReplayControls() {
       ◀
     </button>
 
-    <span id="replay-position">
-      0 / 0
+    <span id="replay-position" aria-label="Move position">
+      <span class="replay-position-current">0</span>
+      <span class="replay-position-total">0</span>
     </span>
 
     <button type="button" id="replay-next" aria-label="Next move" title="Next move">
@@ -2329,6 +2925,8 @@ function createReplayControls() {
   } else {
     document.body.appendChild(replayControlsEl);
   }
+
+  replayControlsEl.appendChild(document.getElementById("flip-button"));
 
 document
   .getElementById("replay-exit")
@@ -2440,8 +3038,10 @@ function updateReplayControls() {
     document.getElementById("replay-return-line");
 
   if (position) {
-    position.textContent =
-      replayIndex + " / " + replayMoves.length;
+    position.querySelector(".replay-position-current").textContent =
+      replayIndex;
+    position.querySelector(".replay-position-total").textContent =
+      replayMoves.length;
   }
 
   if (returnLineButton) {
@@ -2613,7 +3213,8 @@ function stockfishScoreToWhiteChance(score, turn) {
   return turn === "w" ? scoreFromTurn : 1 - scoreFromTurn;
 }
 
-function classifyReplayMove({ deltaPct, moveUci, bestMove, moveProbability, moveNumber, wasMate }) {
+function classifyReplayMove({ deltaPct, moveUci, bestMove, moveProbability, isBookMove, wasMate }) {
+  if (isBookMove) return "book";
   if (wasMate) return "best";
   if (deltaPct <= -20) return "blunder";
   if (deltaPct <= -10) return "mistake";
@@ -2621,7 +3222,6 @@ function classifyReplayMove({ deltaPct, moveUci, bestMove, moveProbability, move
   if (deltaPct <= -3) return "inaccuracy";
   if (moveProbability < 0.05 && deltaPct >= 12) return "brilliant";
   if (moveUci && moveUci === bestMove) return "best";
-  if (moveNumber <= 6 && moveProbability >= 0.35) return "book";
   if (deltaPct >= 8) return "excellent";
   if (deltaPct >= 3) return "great";
   return "good";
@@ -2642,12 +3242,15 @@ function refreshReplayMoveRating(moveIndex) {
   result.before = moverChanceBefore;
   result.after = moverChanceAfter;
   result.deltaPct = (moverChanceAfter - moverChanceBefore) * 100;
+  const movesThroughPosition = replayMoves
+    .slice(0, moveIndex + 1)
+    .map((move) => move.from + move.to + (move.promotion || ""));
   result.classification = classifyReplayMove({
     deltaPct: result.deltaPct,
     moveUci: result.moveUci,
     bestMove: result.bestMove,
     moveProbability: result.moveProbability,
-    moveNumber: Math.floor(moveIndex / 2) + 1,
+    isBookMove: isOpeningBookSequence(movesThroughPosition),
     wasMate: result.wasMate,
   });
 }
@@ -2859,7 +3462,7 @@ function replayEnd() {
 // Exit replay
 // ------------------------------------------------------------
 
-function exitReplay() {
+function exitReplay(resumeGame = true) {
   replayAnalysisRun++;
   replayStockfishRun++;
   replayMotifRun++;
@@ -2867,6 +3470,7 @@ function exitReplay() {
   clockLastTick = performance.now();
   replayAnalyzing = false;
   inReplayMode = false;
+  document.querySelector(".container")?.classList.remove("review-mode");
 
   // Restore the real game.
   if (replayReturnGame) {
@@ -2905,6 +3509,7 @@ function exitReplay() {
     replayControlsEl.remove();
     replayControlsEl = null;
   }
+  gameControlsEl.appendChild(document.getElementById("flip-button"));
   if (replayAnalysisPanelEl) {
     replayAnalysisPanelEl.remove();
     replayAnalysisPanelEl = null;
@@ -2915,6 +3520,9 @@ function exitReplay() {
   renderMoveList();
   updateStatusForTurn();
   updateClockDisplays();
+  if (resumeGame && !inPuzzleMode && !inDrillMode && !isGameLocked() && game.turn() !== playerColor) {
+    runMaiaTurn();
+  }
 
   console.log("Exited replay mode.");
 }
@@ -3018,9 +3626,10 @@ function applyLoadedState(loaded) {
   clockLastTick = performance.now();
   playerColor = loaded.playerColor !== null ? loaded.playerColor : assignNextColor();
   updateClockUnlocks();
-  boardFlipped = playerColor === "b";
-  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+  applyNormalBoardOrientation();
   restoreLastMoveFromRealGame();
+  updateLiveOpeningIndicators(game);
+  recordCompletedOpeningAchievements(game);
   document.getElementById("your-rating").textContent = myRating;
   document.getElementById("maia-rating").textContent = MAIA_ELO;
 }
@@ -3062,10 +3671,10 @@ function newGameCurrentMode() {
   resetForNewGame(currentMode);
   game = new Chess();
   playerColor = assignNextColor();
-  boardFlipped = playerColor === "b";
-  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+  applyNormalBoardOrientation();
   lastMoveFrom = null;
   lastMoveTo = null;
+  updateLiveOpeningIndicators(game);
   resetClocks();
   saveCurrentGame();
 
@@ -3177,6 +3786,13 @@ function renderBoard() {
                   : game
               )
         );
+  if (inDrillMode) {
+    updateDrillOpeningIndicators();
+  } else if (inReplayMode) {
+    updateLiveOpeningIndicators(activeGame, replayPlayerColor);
+  } else if (!inPuzzleMode) {
+    updateLiveOpeningIndicators(activeGame, playerColor);
+  }
   boardEl.innerHTML = "";
   const boardData = activeGame === game && premoves.length
     ? getProjectedPremoveBoard()
@@ -3285,7 +3901,9 @@ function renderReplayEvalBar() {
   const meter = document.getElementById("replay-eval-meter");
   const evalBar = document.getElementById("replay-eval-bar");
   if (!meter || !evalBar) return;
-  const visible = inReplayMode && !!replayGame;
+  const visible = (inReplayMode && !!replayGame)
+    || (inPuzzleMode && !!puzzleGame)
+    || (inDrillMode && !!drillGame);
   meter.classList.toggle("hidden", !visible);
   meter.style.display = visible ? "flex" : "none";
 }
@@ -3784,7 +4402,9 @@ function renderMoveList() {
                   : game
               )
         );
-  const history = activeGame ? activeGame.history() : [];
+  const history = inReplayMode
+    ? replayMoves.map((move) => move.san)
+    : activeGame ? activeGame.history() : [];
   moveListEl.replaceChildren();
   history.forEach((san, index) => {
     if (index % 2 === 0) {
@@ -3797,11 +4417,30 @@ function renderMoveList() {
 
     const move = document.createElement("span");
     move.className = "move";
+    const selectedReplayMove = replayIndex > 0 ? replayIndex - 1 : 0;
+    if (inReplayMode && index === selectedReplayMove) {
+      move.classList.add("replay-current-move");
+      move.setAttribute("aria-current", "step");
+    }
     move.textContent = san;
     moveListEl.append(move, document.createTextNode(" "));
   });
   const scrollParent = moveListEl.closest(".moves");
-  if (scrollParent) scrollParent.scrollLeft = scrollParent.scrollWidth;
+  if (scrollParent && inReplayMode) {
+    const selectedReplayMove = replayIndex > 0 ? replayIndex - 1 : 0;
+    if (selectedReplayMove < 3) {
+      scrollParent.scrollLeft = 0;
+    } else {
+      const moves = moveListEl.querySelectorAll(".move");
+      const firstVisibleMove = moves[selectedReplayMove - 2];
+      if (firstVisibleMove) {
+        scrollParent.scrollLeft += firstVisibleMove.getBoundingClientRect().left -
+          scrollParent.getBoundingClientRect().left;
+      }
+    }
+  } else if (scrollParent) {
+    scrollParent.scrollLeft = scrollParent.scrollWidth;
+  }
 }
 
 function renderReplayMoveInsights() {
@@ -3819,8 +4458,10 @@ function renderReplayMoveInsights() {
 function renderMotifInsightPanel(panel, motifs, pendingText = "", errorText = "") {
   const prosLine = document.createElement("div");
   prosLine.className = "review-insight-pro";
+  prosLine.textContent = "Pros: None identified";
   const consLine = document.createElement("div");
   consLine.className = "review-insight-con";
+  consLine.textContent = "Cons: None identified";
 
   if (errorText) {
     prosLine.textContent = "Pros: —";
@@ -3917,12 +4558,11 @@ async function analyzeOpeningDrillMove(fen, uci, solutionIndex, analysisRun) {
 }
 
 // ---------- Move classification ----------
-function classifyMoveGeneric({ preValue, postValue, moveUci, preTopMove, preMoveProb, moverColor, wasMate, moveNumber, skipTopMatch }) {
+function classifyMoveGeneric({ preValue, postValue, moveUci, preTopMove, preMoveProb, moverColor, wasMate, skipTopMatch }) {
   const delta = moverColor === "w" ? postValue - preValue : preValue - postValue;
   const deltaPct = delta * 100;
 
   if (wasMate) return "best";
-  if (moveNumber <= 6 && preMoveProb >= 0.35) return "book";
   if (preMoveProb < 0.05 && deltaPct >= 12) return "brilliant";
   if (!skipTopMatch && moveUci === preTopMove) return "best";
   if (deltaPct <= -20) return "blunder";
@@ -3936,18 +4576,27 @@ function classifyMoveGeneric({ preValue, postValue, moveUci, preTopMove, preMove
 
 function resolvePendingMaiaGrading(currentPositionValue) {
   if (!pendingMaiaGrading) return;
-  const { preMoveValue, color, moveNumber, moveUci, preMoveProb } = pendingMaiaGrading;
-  const label = classifyMoveGeneric({
-    preValue: preMoveValue,
-    postValue: currentPositionValue,
-    moveUci,
-    preTopMove: null,
-    preMoveProb,
-    moverColor: color,
-    wasMate: false,
+  const {
+    preMoveValue,
+    color,
     moveNumber,
-    skipTopMatch: true,
-  });
+    moveUci,
+    preMoveProb,
+    isBookMove,
+    bookSignature,
+  } = pendingMaiaGrading;
+  const label = isBookMove || openingBookPrefixes.has(bookSignature)
+    ? "book"
+    : classifyMoveGeneric({
+        preValue: preMoveValue,
+        postValue: currentPositionValue,
+        moveUci,
+        preTopMove: null,
+        preMoveProb,
+        moverColor: color,
+        wasMate: false,
+        skipTopMatch: true,
+      });
   maiaMoveStatsObj[label]++;
   pendingMaiaGrading = null;
 }
@@ -4342,6 +4991,11 @@ async function onSquareClick(sq) {
     return;
   }
 
+  const playerMoveIsBook = isOpeningBookMove(game);
+  const playerMoveBookSignature = getOpeningMoveSignature(getLiveGameUciHistory(game));
+  recordCompletedOpeningAchievements(game);
+  updateLiveOpeningIndicators(game);
+
   // ==================================================
   // PLAYER MOVE SUCCESSFUL
   // ==================================================
@@ -4397,6 +5051,7 @@ async function onSquareClick(sq) {
 
   // Maia is now processing the response.
   maiaThinking = true;
+  let retryMaiaMove = false;
 
   updateStatusForTurn();
 
@@ -4524,8 +5179,9 @@ async function onSquareClick(sq) {
       // ==================================================
       // GRADE PLAYER'S MOVE
       // ==================================================
-      const label =
-        classifyMoveGeneric({
+      const label = playerMoveIsBook || openingBookPrefixes.has(playerMoveBookSignature)
+        ? "book"
+        : classifyMoveGeneric({
           preValue: preEval.value,
           postValue: postEval.value,
           moveUci: moveUci,
@@ -4533,7 +5189,6 @@ async function onSquareClick(sq) {
           preMoveProb: preMoveProb,
           moverColor: moverColor,
           wasMate: false,
-          moveNumber: moveNumber,
           skipTopMatch: false
         });
 
@@ -4596,6 +5251,11 @@ async function onSquareClick(sq) {
         );
       }
 
+      const maiaMoveIsBook = isOpeningBookMove(game);
+      const maiaMoveBookSignature = getOpeningMoveSignature(getLiveGameUciHistory(game));
+      recordCompletedOpeningAchievements(game);
+      updateLiveOpeningIndicators(game);
+
       lastMoveFrom = mFrom;
       lastMoveTo = mTo;
       clockLastTick = performance.now();
@@ -4645,7 +5305,13 @@ async function onSquareClick(sq) {
             maiaUci,
 
           preMoveProb:
-            maiaPreMoveProb
+            maiaPreMoveProb,
+
+          isBookMove:
+            maiaMoveIsBook,
+
+          bookSignature:
+            maiaMoveBookSignature
         };
       }
     }
@@ -4668,6 +5334,9 @@ async function onSquareClick(sq) {
     );
 
     if (myToken === gameToken) {
+      retryMaiaMove = !maiaLoadError
+        && !isGameLocked()
+        && game.turn() !== playerColor;
 
       statusEl.textContent =
         "Maia had an error — check the console.";
@@ -4696,6 +5365,10 @@ async function onSquareClick(sq) {
         renderBoard();
       }
     }
+  }
+
+  if (retryMaiaMove && myToken === gameToken) {
+    setTimeout(() => runMaiaTurn(), 0);
   }
 }
 
@@ -4837,8 +5510,79 @@ function pushHistoryEntry() {
 }
 
 function renderHistory() {
+  const title = document.getElementById("history-title");
   const history = loadHistory();
   historyEl.innerHTML = "";
+  if (inPuzzleMode) {
+    const puzzles = loadPuzzleHistory();
+    if (title) {
+      title.hidden = false;
+      title.textContent = "Past Puzzles";
+    }
+    if (puzzles.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "history-empty";
+      empty.textContent = "No puzzles completed yet.";
+      historyEl.appendChild(empty);
+      return;
+    }
+    for (const entry of puzzles) {
+      const card = document.createElement("button");
+      card.className = "history-card";
+      card.type = "button";
+      const result = entry.result === "solved" ? "Solved" : "Gave Up";
+      const date = Number.isFinite(entry.date)
+        ? new Date(entry.date).toLocaleString(undefined, {
+            year: "numeric", month: "numeric", day: "numeric",
+            hour: "numeric", minute: "2-digit", second: "2-digit",
+          })
+        : "Date unavailable";
+      const head = document.createElement("div");
+      head.className = "hc-head";
+      const resultLabel = document.createElement("span");
+      resultLabel.className = "hc-result";
+      resultLabel.textContent = result;
+      const ratingLabel = document.createElement("span");
+      ratingLabel.className = "hc-mode";
+      ratingLabel.textContent = `Puzzle ${entry.rating ?? "—"}`;
+      head.append(resultLabel, ratingLabel);
+
+      const details = document.createElement("div");
+      details.className = "hc-puzzle-details";
+      const sideDate = document.createElement("div");
+      sideDate.className = "hc-stat";
+      sideDate.textContent = `${entry.playerColor === "b" ? "Black" : "White"} to play · ${date}`;
+      const ratingChange = document.createElement("div");
+      ratingChange.className = "hc-stat";
+      const delta = Number.isFinite(entry.ratingDelta)
+        ? `${entry.ratingDelta >= 0 ? "+" : ""}${entry.ratingDelta}`
+        : "—";
+      const ratingAfter = Number.isFinite(entry.playerRatingAfter)
+        ? entry.playerRatingAfter
+        : entry.playerRatingBefore ?? "—";
+      const ratingBefore = Number.isFinite(entry.playerRatingBefore)
+        ? entry.playerRatingBefore
+        : "—";
+      ratingChange.textContent = `Your Elo ${ratingBefore} → ${ratingAfter} (${delta})`;
+      const moveCount = document.createElement("div");
+      moveCount.className = "hc-stat";
+      moveCount.textContent = `Total moves ${entry.totalMoves ?? entry.solution?.length ?? 0}`;
+      details.append(sideDate, moveCount, ratingChange);
+      const moveLine = document.createElement("div");
+      moveLine.className = "hc-moves";
+      moveLine.textContent = entry.moveline || "(no moves)";
+      card.append(head, details, moveLine);
+      card.addEventListener("click", () => {
+        if (entry.pgn) openPastGame(entry);
+      });
+      historyEl.appendChild(card);
+    }
+    return;
+  }
+  if (title) {
+    title.hidden = true;
+    title.textContent = "";
+  }
   if (history.length === 0) {
     const empty = document.createElement("div");
     empty.className = "history-empty";
@@ -5142,7 +5886,7 @@ async function init() {
   initializeMaiaInBackground();
 
   // -----------------------------------------
-  // 5. If Maia needs to move, wait for Maia
+  // 5. Let Maia handle the turn, including waiting for initialization
   // -----------------------------------------
   if (
     !inPuzzleMode &&
@@ -5150,22 +5894,7 @@ async function init() {
     !isGameLocked() &&
     game.turn() !== playerColor
   ) {
-
-    // Maia isn't ready yet.
-    // initializeMaiaInBackground() is already running.
-    if (!maiaReady) {
-      statusEl.textContent = "Loading Maia...";
-      statusEl.classList.remove("status-hidden");
-
-      // Wait until Maia becomes ready.
-      while (!maiaReady && !maiaLoadError) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    if (maiaReady && !isGameLocked()) {
-      runMaiaTurn();
-    }
+    runMaiaTurn();
   }
 }
 
