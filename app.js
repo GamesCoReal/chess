@@ -427,7 +427,16 @@ window.closeMotifGlossary = closeMotifGlossary;
 
 
 // --- Clear all saved data ---
-async function clearAllSavedData() {
+function deleteIndexedDatabase(name) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error(`Could not delete ${name}.`));
+    request.onblocked = () => reject(new Error(`Could not delete ${name}: it is still in use.`));
+  });
+}
+
+async function clearSavedProgressAndDownloads() {
   localStorage.clear();
   sessionStorage.clear();
 
@@ -436,25 +445,196 @@ async function clearAllSavedData() {
 
   if ("caches" in window) {
     const cacheNames = await caches.keys();
-    await Promise.all(cacheNames
+    const offlineCaches = cacheNames
       .filter((name) => name.startsWith("chess-offline-"))
-      .map((name) => caches.delete(name)));
+      .map((name) => caches.delete(name));
+    const deleted = await Promise.all(offlineCaches);
+    if (deleted.some((result) => !result)) {
+      throw new Error("One or more offline caches could not be deleted.");
+    }
   }
 
-  await Promise.all(["PuzzleDatabases", "MaiaModels"].map((name) => new Promise((resolve) => {
-    const request = indexedDB.deleteDatabase(name);
-    request.onsuccess = resolve;
-    request.onerror = resolve;
-    request.onblocked = () => resolve();
-  })));
+  await Promise.all(["PuzzleDatabases", "MaiaModels"].map(deleteIndexedDatabase));
+}
 
-  localStorage.clear();
-  sessionStorage.clear();
-  alert("Saved data and offline downloads cleared. Reloading to download them again...");
+function clearAllSavedData() {
+  openResetConfirmation("clear");
+}
+window.clearAllSavedData = clearAllSavedData;
+
+function openResetConfirmation(action) {
+  const overlay = document.getElementById("reset-confirmation-overlay");
+  const title = document.getElementById("reset-confirmation-title");
+  const message = document.getElementById("reset-confirmation-message");
+  const input = document.getElementById("reset-confirmation-input");
+  const confirmButton = document.getElementById("reset-confirmation-confirm");
+  const status = document.getElementById("reset-confirmation-status");
+  if (!overlay || !title || !message || !input || !confirmButton || !status) {
+    console.error("Could not open reset confirmation: dialog elements are missing.");
+    return;
+  }
+
+  pendingResetAction = action;
+  resetActionBusy = false;
+  input.value = "";
+  input.disabled = false;
+  input.hidden = action !== "clear";
+  input.setAttribute("aria-label", "Type DELETE to confirm");
+  title.textContent = action === "clear" ? "Clear Saved Data?" : "Update App Files?";
+  message.textContent = action === "clear"
+    ? "This permanently deletes all saved data and offline downloads. Type DELETE exactly to continue."
+    : "Checks for newer app files and replaces only changed files. Saved progress, puzzle databases, and Maia downloads are kept.";
+  confirmButton.textContent = action === "clear" ? "Delete All Data" : "Update Files";
+  confirmButton.disabled = action === "clear";
+  status.textContent = "";
+  overlay.classList.remove("hidden");
+  if (action === "clear") input.focus();
+}
+
+let pendingResetAction = null;
+let resetActionBusy = false;
+
+function updateResetConfirmationInput() {
+  const input = document.getElementById("reset-confirmation-input");
+  const confirmButton = document.getElementById("reset-confirmation-confirm");
+  if (!input || !confirmButton) return;
+  confirmButton.disabled = pendingResetAction === "clear" && input.value !== "DELETE";
+}
+
+function closeResetConfirmation(event) {
+  const overlay = document.getElementById("reset-confirmation-overlay");
+  if (event && event.target !== overlay) return;
+  if (resetActionBusy) return;
+  overlay?.classList.add("hidden");
+  pendingResetAction = null;
+}
+
+async function confirmResetAction() {
+  if (resetActionBusy) return;
+  if (pendingResetAction === "clear") {
+    if (document.getElementById("reset-confirmation-input")?.value !== "DELETE") return;
+    resetActionBusy = true;
+    await performClearAllSavedData();
+  } else if (pendingResetAction === "update") {
+    resetActionBusy = true;
+    await performLatestFilesUpdate();
+  }
+}
+
+async function performClearAllSavedData() {
+  const status = document.getElementById("reset-confirmation-status");
+  const confirmButton = document.getElementById("reset-confirmation-confirm");
+  const cancelButton = document.getElementById("reset-confirmation-cancel");
+  const input = document.getElementById("reset-confirmation-input");
+  if (confirmButton) confirmButton.disabled = true;
+  if (cancelButton) cancelButton.disabled = true;
+  if (input) input.disabled = true;
+  if (status) status.textContent = "Deleting saved data...";
+  try {
+    await clearSavedProgressAndDownloads();
+  } catch (error) {
+    console.error("Could not clear all saved data:", error);
+    if (status) status.textContent = `Could not clear all saved data: ${error.message}`;
+    resetActionBusy = false;
+    if (input) input.disabled = false;
+    if (cancelButton) cancelButton.disabled = false;
+    updateResetConfirmationInput();
+    return;
+  }
+
+  if (status) status.textContent = "Saved data cleared. Reloading...";
   location.reload();
 }
 
-window.clearAllSavedData = clearAllSavedData;
+function updateLatestFiles() {
+  openResetConfirmation("update");
+}
+window.updateLatestFiles = updateLatestFiles;
+
+async function performLatestFilesUpdate() {
+  const status = document.getElementById("reset-confirmation-status");
+  const confirmButton = document.getElementById("reset-confirmation-confirm");
+  const cancelButton = document.getElementById("reset-confirmation-cancel");
+  if (confirmButton) confirmButton.disabled = true;
+  if (cancelButton) cancelButton.disabled = true;
+  if (status) status.textContent = "Checking for the latest app files...";
+
+  try {
+    if (!("serviceWorker" in navigator)) {
+      throw new Error("Service workers are not supported in this browser.");
+    }
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) throw new Error("No service worker is registered for this app.");
+    const activeWorkerBeforeUpdate = registration.active;
+
+    await registration.update();
+
+    const pendingWorker = registration.installing || registration.waiting;
+    if (pendingWorker) {
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Timed out while installing the latest app files."));
+        }, 10 * 60 * 1000);
+        const onStateChange = () => {
+          if (pendingWorker.state === "activated") {
+            clearTimeout(timeout);
+            pendingWorker.removeEventListener("statechange", onStateChange);
+            resolve();
+          } else if (pendingWorker.state === "redundant") {
+            clearTimeout(timeout);
+            pendingWorker.removeEventListener("statechange", onStateChange);
+            reject(new Error("The latest app files could not be installed."));
+          }
+        };
+        pendingWorker.addEventListener("statechange", onStateChange);
+        onStateChange();
+      });
+    }
+
+    const activeWorker = (await navigator.serviceWorker.ready).active;
+    if (!activeWorker) throw new Error("The app's service worker is not active.");
+    if (status) {
+      status.textContent = registration.active !== activeWorkerBeforeUpdate
+        ? "Checking app files after installing the latest service worker..."
+        : "Checking app files for updates...";
+    }
+
+    await new Promise((resolve, reject) => {
+      const requestId = `file-update-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const timeout = setTimeout(() => {
+        navigator.serviceWorker.removeEventListener("message", onMessage);
+        reject(new Error("Timed out while checking app files."));
+      }, 10 * 60 * 1000);
+      const onMessage = (event) => {
+        const update = event.data;
+        if (update?.type !== "FILE_UPDATE_STATUS" || update.requestId !== requestId) return;
+        if (status && update.state === "downloading") {
+          status.textContent = `Checking app files (${update.completed}/${update.total}) · ${update.updated} updated`;
+        }
+        if (update.state === "ready") {
+          clearTimeout(timeout);
+          navigator.serviceWorker.removeEventListener("message", onMessage);
+          resolve();
+        } else if (update.state === "error") {
+          clearTimeout(timeout);
+          navigator.serviceWorker.removeEventListener("message", onMessage);
+          reject(new Error(update.message || `Could not update ${update.file || "app files"}.`));
+        }
+      };
+      navigator.serviceWorker.addEventListener("message", onMessage);
+      activeWorker.postMessage({ type: "UPDATE_FILES", requestId });
+    });
+
+    if (status) status.textContent = "Update complete. Reloading...";
+    location.reload();
+  } catch (error) {
+    console.error("Could not update app files:", error);
+    if (status) status.textContent = `Update failed: ${error.message}`;
+    resetActionBusy = false;
+    if (confirmButton) confirmButton.disabled = false;
+    if (cancelButton) cancelButton.disabled = false;
+  }
+}
 
 const STARTING_CLOCK_SECONDS = 600;
 

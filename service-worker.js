@@ -1,4 +1,4 @@
-const CACHE_NAME = "chess-offline-v43";
+const CACHE_NAME = "chess-offline-v47";
 // Refresh the app shell after static UI changes.
 const STATUS_URL = new URL("__offline_status__", self.registration.scope).href;
 
@@ -92,6 +92,23 @@ async function writeStatus(status) {
 }
 
 let offlineDownloadPromise = null;
+let offlineUpdatePromise = null;
+
+async function migrateOfflineCache() {
+  const cache = await caches.open(CACHE_NAME);
+  const oldCacheNames = (await caches.keys()).filter((name) =>
+    name.startsWith("chess-offline-") && name !== CACHE_NAME
+  );
+  for (const name of oldCacheNames) {
+    const oldCache = await caches.open(name);
+    for (const request of await oldCache.keys()) {
+      if (new URL(request.url).pathname.endsWith("/__offline_status__")) continue;
+      if (await cache.match(request, { ignoreSearch: true })) continue;
+      const response = await oldCache.match(request);
+      if (response) await cache.put(request, response);
+    }
+  }
+}
 
 async function removeLegacyPuzzleDbCacheEntries() {
   const cacheNames = await caches.keys();
@@ -103,6 +120,24 @@ async function removeLegacyPuzzleDbCacheEntries() {
       return /\/data\/puzzles_[^/]+\.db$/.test(pathname);
     }).map((request) => cache.delete(request)));
   }));
+}
+
+async function replaceCacheEntryIfChanged(cache, url, response) {
+  const cachedResponse = await cache.match(url, { ignoreSearch: true });
+  if (cachedResponse) {
+    const [cachedData, latestData] = await Promise.all([
+      cachedResponse.arrayBuffer(),
+      response.clone().arrayBuffer(),
+    ]);
+    if (cachedData.byteLength === latestData.byteLength) {
+      const cachedBytes = new Uint8Array(cachedData);
+      const latestBytes = new Uint8Array(latestData);
+      if (!cachedBytes.some((byte, index) => byte !== latestBytes[index])) return false;
+    }
+    await cache.delete(url, { ignoreSearch: true });
+  }
+  await cache.put(url, response);
+  return true;
 }
 
 function downloadOfflineFiles() {
@@ -123,7 +158,7 @@ function downloadOfflineFiles() {
         try {
           const response = await fetch(url, { cache: "reload" });
           if (response.status !== 200) throw new Error(`HTTP ${response.status} for ${file}`);
-          await cache.put(url, response);
+          await replaceCacheEntryIfChanged(cache, url, response);
           lastError = null;
           break;
         } catch (error) {
@@ -145,10 +180,67 @@ function downloadOfflineFiles() {
   return offlineDownloadPromise;
 }
 
+function refreshOfflineFiles(source, requestId) {
+  if (offlineUpdatePromise) {
+    return offlineUpdatePromise.then(
+      () => refreshOfflineFiles(source, requestId),
+      () => refreshOfflineFiles(source, requestId)
+    );
+  }
+
+  offlineUpdatePromise = (async () => {
+    if (offlineDownloadPromise) await offlineDownloadPromise;
+    const cache = await caches.open(CACHE_NAME);
+    let updated = 0;
+    const send = (status) => source?.postMessage({
+      type: "FILE_UPDATE_STATUS",
+      requestId,
+      updated,
+      ...status,
+    });
+
+    send({ state: "downloading", completed: 0, total: OFFLINE_FILES.length });
+    for (let index = 0; index < OFFLINE_FILES.length; index++) {
+      const file = OFFLINE_FILES[index];
+      const url = new URL(file, self.registration.scope).href;
+      let response;
+      try {
+        response = await fetch(url, { cache: "reload" });
+        if (response.status !== 200) throw new Error(`HTTP ${response.status} for ${file}`);
+      } catch (error) {
+        send({
+          state: "error",
+          completed: index,
+          total: OFFLINE_FILES.length,
+          file,
+          message: error.message,
+        });
+        throw error;
+      }
+
+      if (await replaceCacheEntryIfChanged(cache, url, response)) updated++;
+      send({
+        state: "downloading",
+        completed: index + 1,
+        total: OFFLINE_FILES.length,
+        file,
+      });
+    }
+    send({ state: "ready", completed: OFFLINE_FILES.length, total: OFFLINE_FILES.length });
+  })().catch((error) => {
+    console.error("Could not check for updated offline files:", error);
+    throw error;
+  }).finally(() => {
+    offlineUpdatePromise = null;
+  });
+  return offlineUpdatePromise;
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     // Older releases cached every puzzle shard. They are now stored in
     // IndexedDB on demand, so release those duplicate CacheStorage copies.
+    await migrateOfflineCache();
     await removeLegacyPuzzleDbCacheEntries();
     await downloadOfflineFiles();
     await self.skipWaiting();
@@ -175,6 +267,8 @@ self.addEventListener("message", (event) => {
     })());
   } else if (event.data?.type === "REDOWNLOAD_ALL") {
     event.waitUntil(downloadOfflineFiles());
+  } else if (event.data?.type === "UPDATE_FILES") {
+    event.waitUntil(refreshOfflineFiles(event.source, event.data.requestId));
   }
 });
 
