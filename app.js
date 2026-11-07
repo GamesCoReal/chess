@@ -107,21 +107,71 @@ if (defaultMode !== "ranked" && defaultMode !== "puzzles") {
   localStorage.setItem("chess_default_mode", defaultMode);
 }
 
-let currentMode = defaultMode === "puzzles" ? "puzzles" : "rated";
+const ELO_PLACEMENT_KEY = "chess_elo_placement";
+const ELO_PLACEMENT_VERSION = 2;
+const ELO_PLACEMENT_RATINGS = new Set([
+  100, 125, 250, 375, 500, 625, 750, 875, 1000, 1250, 1500, 1750, 2000, 2500, 3000,
+]);
+
+function loadEloPlacementState() {
+  const saved = localStorage.getItem(ELO_PLACEMENT_KEY);
+  if (!saved) return null;
+  try {
+    const state = JSON.parse(saved);
+    if (
+      state.version !== ELO_PLACEMENT_VERSION
+      || typeof state.active !== "boolean"
+      || typeof state.complete !== "boolean"
+      || !Number.isInteger(state.decisiveGames)
+      || state.decisiveGames < 0
+      || state.decisiveGames > 4
+      || !ELO_PLACEMENT_RATINGS.has(state.opponent)
+    ) {
+      throw new Error("Saved placement progress uses invalid or outdated rules.");
+    }
+    return state;
+  } catch (error) {
+    console.warn("Could not restore Elo placement progress:", error);
+    return null;
+  }
+}
+
+let placementState = loadEloPlacementState();
+const savedActiveMode = localStorage.getItem("chess_active_mode");
+let currentMode = savedActiveMode === "placement" && placementState
+  ? "placement"
+  : defaultMode === "puzzles" ? "puzzles" : "rated";
+if (currentMode === "placement" && placementState.active) {
+  MAIA_ELO = String(placementState.opponent);
+}
 
 const hadPriorSession = !!localStorage.getItem("chess_active_mode"); // used once at startup below
 
 function updateModeBadge() {
   const el = document.getElementById("mode-badge");
-  if (!el) return;
-
-  if (inPuzzleMode) {
-    el.textContent = "Puzzle";
-  } else if (inDrillMode) {
-    el.textContent = "Opening";
-  } else {
-    el.textContent = currentMode === "rated" ? "Ranked" : "Puzzle";
+  if (el) {
+    if (inPuzzleMode) {
+      el.textContent = "Puzzle";
+    } else if (inDrillMode) {
+      el.textContent = "Opening";
+    } else if (currentMode === "placement") {
+      el.textContent = "Elo Placement";
+    } else {
+      el.textContent = currentMode === "rated" ? "Ranked" : "Puzzle";
+    }
   }
+  updatePlacementStatus();
+}
+
+function updatePlacementStatus() {
+  const el = document.getElementById("placement-status");
+  if (!el) return;
+  const showing = currentMode === "placement" && placementState;
+  el.classList.toggle("hidden", !showing);
+  if (!showing) return;
+  el.textContent = placementState.complete
+    ? `Estimated Elo: ${placementState.estimatedElo} · Placement complete`
+    : `Game ${placementState.decisiveGames + 1} of 4 · Opponent: ${placementState.opponent} Elo`;
 }
 
 
@@ -3635,6 +3685,10 @@ function applyLoadedState(loaded) {
 }
 
 function selectMode(mode) {
+  if (mode === "placement") {
+    startEloPlacement();
+    return;
+  }
   if (mode === "unrated") mode = "rated";
   if (mode !== "rated" && mode !== "puzzles") return;
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
@@ -3648,6 +3702,7 @@ function selectMode(mode) {
   saveCurrentGame();
   const loaded = loadGame(mode);
   resetForNewGame(mode);
+  MAIA_ELO = String(myRating);
   applyLoadedState(loaded);
   saveCurrentGame();
   updateModeBadge();
@@ -3667,10 +3722,74 @@ function selectMode(mode) {
 }
 window.selectMode = selectMode;
 
+function startEloPlacement() {
+  document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
+  if (document.querySelector(".container").classList.contains("openings-mode")) {
+    leaveOpeningsMode();
+  }
+  if (inPuzzleMode) exitPuzzleMode();
+  if (inDrillMode) exitDrillMode();
+
+  if (currentMode !== "placement") saveCurrentGame();
+  const resume = placementState?.active === true;
+  if (!resume) {
+    placementState = {
+      version: ELO_PLACEMENT_VERSION,
+      active: true,
+      complete: false,
+      decisiveGames: 0,
+      opponent: 1000,
+      estimatedElo: null,
+      lastResultMessage: "",
+    };
+    localStorage.setItem(ELO_PLACEMENT_KEY, JSON.stringify(placementState));
+    localStorage.removeItem(saveKey("placement"));
+  }
+
+  const loaded = resume ? loadGame("placement") : null;
+  resetForNewGame("placement");
+  MAIA_ELO = String(placementState.opponent);
+  if (loaded) {
+    applyLoadedState(loaded);
+  } else {
+    game = new Chess();
+    playerColor = assignNextColor();
+    applyNormalBoardOrientation();
+    lastMoveFrom = null;
+    lastMoveTo = null;
+    updateLiveOpeningIndicators(game);
+    resetClocks();
+  }
+  saveCurrentGame();
+  updateModeBadge();
+  closeOverlay();
+  clearTurnTags();
+  renderBoard();
+  renderMoveList();
+  updateStatusForTurn();
+  updateClockDisplays();
+
+  if (isGameLocked()) {
+    showGameOverPopup();
+  } else if (game.turn() !== playerColor) {
+    runMaiaTurn();
+  }
+}
+window.startEloPlacement = startEloPlacement;
+
 function newGameCurrentMode() {
+  if (currentMode === "placement" && placementState?.complete) {
+    startEloPlacement();
+    return;
+  }
   resetForNewGame(currentMode);
   game = new Chess();
   playerColor = assignNextColor();
+  if (currentMode === "placement") {
+    placementState.lastResultMessage = "";
+    MAIA_ELO = String(placementState.opponent);
+    localStorage.setItem(ELO_PLACEMENT_KEY, JSON.stringify(placementState));
+  }
   applyNormalBoardOrientation();
   lastMoveFrom = null;
   lastMoveTo = null;
@@ -3684,6 +3803,7 @@ function newGameCurrentMode() {
   renderMoveList();
   updateStatusForTurn();
   updateClockDisplays();
+  updatePlacementStatus();
 
   if (game.turn() !== playerColor) runMaiaTurn();
 }
@@ -4673,7 +4793,7 @@ async function runMaiaTurn() {
       engine.evaluate(
         game,
         MAIA_ELO,
-        myRating
+        currentMode === "placement" ? Number(MAIA_ELO) : myRating
       ),
       humanDelay()
     ]);
@@ -5409,6 +5529,79 @@ function computeAccuracy(stats) {
   return Math.round((positive / total) * 100);
 }
 
+function settleEloPlacement(resultLabel) {
+  if (!placementState?.active) return "";
+  if (resultLabel === "0") {
+    placementState.lastResultMessage =
+      `Draw — replay against ${placementState.opponent} Elo; draws do not count.`;
+    localStorage.setItem(ELO_PLACEMENT_KEY, JSON.stringify(placementState));
+    return placementState.lastResultMessage;
+  }
+
+  const gameNumber = placementState.decisiveGames + 1;
+  const opponent = placementState.opponent;
+  const won = resultLabel === "+30";
+  placementState.decisiveGames = gameNumber;
+
+  const finish = (estimatedElo) => {
+    placementState.active = false;
+    placementState.complete = true;
+    placementState.estimatedElo = estimatedElo;
+    myRating = estimatedElo;
+    saveMyRating();
+    document.getElementById("your-rating").textContent = myRating;
+    placementState.lastResultMessage = `Placement complete — estimated Elo: ${estimatedElo}.`;
+  };
+  const next = (nextOpponent) => {
+    placementState.opponent = nextOpponent;
+    MAIA_ELO = String(nextOpponent);
+    document.getElementById("maia-rating").textContent = MAIA_ELO;
+    placementState.lastResultMessage =
+      `Next: game ${gameNumber + 1} against ${nextOpponent} Elo.`;
+  };
+
+  if (gameNumber === 1) {
+    if (opponent !== 1000) throw new Error(`Unexpected opponent in placement game 1: ${opponent}`);
+    next(won ? 2000 : 500);
+  } else if (gameNumber === 2) {
+    if (opponent === 2000) next(won ? 3000 : 1500);
+    else if (opponent === 500) next(won ? 750 : 250);
+    else throw new Error(`Unexpected opponent in placement game 2: ${opponent}`);
+  } else if (gameNumber === 3) {
+    if (opponent === 3000) {
+      if (won) finish(100);
+      else next(2500);
+    } else if (opponent === 1500) {
+      next(won ? 1750 : 1250);
+    } else if (opponent === 750) {
+      next(won ? 875 : 625);
+    } else if (opponent === 250) {
+      next(won ? 375 : 125);
+    } else {
+      throw new Error(`Unexpected opponent in placement game 3: ${opponent}`);
+    }
+  } else if (gameNumber === 4) {
+    const finalRatings = {
+      2500: [2500, 2000],
+      1750: [1750, 1500],
+      1250: [1250, 1000],
+      875: [875, 750],
+      625: [625, 500],
+      375: [375, 250],
+      125: [125, 100],
+    };
+    const ratings = finalRatings[opponent];
+    if (!ratings) throw new Error(`Unexpected opponent in placement game 4: ${opponent}`);
+    finish(ratings[won ? 0 : 1]);
+  } else {
+    throw new Error(`Unexpected placement game number: ${gameNumber}`);
+  }
+
+  localStorage.setItem(ELO_PLACEMENT_KEY, JSON.stringify(placementState));
+  updatePlacementStatus();
+  return placementState.lastResultMessage;
+}
+
 function buildStatsList(container, stats) {
   container.innerHTML = "";
   for (const [key, label] of STAT_LABELS) {
@@ -5443,7 +5636,7 @@ function removeUnrankedSavedGames() {
     localStorage.setItem("chess_active_mode", "rated");
   }
   const rankedHistory = loadHistory().filter((entry) =>
-    entry.rated === true || entry.mode === "rated"
+    entry.rated === true || entry.mode === "rated" || entry.mode === "placement"
   );
   localStorage.setItem(HISTORY_KEY, JSON.stringify(rankedHistory));
 }
@@ -5451,6 +5644,10 @@ function removeUnrankedSavedGames() {
 function pushHistoryEntry() {
   const yourAcc = computeAccuracy(playerMoveStats);
   const maiaAcc = computeAccuracy(maiaMoveStatsObj);
+  const placementGame = currentMode === "placement" && placementState?.active
+    ? placementState.decisiveGames + 1
+    : null;
+  const placementOpponent = currentMode === "placement" ? Number(MAIA_ELO) : null;
 
   let resultLabel;
   if (gameTimedOut) {
@@ -5463,6 +5660,10 @@ function pushHistoryEntry() {
   } else {
     resultLabel = "0";
   }
+
+  const placementMessage = currentMode === "placement"
+    ? settleEloPlacement(resultLabel)
+    : "";
 
   if (currentMode === "rated") {
     if (resultLabel === "+30") myRating += 30;
@@ -5487,6 +5688,8 @@ function pushHistoryEntry() {
     result: resultLabel,
     rated: currentMode === "rated",
     mode: currentMode,
+    placementGame,
+    placementOpponent,
     moveline: moveline || "(no moves)",
     yourName: username,
     yourElo: myRating,
@@ -5507,6 +5710,7 @@ function pushHistoryEntry() {
   const history = loadHistory();
   history.unshift(entry);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 100)));
+  return placementMessage;
 }
 
 function renderHistory() {
@@ -5606,11 +5810,12 @@ function renderHistory() {
     const maiaMistakes = entry.maiaMistakes ?? 0;
     const yourBlunders = entry.yourBlunders ?? 0;
     const maiaBlunders = entry.maiaBlunders ?? 0;
+    const modeLabel = entry.mode === "placement" ? "Elo Placement" : "Ranked";
 
     card.innerHTML = `
       <div class="hc-head">
         <span class="hc-result">${entry.result}</span>
-        <span class="hc-mode">Ranked</span>
+        <span class="hc-mode">${modeLabel}</span>
       </div>
       <div class="hc-top">
         <div class="hc-player">
@@ -5643,16 +5848,29 @@ function renderHistory() {
 }
 
 function showGameOverPopup() {
+  let placementMessage = "";
   if (!historyRecorded) {
-    pushHistoryEntry();
+    placementMessage = pushHistoryEntry();
     historyRecorded = true;
     saveCurrentGame();
     renderHistory();
+  } else if (currentMode === "placement") {
+    placementMessage = placementState?.lastResultMessage || "";
   }
 
   const { title, sub } = getResultText();
   overlayTitleEl.textContent = title;
-  overlaySubEl.textContent = sub;
+  overlaySubEl.textContent = [sub, placementMessage].filter(Boolean).join(" · ");
+  const newGameButton = document.getElementById("game-over-new-game-button");
+  if (newGameButton) {
+    newGameButton.textContent = currentMode === "placement"
+      ? placementState?.complete
+        ? "Start New Placement"
+        : placementState?.lastResultMessage?.startsWith("Draw")
+          ? `Rematch at ${placementState.opponent} Elo`
+          : "Next Placement Game"
+      : "New Game";
+  }
 
   const yourAcc = computeAccuracy(playerMoveStats);
   const maiaAcc = computeAccuracy(maiaMoveStatsObj);
@@ -5860,6 +6078,9 @@ async function init() {
   } else {
 
     try {
+      MAIA_ELO = currentMode === "placement"
+        ? String(placementState.opponent)
+        : String(myRating);
       const loaded = loadGame(currentMode);
 
       applyLoadedState(loaded);

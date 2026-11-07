@@ -1,4 +1,4 @@
-const CACHE_NAME = "chess-offline-v39";
+const CACHE_NAME = "chess-offline-v43";
 // Refresh the app shell after static UI changes.
 const STATUS_URL = new URL("__offline_status__", self.registration.scope).href;
 
