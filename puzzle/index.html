@@ -1,0 +1,598 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Puzzle</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eee8dc;
+            font-family: Arial, sans-serif;
+        }
+
+        main {
+            width: min(100%, 512px);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        #error {
+            display: none;
+            padding: 20px;
+            color: #8b2222;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <canvas id="board" width="512" height="582"></canvas>
+        <div id="error"></div>
+    </main>
+
+    <!-- SQLite engine already included in your repository -->
+    <script src="/chess/engines/sql/sql-wasm.js"></script>
+
+    <script>
+    // ========================================================
+    // CONFIGURATION
+    // ========================================================
+
+    const ROOT = "/chess/";
+
+    const DATABASE_WEIGHTS = {
+        1: 10,
+        2: 20,
+        3: 40,
+    };
+
+    const PIECE_FILES = {
+        "P": "pw.png",
+        "N": "nw.png",
+        "B": "bw.png",
+        "R": "rw.png",
+        "Q": "qw.png",
+        "K": "kw.png",
+
+        "p": "pb.png",
+        "n": "nb.png",
+        "b": "bb.png",
+        "r": "rb.png",
+        "q": "qb.png",
+        "k": "kb.png"
+    };
+
+    const DEFAULT_LIGHT = [240, 217, 181];
+    const DEFAULT_DARK = [181, 136, 99];
+
+    const BACKGROUND = [185, 174, 153];
+
+    const IMAGE_WIDTH = 512;
+    const HEADER_HEIGHT = 48;
+    const BOARD_SIZE = 512;
+    const SQUARE_SIZE = 64;
+    const IMAGE_HEIGHT = 582;
+
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+    const errorElement = document.getElementById("error");
+
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+
+    // ========================================================
+    // URL SETTINGS
+    // ========================================================
+
+    function readSettings() {
+
+        let mate = null;
+
+        if (params.has("matein")) {
+            mate = Number(params.get("matein"));
+
+            if (
+                !Number.isInteger(mate) ||
+                mate < 1 ||
+                mate > 3
+            ) {
+                throw new Error(
+                    "matein must be a number from 1 to 5."
+                );
+            }
+        }
+
+        let move = null;
+
+        if (params.has("move")) {
+            move = params.get("move").toLowerCase();
+
+            if (move !== "white" && move !== "black") {
+                throw new Error(
+                    "move must be white or black."
+                );
+            }
+        }
+
+        function readRGB(name, fallback) {
+
+            if (!params.has(name)) {
+                return fallback;
+            }
+
+            const values = params.get(name)
+                .split(",")
+                .map(value => Number(value.trim()));
+
+            if (
+                values.length !== 3 ||
+                values.some(value =>
+                    !Number.isInteger(value) ||
+                    value < 0 ||
+                    value > 255
+                )
+            ) {
+                throw new Error(
+                    name + " must use RGB format: 255,255,255."
+                );
+            }
+
+            return values;
+        }
+
+        return {
+            mate,
+            move,
+            light: readRGB("light", DEFAULT_LIGHT),
+            dark: readRGB("dark", DEFAULT_DARK)
+        };
+    }
+
+
+    // ========================================================
+    // SQLITE DATABASE
+    // ========================================================
+
+    async function loadDatabase(SQL, mate) {
+
+        const url = ROOT + "puzzle/data/MateIn" +
+            mate + ".db";
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                "Could not load MateIn" + mate + ".db"
+            );
+        }
+
+        const bytes = await response.arrayBuffer();
+
+        return new SQL.Database(new Uint8Array(bytes));
+    }
+
+
+    function getPuzzleCount(db, move) {
+
+        let result;
+
+        if (move === null) {
+            result = db.exec(
+                "SELECT COUNT(*) FROM puzzles"
+            );
+        } else {
+            const color = move === "white" ? "w" : "b";
+
+            const statement = db.prepare(
+                "SELECT COUNT(*) FROM puzzles " +
+                "WHERE substr(fen, instr(fen, ' ') + 1, 1) = ?"
+            );
+
+            statement.bind([color]);
+
+            statement.step();
+
+            result = [{
+                values: [statement.get()[0]]
+            }];
+
+            statement.free();
+        }
+
+        return Number(result[0]?.values[0]?.[0] ?? 0);
+    }
+
+
+    function getRandomPuzzle(db, move) {
+
+        let statement;
+
+        if (move === null) {
+
+            statement = db.prepare(
+                "SELECT fen FROM puzzles ORDER BY RANDOM() LIMIT 1"
+            );
+
+        } else {
+
+            const color = move === "white" ? "w" : "b";
+
+            statement = db.prepare(
+                "SELECT fen FROM puzzles " +
+                "WHERE substr(fen, instr(fen, ' ') + 1, 1) = ? " +
+                "ORDER BY RANDOM() LIMIT 1"
+            );
+
+            statement.bind([color]);
+        }
+
+        let fen = null;
+
+        if (statement.step()) {
+            fen = statement.getAsObject().fen;
+        }
+
+        statement.free();
+
+        return fen;
+    }
+
+
+    // ========================================================
+    // WEIGHTED RANDOM SELECTION
+    // ========================================================
+
+    function weightedChoice(candidates) {
+
+        const totalWeight = candidates.reduce(
+            (total, candidate) =>
+                total + DATABASE_WEIGHTS[candidate],
+            0
+        );
+
+        let random = Math.random() * totalWeight;
+
+        for (const mate of candidates) {
+
+            random -= DATABASE_WEIGHTS[mate];
+
+            if (random < 0) {
+                return mate;
+            }
+        }
+
+        return candidates[candidates.length - 1];
+    }
+
+
+    async function selectPuzzle(SQL, settings) {
+
+        let candidates = settings.mate !== null
+            ? [settings.mate]
+            : Object.keys(DATABASE_WEIGHTS).map(Number);
+
+        const available = [];
+
+        // Check which databases contain matching puzzles.
+        for (const mate of candidates) {
+
+            const db = await loadDatabase(SQL, mate);
+
+            try {
+                const count = getPuzzleCount(db, settings.move);
+
+                if (count > 0) {
+                    available.push(mate);
+                }
+            } finally {
+                db.close();
+            }
+        }
+
+        if (available.length === 0) {
+            throw new Error(
+                "No puzzles match the selected settings."
+            );
+        }
+
+        const selectedMate = settings.mate !== null
+            ? settings.mate
+            : weightedChoice(available);
+
+        const db = await loadDatabase(SQL, selectedMate);
+
+        try {
+
+            const fen = getRandomPuzzle(db, settings.move);
+
+            if (!fen) {
+                throw new Error("Could not retrieve a puzzle.");
+            }
+
+            return {
+                mate: selectedMate,
+                fen
+            };
+
+        } finally {
+            db.close();
+        }
+    }
+
+
+    // ========================================================
+    // IMAGE LOADING
+    // ========================================================
+
+    const pieceImages = {};
+
+    async function loadPieceImages() {
+
+        const entries = Object.entries(PIECE_FILES);
+
+        await Promise.all(entries.map(([piece, filename]) => {
+
+            return new Promise((resolve, reject) => {
+
+                const image = new Image();
+
+                image.onload = () => {
+                    pieceImages[piece] = image;
+                    resolve();
+                };
+
+                image.onerror = () => {
+                    reject(new Error(
+                        "Could not load piece image: " + filename
+                    ));
+                };
+
+                image.src = ROOT + "images/pieces/" + filename;
+            });
+        }));
+    }
+
+
+    // ========================================================
+    // DRAWING
+    // ========================================================
+
+    function rgb(color) {
+        return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+    }
+
+
+    function drawCenteredText(text, y, font, color) {
+
+        ctx.font = font;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+
+        if (color === "white") {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "#41372d";
+            ctx.strokeText(text, 256, y);
+            ctx.fillStyle = "#ffffff";
+        } else {
+            ctx.fillStyle = "#000000";
+        }
+
+        ctx.fillText(text, 256, y);
+    }
+
+
+    function drawBoard(fen, mate, light, dark) {
+
+        const parts = fen.split(" ");
+
+        if (parts.length < 4) {
+            throw new Error("Invalid FEN.");
+        }
+
+        const position = parts[0];
+        const activeColor = parts[1];
+
+        if (activeColor !== "w" && activeColor !== "b") {
+            throw new Error("Invalid FEN active color.");
+        }
+
+        const turnName = activeColor === "w"
+            ? "White"
+            : "Black";
+
+        const turnColor = activeColor === "w"
+            ? "white"
+            : "black";
+
+        // Background
+        ctx.fillStyle = rgb(BACKGROUND);
+        ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
+
+        // Header
+        drawCenteredText(
+            turnName + "'s Move:",
+            3,
+            "bold 19px Arial",
+            turnColor
+        );
+
+        drawCenteredText(
+            "Mate In " + mate,
+            26,
+            "bold 14px Arial",
+            turnColor
+        );
+
+        // Board squares
+        const ranks = position.split("/");
+
+        if (ranks.length !== 8) {
+            throw new Error("Invalid FEN: expected 8 ranks.");
+        }
+
+        for (let row = 0; row < 8; row++) {
+
+            for (let column = 0; column < 8; column++) {
+
+                ctx.fillStyle =
+                    (row + column) % 2 === 0
+                        ? rgb(light)
+                        : rgb(dark);
+
+                ctx.fillRect(
+                    column * SQUARE_SIZE,
+                    HEADER_HEIGHT + row * SQUARE_SIZE,
+                    SQUARE_SIZE,
+                    SQUARE_SIZE
+                );
+            }
+        }
+
+        // Pieces
+        for (let row = 0; row < 8; row++) {
+
+            let column = 0;
+
+            for (const character of ranks[row]) {
+
+                if (/[1-8]/.test(character)) {
+                    column += Number(character);
+                    continue;
+                }
+
+                const piece = pieceImages[character];
+
+                if (!piece) {
+                    throw new Error(
+                        "Invalid FEN piece: " + character
+                    );
+                }
+
+                if (column >= 8) {
+                    throw new Error("Invalid FEN rank.");
+                }
+
+                const x = column * SQUARE_SIZE + 2;
+                const y = HEADER_HEIGHT + row * SQUARE_SIZE + 2;
+
+                ctx.drawImage(
+                    piece,
+                    x,
+                    y,
+                    60,
+                    60
+                );
+
+                column++;
+            }
+
+            if (column !== 8) {
+                throw new Error(
+                    "Invalid FEN rank: expected 8 squares."
+                );
+            }
+        }
+
+        // Full FEN at the bottom
+        const fenLeft = SQUARE_SIZE;
+        const fenWidth = 6 * SQUARE_SIZE;
+
+        let fontSize = 9;
+
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+
+        do {
+            ctx.font = fontSize + "px Arial";
+
+            if (ctx.measureText(fen).width <= fenWidth - 8) {
+                break;
+            }
+
+            fontSize--;
+        } while (fontSize >= 1);
+
+        ctx.font = fontSize + "px Arial";
+        ctx.fillStyle = "#41372d";
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+            fen,
+            fenLeft + fenWidth / 2,
+            HEADER_HEIGHT + BOARD_SIZE + 15
+        );
+    }
+
+
+    // ========================================================
+    // MAIN
+    // ========================================================
+
+    async function main() {
+
+        try {
+
+            errorElement.style.display = "none";
+            canvas.style.display = "block";
+
+            const settings = readSettings();
+
+            if (typeof initSqlJs !== "function") {
+                throw new Error("SQLite engine failed to load.");
+            }
+
+            const SQL = await initSqlJs({
+                locateFile: file =>
+                    ROOT + "engines/sql/" + file
+            });
+
+            await loadPieceImages();
+
+            const puzzle = await selectPuzzle(SQL, settings);
+
+            drawBoard(
+                puzzle.fen,
+                puzzle.mate,
+                settings.light,
+                settings.dark
+            );
+
+            console.log(
+                "Loaded MateIn" + puzzle.mate,
+                puzzle.fen
+            );
+
+        } catch (error) {
+
+            console.error(error);
+
+            canvas.style.display = "none";
+
+            errorElement.textContent = error.message;
+            errorElement.style.display = "block";
+        }
+    }
+
+    main();
+    </script>
+</body>
+</html>

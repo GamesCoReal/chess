@@ -3160,7 +3160,7 @@ function createReplayControls() {
 
 document
   .getElementById("replay-exit")
-  .addEventListener("click", exitReplay);
+  .addEventListener("click", () => exitReplay(true));
 
 document
   .getElementById("replay-start")
@@ -3693,24 +3693,38 @@ function replayEnd() {
 // ------------------------------------------------------------
 
 function exitReplay(resumeGame = true) {
+  // Invalidate all replay analysis currently running.
   replayAnalysisRun++;
   replayStockfishRun++;
   replayMotifRun++;
+
   window.stockfishEvaluator?.stop();
+
   clockLastTick = performance.now();
   replayAnalyzing = false;
   inReplayMode = false;
+
   document.querySelector(".container")?.classList.remove("review-mode");
 
-  // Restore the real game.
+  const boardWrap = document.getElementById("board-wrap");
+  boardWrap?.classList.remove("replay-mode");
+
+  // Restore the game that was open before review.
   if (replayReturnGame) {
     game = replayReturnGame;
   }
+
+  replayReturnGame = null;
+
+  // Restore the normal board orientation.
   if (replayReturnBoardFlipped !== null) {
     boardFlipped = replayReturnBoardFlipped;
     replayReturnBoardFlipped = null;
   }
 
+  boardWrap?.classList.toggle("flipped", boardFlipped);
+
+  // Clear replay data.
   replayGame = null;
   replayMoves = [];
   replayMoveFens = [];
@@ -3722,39 +3736,61 @@ function exitReplay(resumeGame = true) {
   replayOriginalClockHistory = [];
   replayBranchStart = null;
   replayOriginalPgn = "";
+
   replayPositionScores.clear();
   replayOriginalPositionScores.clear();
+
   replayIndex = 0;
   replayAnalysis = [];
   replayCandidateLines = [];
   replayRankedLines = [];
-  replayReturnGame = null;
 
   selectedSquare = null;
-
   lastMoveFrom = null;
   lastMoveTo = null;
 
-  if (replayControlsEl) {
-    replayControlsEl.remove();
-    replayControlsEl = null;
-  }
-  gameControlsEl.appendChild(document.getElementById("flip-button"));
+  // Remove replay controls and analysis.
+  replayControlsEl?.remove();
+  replayControlsEl = null;
+
   if (replayAnalysisPanelEl) {
     replayAnalysisPanelEl.remove();
     replayAnalysisPanelEl = null;
   }
 
-  renderReplayMoveInsights();
-  renderBoard();
-  renderMoveList();
-  updateStatusForTurn();
-  updateClockDisplays();
-  if (resumeGame && !inPuzzleMode && !inDrillMode && !isGameLocked() && game.turn() !== playerColor) {
-    runMaiaTurn();
+  document.getElementById("review-insights-panel")
+    ?.classList.add("hidden");
+
+  document.getElementById("review-insights-panel")
+    ?.replaceChildren();
+
+  // Restore normal game controls.
+  gameControlsEl.appendChild(
+    document.getElementById("flip-button")
+  );
+
+  gameControlsEl.classList.remove("hidden");
+
+  // If there is no playable game, start a fresh one.
+  if (isGameLocked() || !game || game.game_over()) {
+    newGameCurrentMode();
+    return;
   }
 
-  console.log("Exited replay mode.");
+  // Restore the existing game.
+  restoreLastMoveFromRealGame();
+
+  renderBoard();
+  renderMoveList();
+  updateClockDisplays();
+  renderHistory();
+
+  // Resume the game and Maia if it's her turn.
+  updateStatusForTurn();
+
+  if (resumeGame && game.turn() !== playerColor) {
+    runMaiaTurn();
+  }
 }
 
 // ------------------------------------------------------------
@@ -5055,7 +5091,6 @@ async function runMaiaTurn() {
     renderBoard();
     renderMoveList();
     updateClockDisplays();
-
     saveCurrentGame();
 
     // ==================================================
@@ -5312,7 +5347,6 @@ async function onSquareClick(sq) {
   );
 
   updateClockUnlocks();
-
   renderBoard();
   renderMoveList();
   saveCurrentGame();
@@ -6062,6 +6096,21 @@ function showGameOverPopup() {
   overlayEl.classList.remove("hidden");
 }
 
+function reviewJustFinishedGame() {
+  const history = loadHistory();
+  const latestGame = history[0];
+
+  if (!latestGame || !latestGame.pgn) {
+    console.error("Could not find the completed game to review.");
+    return;
+  }
+
+  closeOverlay();
+  openPastGame(latestGame);
+}
+
+window.reviewJustFinishedGame = reviewJustFinishedGame;
+
 function closeOverlay() {
   overlayEl.classList.add("hidden");
 }
@@ -6268,7 +6317,12 @@ async function init() {
       renderBoard();
       renderMoveList();
       updateClockDisplays();
-      updateStatusForTurn();
+
+      if (isGameLocked()) {
+        showGameOverPopup();
+      } else {
+        updateStatusForTurn();
+      }
 
     } catch (err) {
 

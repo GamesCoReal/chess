@@ -427,11 +427,32 @@ max-height:80vh;overflow-y:auto;
 .stats-col-title .acc{color:#c9a84c;font-weight:700}
 .stat-line{display:flex;justify-content:space-between;padding:2px 0;color:#ccc;font-size:12px;gap:6px}
 .stat-line .num{font-weight:600;color:#fff}
-.overlay-buttons button{
-width:100%;min-height:44px;border:none;border-radius:22px;
-background:#c9a84c;color:#202124;font-weight:700;font-size:15px;cursor:pointer;
--webkit-user-select:none;user-select:none;
+
+.overlay-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
 }
+
+.overlay-buttons button {
+    width: 100%;
+    min-height: 44px;
+    border: none;
+    border-radius: 22px;
+    background: #c9a84c;
+    color: #202124;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.overlay-buttons button:active {
+    opacity: 0.8;
+}
+
 .overlay-buttons button:active{opacity:.8}
 
 .openings-browser{position:relative;width:100%;margin:0 auto;overflow:visible;background:transparent;color:inherit;padding-bottom:env(safe-area-inset-bottom)}
@@ -565,7 +586,7 @@ canvas.opening-achievement-icon{display:block}
 <div class="vstack">
 <button id="settings-username-btn" onclick="setUsername()">Username: You</button>
 <button id="settings-sound-btn" onclick="toggleSound()">Sound: On</button>
-<button id="settings-defaultmode-btn" onclick="cycleDefaultMode()">Default: Ranked</button>
+<button id="settings-defaultmode-btn" onclick="cycleDefaultMode()">Default: Chess</button>
 <button id="settings-opening-achievements-btn" onclick="openOpeningAchievements()">Achievements</button>
 <button id="settings-glossary-btn" onclick="openMotifGlossary()">Motif Glossary</button>
 <button id="settings-storage-btn" onclick="openStorageManager()">Storage</button>
@@ -682,7 +703,13 @@ canvas.opening-achievement-icon{display:block}
 </div>
 </div>
 <div class="overlay-buttons">
-<button id="game-over-new-game-button" onclick="newGameCurrentMode()">New Game</button>
+<button id="game-over-review-button" onclick="reviewJustFinishedGame()">
+  Review Game
+</button>
+
+<button id="game-over-new-game-button" onclick="newGameCurrentMode()">
+  New Game
+</button>
 </div>
 </div>
 </div>
