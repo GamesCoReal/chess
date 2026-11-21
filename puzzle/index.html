@@ -108,6 +108,8 @@
     const ctx = canvas.getContext("2d");
     const errorElement = document.getElementById("error");
 
+    window.CHESS_READY = false;
+
     const params = new URLSearchParams(
         window.location.search
     );
@@ -997,6 +999,9 @@
 
             // Draw captured pieces in the sidebar.
             drawCapturedSidebar(captured);
+
+            // Everything, including captured pieces, is now drawn.
+            window.CHESS_READY = true;
 
             console.log(
                 "Loaded MateIn" + puzzle.mate,
