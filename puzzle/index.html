@@ -190,37 +190,34 @@
         return new SQL.Database(new Uint8Array(bytes));
     }
 
-
     function getPuzzleCount(db, move) {
 
-        let result;
-
         if (move === null) {
-            result = db.exec(
+            const result = db.exec(
                 "SELECT COUNT(*) FROM puzzles"
             );
-        } else {
-            const color = move === "white" ? "w" : "b";
 
-            const statement = db.prepare(
-                "SELECT COUNT(*) FROM puzzles " +
-                "WHERE substr(fen, instr(fen, ' ') + 1, 1) = ?"
-            );
-
-            statement.bind([color]);
-
-            statement.step();
-
-            result = [{
-                values: [statement.get()[0]]
-            }];
-
-            statement.free();
+            return Number(result[0].values[0][0]);
         }
 
-        return Number(result[0]?.values[0]?.[0] ?? 0);
-    }
+        const color = move === "white" ? "w" : "b";
 
+        const statement = db.prepare(`
+            SELECT COUNT(*)
+            FROM puzzles
+            WHERE substr(fen, instr(fen, ' ') + 1, 1) = ?
+        `);
+
+        try {
+            statement.bind([color]);
+            statement.step();
+
+            return Number(statement.get()[0]);
+
+        } finally {
+            statement.free();
+        }
+    }
 
     function getRandomPuzzle(db, move) {
 
