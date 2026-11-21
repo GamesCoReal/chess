@@ -342,30 +342,51 @@
 
     const pieceImages = {};
 
-    async function loadPieceImages() {
+    async function loadPieceImages(fen) {
 
-        const entries = Object.entries(PIECE_FILES);
+        // Extract the board position from the FEN.
+        const position = fen.split(" ")[0];
 
-        await Promise.all(entries.map(([piece, filename]) => {
+        // Find only the pieces actually present.
+        const neededPieces = [
+            ...new Set(
+                [...position].filter(character =>
+                    PIECE_FILES[character]
+                )
+            )
+        ];
 
-            return new Promise((resolve, reject) => {
+        // Download only the required images.
+        await Promise.all(
+            neededPieces.map(piece => {
 
-                const image = new Image();
+                return new Promise((resolve, reject) => {
 
-                image.onload = () => {
-                    pieceImages[piece] = image;
-                    resolve();
-                };
+                    const image = new Image();
 
-                image.onerror = () => {
-                    reject(new Error(
-                        "Could not load piece image: " + filename
-                    ));
-                };
+                    image.onload = () => {
+                        pieceImages[piece] = image;
+                        resolve();
+                    };
 
-                image.src = ROOT + "images/pieces/" + filename;
-            });
-        }));
+                    image.onerror = () => {
+                        reject(new Error(
+                            "Could not load piece image: " +
+                            PIECE_FILES[piece]
+                        ));
+                    };
+
+                    image.src =
+                        ROOT + "images/pieces/" +
+                        PIECE_FILES[piece];
+                });
+            })
+        );
+
+        console.log(
+            "Downloaded piece images:",
+            neededPieces.map(piece => PIECE_FILES[piece])
+        );
     }
 
 
@@ -559,9 +580,9 @@
                     ROOT + "engines/sql/" + file
             });
 
-            await loadPieceImages();
-
             const puzzle = await selectPuzzle(SQL, settings);
+
+            await loadPieceImages(puzzle.fen);
 
             drawBoard(
                 puzzle.fen,
