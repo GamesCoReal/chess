@@ -47,6 +47,12 @@
         <div id="error"></div>
     </main>
 
+    <!-- Shared chess and Maia files from /chess/ -->
+    <script src="/chess/chess.min.js"></script>
+    <script src="/chess/engines/maia3/maia-tensor.js"></script>
+    <script src="/chess/engines/maia3/maia-engine.js"></script>
+
+    <!-- SQLite -->
     <script src="/chess/engines/sql/sql-wasm.js"></script>
 
     <script>
@@ -55,6 +61,16 @@
     // ========================================================
 
     const ROOT = "/chess/";
+
+    // Maia 3 configuration.
+    const DEFAULT_ELO = 1000;
+    const MAIA_DATA_PATH = ROOT + "data/";
+
+    let maiaReady = false;
+    let maiaLoading = null;
+    let maiaLoadError = null;
+
+    let maiaMove = null;
 
     const DATABASE_WEIGHTS = {
         1: 10,
@@ -78,7 +94,6 @@
         "k": "kb.png"
     };
 
-    // Standard starting material for each side.
     const STARTING_PIECES = {
         "P": 8,
         "N": 2,
@@ -91,13 +106,11 @@
     const DEFAULT_LIGHT = [240, 217, 181];
     const DEFAULT_DARK = [181, 136, 99];
 
-    // Shared color for header, footer and sidebar.
     const BACKGROUND = [185, 174, 153];
 
     const BOARD_SIZE = 512;
     const SQUARE_SIZE = 64;
 
-    // Default dimensions.
     let HEADER_HEIGHT = 48;
     let FOOTER_HEIGHT = 22;
     let SIDEBAR_WIDTH = 96;
@@ -235,6 +248,161 @@
 
 
     // ========================================================
+    // MAIA 3 INITIALIZATION
+    // ========================================================
+
+    async function initializeMaia() {
+
+        if (maiaReady && window.engine) {
+            return true;
+        }
+
+        if (maiaLoadError) {
+            throw maiaLoadError;
+        }
+
+        if (maiaLoading) {
+            return maiaLoading;
+        }
+
+        maiaLoading = (async () => {
+
+            try {
+
+                console.log("Maia 3: initializing...");
+
+                if (typeof MaiaTensor === "undefined") {
+                    throw new Error(
+                        "MaiaTensor was not loaded. Check maia-tensor.js."
+                    );
+                }
+
+                if (typeof Chess === "undefined") {
+                    throw new Error(
+                        "Chess.js was not loaded."
+                    );
+                }
+
+                await MaiaTensor.initMoveTables(
+                    MAIA_DATA_PATH
+                );
+
+                if (!window.engine) {
+                    throw new Error(
+                        "Maia move tables loaded, but the engine was not created."
+                    );
+                }
+
+                maiaReady = true;
+
+                console.log("Maia 3: ready.");
+
+                return true;
+
+            } catch (error) {
+
+                maiaReady = false;
+                maiaLoadError = error;
+
+                console.error(
+                    "Maia 3 initialization failed:",
+                    error
+                );
+
+                throw error;
+            }
+        })();
+
+        return maiaLoading;
+    }
+
+
+    // ========================================================
+    // MAIA 3 MOVE EVALUATION
+    // ========================================================
+
+    async function getMaiaMove(fen) {
+
+        await initializeMaia();
+
+        const game = new Chess(fen);
+
+        if (game.isGameOver()) {
+            return null;
+        }
+
+        console.log("Maia 3: evaluating position...");
+
+        const evalResult = await window.engine.evaluate(
+            game,
+            String(DEFAULT_ELO),
+            DEFAULT_ELO
+        );
+
+        if (!evalResult) {
+            throw new Error(
+                "Maia did not return an evaluation."
+            );
+        }
+
+        if (
+            !evalResult.policy ||
+            Object.keys(evalResult.policy).length === 0
+        ) {
+            throw new Error(
+                "Maia did not return any legal moves."
+            );
+        }
+
+        // Maia's preferred move is the first policy entry.
+        const uci = Object.keys(evalResult.policy)[0];
+
+        if (!uci || uci.length < 4) {
+            throw new Error(
+                "Maia returned an invalid move: " + uci
+            );
+        }
+
+        const from = uci.slice(0, 2);
+        const to = uci.slice(2, 4);
+
+        const promotion = uci.length > 4
+            ? uci.slice(4)
+            : null;
+
+        // Verify that Maia's move is legal.
+        const legalMoves = game.moves({
+            verbose: true
+        });
+
+        const legalMove = legalMoves.find(move =>
+            move.from === from &&
+            move.to === to &&
+            (move.promotion || null) === promotion
+        );
+
+        if (!legalMove) {
+            throw new Error(
+                "Maia returned an illegal move: " + uci
+            );
+        }
+
+        const result = {
+            uci,
+            from,
+            to,
+            promotion,
+            probability: evalResult.policy[uci],
+            value: evalResult.value
+        };
+
+        console.log("Maia 3 preferred move:", result);
+
+        return result;
+    }
+
+
+    // ========================================================
     // SQLITE DATABASE
     // ========================================================
 
@@ -354,7 +522,6 @@
 
     async function selectPuzzle(SQL, settings) {
 
-        // Select database before downloading.
         const selectedMate = settings.mate !== null
             ? settings.mate
             : weightedChoice(
@@ -365,7 +532,6 @@
             "Selected database: MateIn" + selectedMate
         );
 
-        // Download only one database.
         const db = await loadDatabase(SQL, selectedMate);
 
         try {
@@ -554,7 +720,6 @@
             }
         };
 
-        // Count all pieces currently on the board.
         for (const rank of board) {
 
             for (const piece of rank) {
@@ -697,10 +862,59 @@
 
 
     // ========================================================
+    // MAIA MOVE HIGHLIGHTING
+    // ========================================================
+
+    function drawMaiaHighlights(move, orientation) {
+
+        if (!move) return;
+
+        function squareCoordinates(square) {
+
+            const file = square.charCodeAt(0) - 97;
+            const rank = Number(square[1]) - 1;
+
+            if (
+                file < 0 || file > 7 ||
+                rank < 0 || rank > 7
+            ) {
+                throw new Error(
+                    "Invalid Maia square: " + square
+                );
+            }
+
+            let column = file;
+            let row = 7 - rank;
+
+            if (orientation === "black") {
+                column = 7 - file;
+                row = rank;
+            }
+
+            return { row, column };
+        }
+
+        for (const square of [move.from, move.to]) {
+
+            const position = squareCoordinates(square);
+
+            ctx.fillStyle = "rgba(40, 210, 75, 0.55)";
+
+            ctx.fillRect(
+                position.column * SQUARE_SIZE,
+                HEADER_HEIGHT + position.row * SQUARE_SIZE,
+                SQUARE_SIZE,
+                SQUARE_SIZE
+            );
+        }
+    }
+
+
+    // ========================================================
     // DRAW MAIN BOARD
     // ========================================================
 
-    function drawBoard(fen, mate, light, dark) {
+    function drawBoard(fen, mate, light, dark, maiaMove = null) {
 
         const parsed = parseFenBoard(fen);
 
@@ -758,6 +972,12 @@
                 );
             }
         }
+
+        // Highlight Maia's preferred move.
+        drawMaiaHighlights(
+            maiaMove,
+            orientation
+        );
 
         // Draw pieces using the selected orientation.
         for (let displayRow = 0; displayRow < 8; displayRow++) {
@@ -880,13 +1100,9 @@
 
         const centerX = BOARD_SIZE + 35;
 
-        // Position of the divider: exact center of the board.
         const dividerY = HEADER_HEIGHT + BOARD_SIZE / 2;
 
-        // ----------------------------------------
-        // DIVIDER
-        // ----------------------------------------
-
+        // Divider.
         ctx.strokeStyle = "rgba(65, 55, 45, 0.45)";
         ctx.lineWidth = 1;
 
@@ -895,10 +1111,7 @@
         ctx.lineTo(IMAGE_WIDTH - 18, dividerY);
         ctx.stroke();
 
-        // ----------------------------------------
-        // DRAW PIECE GROUPS
-        // ----------------------------------------
-
+        // Draw piece groups.
         function drawGroups(
             groups,
             numberColor,
@@ -965,10 +1178,7 @@
             }
         }
 
-        // ----------------------------------------
-        // TOP: BLACK CAPTURED PIECES
-        // ----------------------------------------
-
+        // Top: black captured pieces.
         drawGroups(
             blackGroups,
             "#FFFFFF",
@@ -977,10 +1187,7 @@
             false
         );
 
-        // ----------------------------------------
-        // BOTTOM: WHITE CAPTURED PIECES
-        // ----------------------------------------
-
+        // Bottom: white captured pieces.
         drawGroups(
             whiteGroups,
             "#000000",
@@ -1008,7 +1215,6 @@
 
             const settings = readSettings();
 
-            // Configure the canvas based on URL settings.
             configureCanvas(settings);
 
             console.log("Display settings:", {
@@ -1017,9 +1223,16 @@
                 fenId: settings.fenId
             });
 
+            // Check required libraries.
             if (typeof initSqlJs !== "function") {
                 throw new Error(
                     "SQLite engine failed to load."
+                );
+            }
+
+            if (typeof Chess === "undefined") {
+                throw new Error(
+                    "Chess.js failed to load."
                 );
             }
 
@@ -1035,31 +1248,59 @@
                 settings
             );
 
-            // Parse FEN before loading images.
+            console.log(
+                "Loaded MateIn" + puzzle.mate,
+                puzzle.fen
+            );
+
+            // Parse FEN.
             const parsed = parseFenBoard(puzzle.fen);
 
             const captured = getCapturedPieces(
                 parsed.board
             );
 
-            // PHASE 1:
-            // Download only pieces currently on the board.
+            // ====================================================
+            // MAIA ANALYSIS
+            // ====================================================
+
+            console.log("Starting Maia analysis...");
+
+            maiaMove = await getMaiaMove(
+                puzzle.fen
+            );
+
+            console.log(
+                "Maia analysis complete:",
+                maiaMove
+            );
+
+            // ====================================================
+            // LOAD BOARD PIECES
+            // ====================================================
+
             const boardPieces = getBoardPieces(
                 parsed.board
             );
 
             await loadPieceImages(boardPieces);
 
-            // Draw header, board and footer.
+            // ====================================================
+            // DRAW BOARD WITH MAIA HIGHLIGHT
+            // ====================================================
+
             const drawing = drawBoard(
                 puzzle.fen,
                 puzzle.mate,
                 settings.light,
-                settings.dark
+                settings.dark,
+                maiaMove
             );
 
-            // PHASE 2:
-            // Load captured pieces only if their sidebar is enabled.
+            // ====================================================
+            // LOAD AND DRAW CAPTURED PIECES
+            // ====================================================
+
             if (settings.takenPieces) {
 
                 const capturedPieces = getCapturedPieceList(
@@ -1068,14 +1309,12 @@
 
                 await loadPieceImages(capturedPieces);
 
-                // Draw captured pieces in the sidebar.
                 drawCapturedSidebar(captured);
             }
 
-            console.log(
-                "Loaded MateIn" + puzzle.mate,
-                puzzle.fen
-            );
+            // ====================================================
+            // FINISHED
+            // ====================================================
 
             console.log(
                 "Board orientation:",
@@ -1087,7 +1326,8 @@
                 height: canvas.height
             });
 
-            // Everything is now drawn.
+            console.log("Maia move:", maiaMove);
+
             window.CHESS_READY = true;
 
         } catch (error) {
