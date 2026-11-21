@@ -808,9 +808,7 @@
 
     function drawCapturedSidebar(captured) {
 
-        // Group identical pieces together.
         function groupPieces(pieces) {
-
             const groups = {};
 
             for (const piece of pieces) {
@@ -823,37 +821,52 @@
         const whiteGroups = groupPieces(captured.white);
         const blackGroups = groupPieces(captured.black);
 
-        const totalGroups = whiteGroups.length + blackGroups.length;
+        const centerX = BOARD_SIZE + 35; // Closer
 
-        if (totalGroups === 0) {
-            console.log("No captured pieces to display.");
-            return;
-        }
+        // Position of the divider: exact center of the board.
+        const dividerY = HEADER_HEIGHT + BOARD_SIZE / 2;
 
-        const startY = HEADER_HEIGHT + 8;
-        const availableHeight = BOARD_SIZE - 16;
+        // ----------------------------------------
+        // DIVIDER
+        // ----------------------------------------
 
-        const hasBothColors =
-            whiteGroups.length > 0 &&
-            blackGroups.length > 0;
+        ctx.strokeStyle = "rgba(65, 55, 45, 0.45)";
+        ctx.lineWidth = 1;
 
-        const gap = 5;
-        const dividerSpace = hasBothColors ? 10 : 0;
+        ctx.beginPath();
+        ctx.moveTo(BOARD_SIZE + 18, dividerY);
+        ctx.lineTo(IMAGE_WIDTH - 18, dividerY);
+        ctx.stroke();
 
-        const pieceSize = Math.min(
-            42,
-            (
-                availableHeight -
-                (totalGroups - 1) * gap -
-                dividerSpace
-            ) / totalGroups
-        );
+        // ----------------------------------------
+        // DRAW PIECE GROUPS
+        // ----------------------------------------
 
-        const centerX = BOARD_SIZE + SIDEBAR_WIDTH / 2;
+        function drawGroups(groups, numberColor, top, bottom, fromBottom) {
 
-        let y = startY;
+            if (groups.length === 0) return;
 
-        function drawStack(groups, numberColor) {
+            const padding = 8;
+            const gap = 5;
+
+            const availableHeight = bottom - top - padding * 2;
+
+            const pieceSize = Math.min(
+                42,
+                (availableHeight - (groups.length - 1) * gap) /
+                groups.length
+            );
+
+            // Calculate total stack height.
+            const stackHeight =
+                groups.length * pieceSize +
+                (groups.length - 1) * gap;
+
+            // Top section starts at top.
+            // Bottom section ends at bottom.
+            let y = fromBottom
+                ? bottom - padding - stackHeight
+                : top + padding;
 
             for (const [piece, count] of groups) {
 
@@ -865,7 +878,6 @@
                     );
                 }
 
-                // Draw one piece image.
                 ctx.drawImage(
                     image,
                     centerX - pieceSize / 2,
@@ -874,7 +886,6 @@
                     pieceSize
                 );
 
-                // Only display a number when there are duplicates.
                 if (count > 1) {
 
                     ctx.font = "bold 17px Arial";
@@ -893,32 +904,34 @@
             }
         }
 
-        // White pieces: numbers are black.
-        drawStack(whiteGroups, "#000000");
+        // ----------------------------------------
+        // TOP: BLACK CAPTURED PIECES
+        // ----------------------------------------
 
-        // Divider between colors.
-        if (hasBothColors) {
+        drawGroups(
+            blackGroups,
+            "#FFFFFF",
+            HEADER_HEIGHT,
+            dividerY,
+            false
+        );
 
-            y += 3;
+        // ----------------------------------------
+        // BOTTOM: WHITE CAPTURED PIECES
+        // ----------------------------------------
 
-            ctx.strokeStyle = "rgba(65, 55, 45, 0.45)";
-            ctx.lineWidth = 1;
-
-            ctx.beginPath();
-
-            ctx.moveTo(BOARD_SIZE + 18, y);
-            ctx.lineTo(IMAGE_WIDTH - 18, y);
-
-            ctx.stroke();
-
-            y += 7;
-        }
-
-        // Black pieces: numbers are white.
-        drawStack(blackGroups, "#FFFFFF");
+        drawGroups(
+            whiteGroups,
+            "#000000",
+            dividerY,
+            HEADER_HEIGHT + BOARD_SIZE,
+            true
+        );
 
         console.log("Captured pieces:", captured);
     }
+
+
 
     // ========================================================
     // MAIN
