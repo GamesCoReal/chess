@@ -95,14 +95,17 @@
     const BACKGROUND = [185, 174, 153];
 
     const BOARD_SIZE = 512;
-    const HEADER_HEIGHT = 48;
-    const FOOTER_HEIGHT = 22;
     const SQUARE_SIZE = 64;
 
-    const SIDEBAR_WIDTH = 96;
+    // Default dimensions.
+    let HEADER_HEIGHT = 48;
+    let FOOTER_HEIGHT = 22;
+    let SIDEBAR_WIDTH = 96;
 
-    const IMAGE_WIDTH = BOARD_SIZE + SIDEBAR_WIDTH;
-    const IMAGE_HEIGHT = HEADER_HEIGHT + BOARD_SIZE + FOOTER_HEIGHT;
+    let IMAGE_WIDTH = BOARD_SIZE + SIDEBAR_WIDTH;
+    let IMAGE_HEIGHT = HEADER_HEIGHT + BOARD_SIZE + FOOTER_HEIGHT;
+
+    let DISPLAY_TAKEN_PIECES = true;
 
     const canvas = document.getElementById("board");
     const ctx = canvas.getContext("2d");
@@ -177,12 +180,57 @@
             return values;
         }
 
+        function readBoolean(name, fallback = true) {
+
+            if (!params.has(name)) {
+                return fallback;
+            }
+
+            const value = params.get(name).toLowerCase();
+
+            if (value === "true") return true;
+            if (value === "false") return false;
+
+            throw new Error(
+                name + " must be true or false."
+            );
+        }
+
         return {
             mate,
             move,
+
             light: readRGB("light", DEFAULT_LIGHT),
-            dark: readRGB("dark", DEFAULT_DARK)
+            dark: readRGB("dark", DEFAULT_DARK),
+
+            takenPieces: readBoolean("taken_pieces"),
+            title: readBoolean("title"),
+            fenId: readBoolean("fen_id")
         };
+    }
+
+
+    // ========================================================
+    // CANVAS DIMENSIONS
+    // ========================================================
+
+    function configureCanvas(settings) {
+
+        DISPLAY_TAKEN_PIECES = settings.takenPieces;
+
+        HEADER_HEIGHT = settings.title ? 48 : 0;
+        FOOTER_HEIGHT = settings.fenId ? 22 : 0;
+        SIDEBAR_WIDTH = settings.takenPieces ? 96 : 0;
+
+        IMAGE_WIDTH = BOARD_SIZE + SIDEBAR_WIDTH;
+
+        IMAGE_HEIGHT =
+            HEADER_HEIGHT +
+            BOARD_SIZE +
+            FOOTER_HEIGHT;
+
+        canvas.width = IMAGE_WIDTH;
+        canvas.height = IMAGE_HEIGHT;
     }
 
 
@@ -468,10 +516,6 @@
             );
         }
 
-        // FEN rows increase from top to bottom.
-        // The king on the lower rank determines
-        // which player is displayed at the bottom.
-
         if (whiteKingRow > blackKingRow) {
             return "white";
         }
@@ -480,7 +524,6 @@
             return "black";
         }
 
-        // Fallback if both kings share a rank.
         return activeColor === "w" ? "white" : "black";
     }
 
@@ -682,17 +725,20 @@
         );
 
         // Header.
-        const textColor = activeColor === "w"
-            ? light
-            : dark;
+        if (HEADER_HEIGHT > 0) {
 
-        drawHeaderText(
-            "Mate In " + mate,
-            BOARD_SIZE / 2,
-            HEADER_HEIGHT / 2,
-            "bold 20px Arial",
-            textColor
-        );
+            const textColor = activeColor === "w"
+                ? light
+                : dark;
+
+            drawHeaderText(
+                "Mate In " + mate,
+                BOARD_SIZE / 2,
+                HEADER_HEIGHT / 2,
+                "bold 20px Arial",
+                textColor
+            );
+        }
 
         // Board squares.
         for (let row = 0; row < 8; row++) {
@@ -757,44 +803,50 @@
         }
 
         // Footer FEN.
-        let fontSize = 12;
+        if (FOOTER_HEIGHT > 0) {
 
-        ctx.textAlign = "center";
-        ctx.textBaseline = "alphabetic";
+            let fontSize = 12;
 
-        do {
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
 
-            ctx.font = fontSize + "px Arial";
+            do {
 
-            if (
-                ctx.measureText(fen).width <=
-                BOARD_SIZE - 16
-            ) {
-                break;
-            }
+                ctx.font = fontSize + "px Arial";
 
-            fontSize--;
+                if (
+                    ctx.measureText(fen).width <=
+                    BOARD_SIZE - 16
+                ) {
+                    break;
+                }
 
-        } while (fontSize >= 1);
+                fontSize--;
 
-        ctx.font = Math.max(1, fontSize) + "px Arial";
-        ctx.fillStyle = "#41372d";
+            } while (fontSize >= 1);
 
-        ctx.fillText(
-            fen,
-            BOARD_SIZE / 2,
-            HEADER_HEIGHT + BOARD_SIZE + 15
-        );
+            ctx.font = Math.max(1, fontSize) + "px Arial";
+            ctx.fillStyle = "#41372d";
+
+            ctx.fillText(
+                fen,
+                BOARD_SIZE / 2,
+                HEADER_HEIGHT + BOARD_SIZE + 15
+            );
+        }
 
         // Sidebar background.
-        ctx.fillStyle = rgb(BACKGROUND);
+        if (SIDEBAR_WIDTH > 0) {
 
-        ctx.fillRect(
-            BOARD_SIZE,
-            0,
-            SIDEBAR_WIDTH,
-            IMAGE_HEIGHT
-        );
+            ctx.fillStyle = rgb(BACKGROUND);
+
+            ctx.fillRect(
+                BOARD_SIZE,
+                0,
+                SIDEBAR_WIDTH,
+                IMAGE_HEIGHT
+            );
+        }
 
         return {
             board,
@@ -810,7 +862,10 @@
 
     function drawCapturedSidebar(captured) {
 
+        if (!DISPLAY_TAKEN_PIECES) return;
+
         function groupPieces(pieces) {
+
             const groups = {};
 
             for (const piece of pieces) {
@@ -823,7 +878,7 @@
         const whiteGroups = groupPieces(captured.white);
         const blackGroups = groupPieces(captured.black);
 
-        const centerX = BOARD_SIZE + 35; // Closer
+        const centerX = BOARD_SIZE + 35;
 
         // Position of the divider: exact center of the board.
         const dividerY = HEADER_HEIGHT + BOARD_SIZE / 2;
@@ -844,14 +899,21 @@
         // DRAW PIECE GROUPS
         // ----------------------------------------
 
-        function drawGroups(groups, numberColor, top, bottom, fromBottom) {
+        function drawGroups(
+            groups,
+            numberColor,
+            top,
+            bottom,
+            fromBottom
+        ) {
 
             if (groups.length === 0) return;
 
             const padding = 8;
             const gap = 5;
 
-            const availableHeight = bottom - top - padding * 2;
+            const availableHeight =
+                bottom - top - padding * 2;
 
             const pieceSize = Math.min(
                 42,
@@ -859,13 +921,10 @@
                 groups.length
             );
 
-            // Calculate total stack height.
             const stackHeight =
                 groups.length * pieceSize +
                 (groups.length - 1) * gap;
 
-            // Top section starts at top.
-            // Bottom section ends at bottom.
             let y = fromBottom
                 ? bottom - padding - stackHeight
                 : top + padding;
@@ -934,12 +993,13 @@
     }
 
 
-
     // ========================================================
     // MAIN
     // ========================================================
 
     async function main() {
+
+        window.CHESS_READY = false;
 
         try {
 
@@ -947,6 +1007,15 @@
             canvas.style.display = "block";
 
             const settings = readSettings();
+
+            // Configure the canvas based on URL settings.
+            configureCanvas(settings);
+
+            console.log("Display settings:", {
+                takenPieces: settings.takenPieces,
+                title: settings.title,
+                fenId: settings.fenId
+            });
 
             if (typeof initSqlJs !== "function") {
                 throw new Error(
@@ -990,18 +1059,18 @@
             );
 
             // PHASE 2:
-            // Only after the board is drawn, load captured pieces.
-            const capturedPieces = getCapturedPieceList(
-                captured
-            );
+            // Load captured pieces only if their sidebar is enabled.
+            if (settings.takenPieces) {
 
-            await loadPieceImages(capturedPieces);
+                const capturedPieces = getCapturedPieceList(
+                    captured
+                );
 
-            // Draw captured pieces in the sidebar.
-            drawCapturedSidebar(captured);
+                await loadPieceImages(capturedPieces);
 
-            // Everything, including captured pieces, is now drawn.
-            window.CHESS_READY = true;
+                // Draw captured pieces in the sidebar.
+                drawCapturedSidebar(captured);
+            }
 
             console.log(
                 "Loaded MateIn" + puzzle.mate,
@@ -1013,9 +1082,19 @@
                 drawing.orientation
             );
 
+            console.log("Canvas dimensions:", {
+                width: canvas.width,
+                height: canvas.height
+            });
+
+            // Everything is now drawn.
+            window.CHESS_READY = true;
+
         } catch (error) {
 
             console.error(error);
+
+            window.CHESS_READY = false;
 
             canvas.style.display = "none";
 
