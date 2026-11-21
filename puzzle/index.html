@@ -808,13 +808,24 @@
 
     function drawCapturedSidebar(captured) {
 
-        const whitePieces = captured.white;
-        const blackPieces = captured.black;
+        // Group identical pieces together.
+        function groupPieces(pieces) {
 
-        const totalPieces =
-            whitePieces.length + blackPieces.length;
+            const groups = {};
 
-        if (totalPieces === 0) {
+            for (const piece of pieces) {
+                groups[piece] = (groups[piece] || 0) + 1;
+            }
+
+            return Object.entries(groups);
+        }
+
+        const whiteGroups = groupPieces(captured.white);
+        const blackGroups = groupPieces(captured.black);
+
+        const totalGroups = whiteGroups.length + blackGroups.length;
+
+        if (totalGroups === 0) {
             console.log("No captured pieces to display.");
             return;
         }
@@ -823,29 +834,28 @@
         const availableHeight = BOARD_SIZE - 16;
 
         const hasBothColors =
-            whitePieces.length > 0 &&
-            blackPieces.length > 0;
+            whiteGroups.length > 0 &&
+            blackGroups.length > 0;
 
-        const gap = 2;
+        const gap = 5;
         const dividerSpace = hasBothColors ? 10 : 0;
 
         const pieceSize = Math.min(
             42,
             (
                 availableHeight -
-                (totalPieces - 1) * gap -
+                (totalGroups - 1) * gap -
                 dividerSpace
-            ) / totalPieces
+            ) / totalGroups
         );
 
-        const centerX =
-            BOARD_SIZE + SIDEBAR_WIDTH / 2;
+        const centerX = BOARD_SIZE + SIDEBAR_WIDTH / 2;
 
         let y = startY;
 
-        function drawStack(pieces) {
+        function drawStack(groups, numberColor) {
 
-            for (const piece of pieces) {
+            for (const [piece, count] of groups) {
 
                 const image = pieceImages[piece];
 
@@ -855,6 +865,7 @@
                     );
                 }
 
+                // Draw one piece image.
                 ctx.drawImage(
                     image,
                     centerX - pieceSize / 2,
@@ -863,14 +874,29 @@
                     pieceSize
                 );
 
+                // Only display a number when there are duplicates.
+                if (count > 1) {
+
+                    ctx.font = "bold 17px Arial";
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "bottom";
+                    ctx.fillStyle = numberColor;
+
+                    ctx.fillText(
+                        count.toString(),
+                        centerX + pieceSize / 2 - 2,
+                        y + pieceSize - 1
+                    );
+                }
+
                 y += pieceSize + gap;
             }
         }
 
-        // White captured pieces first.
-        drawStack(whitePieces);
+        // White pieces: numbers are black.
+        drawStack(whiteGroups, "#000000");
 
-        // Separate the two colors.
+        // Divider between colors.
         if (hasBothColors) {
 
             y += 3;
@@ -880,27 +906,19 @@
 
             ctx.beginPath();
 
-            ctx.moveTo(
-                BOARD_SIZE + 18,
-                y
-            );
-
-            ctx.lineTo(
-                IMAGE_WIDTH - 18,
-                y
-            );
+            ctx.moveTo(BOARD_SIZE + 18, y);
+            ctx.lineTo(IMAGE_WIDTH - 18, y);
 
             ctx.stroke();
 
             y += 7;
         }
 
-        // Black captured pieces afterward.
-        drawStack(blackPieces);
+        // Black pieces: numbers are white.
+        drawStack(blackGroups, "#FFFFFF");
 
         console.log("Captured pieces:", captured);
     }
-
 
     // ========================================================
     // MAIN
