@@ -280,45 +280,33 @@
         return candidates[candidates.length - 1];
     }
 
-
     async function selectPuzzle(SQL, settings) {
 
-        let candidates = settings.mate !== null
-            ? [settings.mate]
-            : Object.keys(DATABASE_WEIGHTS).map(Number);
-
-        const available = [];
-
-        // Check which databases contain matching puzzles.
-        for (const mate of candidates) {
-
-            const db = await loadDatabase(SQL, mate);
-
-            try {
-                const count = getPuzzleCount(db, settings.move);
-
-                if (count > 0) {
-                    available.push(mate);
-                }
-            } finally {
-                db.close();
-            }
-        }
-
-        if (available.length === 0) {
-            throw new Error(
-                "No puzzles match the selected settings."
-            );
-        }
-
+        // Choose the database BEFORE downloading anything.
         const selectedMate = settings.mate !== null
             ? settings.mate
-            : weightedChoice(available);
+            : weightedChoice(
+                Object.keys(DATABASE_WEIGHTS).map(Number)
+            );
 
+        console.log("Selected database: MateIn" + selectedMate);
+
+        // Download only the selected database.
         const db = await loadDatabase(SQL, selectedMate);
 
         try {
 
+            // Check that the selected database has matching puzzles.
+            const count = getPuzzleCount(db, settings.move);
+
+            if (count === 0) {
+                throw new Error(
+                    "No puzzles found in MateIn" + selectedMate +
+                    " for the selected side."
+                );
+            }
+
+            // Retrieve one random puzzle.
             const fen = getRandomPuzzle(db, settings.move);
 
             if (!fen) {
@@ -335,7 +323,7 @@
         }
     }
 
-
+    
     // ========================================================
     // IMAGE LOADING
     // ========================================================
