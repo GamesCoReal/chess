@@ -378,22 +378,13 @@
     }
 
 
-    function drawCenteredText(text, y, font, color) {
-
+    function drawHeaderText(text, x, y, font, color, alignment) {
         ctx.font = font;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
+        ctx.textAlign = alignment;
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = rgb(color);
 
-        if (color === "white") {
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = "#41372d";
-            ctx.strokeText(text, 256, y);
-            ctx.fillStyle = "#ffffff";
-        } else {
-            ctx.fillStyle = "#000000";
-        }
-
-        ctx.fillText(text, 256, y);
+        ctx.fillText(text, x, y);
     }
 
 
@@ -425,18 +416,24 @@
         ctx.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
 
         // Header
-        drawCenteredText(
+        const textColor = activeColor === "w" ? light : dark;
+
+        drawHeaderText(
             turnName + "'s Move:",
-            3,
+            12,
+            24,
             "bold 19px Arial",
-            turnColor
+            textColor,
+            "left"
         );
 
-        drawCenteredText(
+        drawHeaderText(
             "Mate In " + mate,
-            26,
-            "bold 14px Arial",
-            turnColor
+            IMAGE_WIDTH - 12,
+            24,
+            "bold 19px Arial",
+            textColor,
+            "right"
         );
 
         // Board squares
@@ -513,7 +510,7 @@
         const fenLeft = SQUARE_SIZE;
         const fenWidth = 6 * SQUARE_SIZE;
 
-        let fontSize = 9;
+        let fontSize = 12;
 
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
