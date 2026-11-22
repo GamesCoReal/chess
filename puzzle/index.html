@@ -47,6 +47,15 @@
         <div id="error"></div>
     </main>
 
+    <!-- Chess and Maia -->
+    <script src="/chess/chess.min.js"></script>
+    <script src="/chess/engines/maia3/maia-tensor.js"></script>
+    <script src="/chess/engines/maia3/maia-engine.js"></script>
+
+    <!-- Reverse FEN Solver -->
+    <script src="/chess/puzzle/reverse-fen-solver.js"></script>
+
+    <!-- SQLite -->
     <script src="/chess/engines/sql/sql-wasm.js"></script>
 
     <script>
@@ -56,6 +65,15 @@
 
     const ROOT = "/chess/";
 
+    const DEFAULT_ELO = 1000;
+    const MAIA_DATA_PATH = ROOT + "data/";
+
+    let maiaReady = false;
+    let maiaLoading = null;
+    let maiaLoadError = null;
+
+    let maiaMove = null;
+
     const DATABASE_WEIGHTS = {
         1: 10,
         2: 20,
@@ -63,41 +81,38 @@
     };
 
     const PIECE_FILES = {
-        "P": "pw.png",
-        "N": "nw.png",
-        "B": "bw.png",
-        "R": "rw.png",
-        "Q": "qw.png",
-        "K": "kw.png",
+        P: "pw.png",
+        N: "nw.png",
+        B: "bw.png",
+        R: "rw.png",
+        Q: "qw.png",
+        K: "kw.png",
 
-        "p": "pb.png",
-        "n": "nb.png",
-        "b": "bb.png",
-        "r": "rb.png",
-        "q": "qb.png",
-        "k": "kb.png"
+        p: "pb.png",
+        n: "nb.png",
+        b: "bb.png",
+        r: "rb.png",
+        q: "qb.png",
+        k: "kb.png"
     };
 
-    // Standard starting material for each side.
     const STARTING_PIECES = {
-        "P": 8,
-        "N": 2,
-        "B": 2,
-        "R": 2,
-        "Q": 1,
-        "K": 1
+        P: 8,
+        N: 2,
+        B: 2,
+        R: 2,
+        Q: 1,
+        K: 1
     };
 
     const DEFAULT_LIGHT = [240, 217, 181];
     const DEFAULT_DARK = [181, 136, 99];
 
-    // Shared color for header, footer and sidebar.
     const BACKGROUND = [185, 174, 153];
 
     const BOARD_SIZE = 512;
     const SQUARE_SIZE = 64;
 
-    // Default dimensions.
     let HEADER_HEIGHT = 48;
     let FOOTER_HEIGHT = 22;
     let SIDEBAR_WIDTH = 96;
@@ -196,9 +211,26 @@
             );
         }
 
+        let elo = DEFAULT_ELO;
+
+        if (params.has("elo")) {
+
+            elo = Number(params.get("elo"));
+
+            if (
+                !Number.isInteger(elo) ||
+                elo < 0
+            ) {
+                throw new Error(
+                    "elo must be a non-negative whole number."
+                );
+            }
+        }
+
         return {
             mate,
             move,
+            elo,
 
             light: readRGB("light", DEFAULT_LIGHT),
             dark: readRGB("dark", DEFAULT_DARK),
@@ -235,13 +267,143 @@
 
 
     // ========================================================
+    // MAIA 3 INITIALIZATION
+    // ========================================================
+
+    async function initializeMaia() {
+
+        if (maiaReady && window.engine) {
+            return true;
+        }
+
+        if (maiaLoadError) {
+            throw maiaLoadError;
+        }
+
+        if (maiaLoading) {
+            return maiaLoading;
+        }
+
+        maiaLoading = (async () => {
+
+            try {
+
+                console.log("Maia 3: initializing...");
+
+                if (typeof MaiaTensor === "undefined") {
+                    throw new Error(
+                        "MaiaTensor was not loaded."
+                    );
+                }
+
+                if (typeof Chess === "undefined") {
+                    throw new Error(
+                        "Chess.js was not loaded."
+                    );
+                }
+
+                if (!window.engine) {
+                    throw new Error(
+                        "Maia engine was not created."
+                    );
+                }
+
+                if (!window.ReverseFenSolver ||
+                    typeof window.ReverseFenSolver.findLikelyLastMove !== "function") {
+                    throw new Error(
+                        "Reverse FEN Solver is missing findLikelyLastMove()."
+                    );
+                }
+
+                // Load Maia move tables.
+                await MaiaTensor.initMoveTables(
+                    MAIA_DATA_PATH
+                );
+
+                console.log("Maia move tables ready.");
+
+                // Wait for the ONNX model and worker.
+                await window.engine.load();
+
+                console.log("Maia ONNX model ready.");
+
+                maiaReady = true;
+
+                return true;
+
+            } catch (error) {
+
+                maiaReady = false;
+                maiaLoadError = error;
+
+                console.error(
+                    "Maia 3 initialization failed:",
+                    error
+                );
+
+                throw error;
+            }
+        })();
+
+        return maiaLoading;
+    }
+
+    // ========================================================
+    // REVERSE FEN ANALYSIS
+    // ========================================================
+
+    async function getMaiaMove(fen, elo) {
+
+        await initializeMaia();
+
+        console.log(
+            "Reverse FEN Solver: analyzing last move."
+        );
+
+        console.log("Target FEN:", fen);
+        console.log("Maia Elo:", elo);
+
+        const result =
+            await window.ReverseFenSolver.findLikelyLastMove(
+                fen,
+                elo
+            );
+
+        if (!result || !result.best) {
+            throw new Error(
+                "Reverse FEN Solver returned no best move."
+            );
+        }
+
+        const best = result.best;
+
+        const move = {
+            uci: best.uci,
+            from: best.move.from,
+            to: best.move.to,
+            promotion: best.move.promotion || null,
+            probability: best.probability,
+            san: best.san,
+            previousFen: best.fen,
+            candidateCount: result.candidateCount,
+            elo: result.elo
+        };
+
+        console.log("Reverse FEN results:", result);
+        console.log("Most likely last move:", move);
+
+        return move;
+    }
+
+
+    // ========================================================
     // SQLITE DATABASE
     // ========================================================
 
     async function loadDatabase(SQL, mate) {
 
-        const url = ROOT + "puzzle/data/MateIn" +
-            mate + ".db";
+        const url =
+            ROOT + "puzzle/data/MateIn" + mate + ".db";
 
         const response = await fetch(url);
 
@@ -277,6 +439,7 @@
         `);
 
         try {
+
             statement.bind([color]);
             statement.step();
 
@@ -354,7 +517,6 @@
 
     async function selectPuzzle(SQL, settings) {
 
-        // Select database before downloading.
         const selectedMate = settings.mate !== null
             ? settings.mate
             : weightedChoice(
@@ -365,7 +527,6 @@
             "Selected database: MateIn" + selectedMate
         );
 
-        // Download only one database.
         const db = await loadDatabase(SQL, selectedMate);
 
         try {
@@ -536,25 +697,16 @@
 
         const counts = {
             white: {
-                P: 0,
-                N: 0,
-                B: 0,
-                R: 0,
-                Q: 0,
-                K: 0
+                P: 0, N: 0, B: 0,
+                R: 0, Q: 0, K: 0
             },
 
             black: {
-                P: 0,
-                N: 0,
-                B: 0,
-                R: 0,
-                Q: 0,
-                K: 0
+                P: 0, N: 0, B: 0,
+                R: 0, Q: 0, K: 0
             }
         };
 
-        // Count all pieces currently on the board.
         for (const rank of board) {
 
             for (const piece of rank) {
@@ -700,7 +852,7 @@
     // DRAW MAIN BOARD
     // ========================================================
 
-    function drawBoard(fen, mate, light, dark) {
+    function drawBoard(fen, mate, light, dark, lastMove = null) {
 
         const parsed = parseFenBoard(fen);
 
@@ -741,14 +893,44 @@
         }
 
         // Board squares.
+        // The two last-move squares replace their normal colors.
         for (let row = 0; row < 8; row++) {
 
             for (let column = 0; column < 8; column++) {
 
-                ctx.fillStyle =
-                    (row + column) % 2 === 0
-                        ? rgb(light)
-                        : rgb(dark);
+                let displayedSquare;
+
+                if (orientation === "black") {
+
+                    displayedSquare =
+                        String.fromCharCode(97 + (7 - column)) +
+                        String(row + 1);
+
+                } else {
+
+                    displayedSquare =
+                        String.fromCharCode(97 + column) +
+                        String(8 - row);
+                }
+
+                const isLastMoveSquare =
+                    lastMove &&
+                    (
+                        displayedSquare === lastMove.from ||
+                        displayedSquare === lastMove.to
+                    );
+
+                if (isLastMoveSquare) {
+
+                    ctx.fillStyle = "#28d34f";
+
+                } else {
+
+                    ctx.fillStyle =
+                        (row + column) % 2 === 0
+                            ? rgb(light)
+                            : rgb(dark);
+                }
 
                 ctx.fillRect(
                     column * SQUARE_SIZE,
@@ -880,13 +1062,9 @@
 
         const centerX = BOARD_SIZE + 35;
 
-        // Position of the divider: exact center of the board.
         const dividerY = HEADER_HEIGHT + BOARD_SIZE / 2;
 
-        // ----------------------------------------
-        // DIVIDER
-        // ----------------------------------------
-
+        // Divider.
         ctx.strokeStyle = "rgba(65, 55, 45, 0.45)";
         ctx.lineWidth = 1;
 
@@ -894,10 +1072,6 @@
         ctx.moveTo(BOARD_SIZE + 18, dividerY);
         ctx.lineTo(IMAGE_WIDTH - 18, dividerY);
         ctx.stroke();
-
-        // ----------------------------------------
-        // DRAW PIECE GROUPS
-        // ----------------------------------------
 
         function drawGroups(
             groups,
@@ -965,10 +1139,7 @@
             }
         }
 
-        // ----------------------------------------
-        // TOP: BLACK CAPTURED PIECES
-        // ----------------------------------------
-
+        // Top: black captured pieces.
         drawGroups(
             blackGroups,
             "#FFFFFF",
@@ -977,10 +1148,7 @@
             false
         );
 
-        // ----------------------------------------
-        // BOTTOM: WHITE CAPTURED PIECES
-        // ----------------------------------------
-
+        // Bottom: white captured pieces.
         drawGroups(
             whiteGroups,
             "#000000",
@@ -1008,18 +1176,25 @@
 
             const settings = readSettings();
 
-            // Configure the canvas based on URL settings.
             configureCanvas(settings);
 
             console.log("Display settings:", {
                 takenPieces: settings.takenPieces,
                 title: settings.title,
-                fenId: settings.fenId
+                fenId: settings.fenId,
+                elo: settings.elo
             });
 
+            // Check required libraries.
             if (typeof initSqlJs !== "function") {
                 throw new Error(
                     "SQLite engine failed to load."
+                );
+            }
+
+            if (typeof Chess === "undefined") {
+                throw new Error(
+                    "Chess.js failed to load."
                 );
             }
 
@@ -1029,37 +1204,54 @@
                     ROOT + "engines/sql/" + file
             });
 
-            // Select and retrieve one puzzle.
+            // Select one puzzle.
             const puzzle = await selectPuzzle(
                 SQL,
                 settings
             );
 
-            // Parse FEN before loading images.
+            console.log(
+                "Loaded MateIn" + puzzle.mate,
+                puzzle.fen
+            );
+
+            // Parse original database FEN.
             const parsed = parseFenBoard(puzzle.fen);
 
             const captured = getCapturedPieces(
                 parsed.board
             );
 
-            // PHASE 1:
-            // Download only pieces currently on the board.
+            // Analyze the likely previous move.
+            console.log("Starting Maia reverse-FEN analysis...");
+
+            maiaMove = await getMaiaMove(
+                puzzle.fen,
+                settings.elo
+            );
+
+            console.log(
+                "Maia analysis complete:",
+                maiaMove
+            );
+
+            // Load board pieces.
             const boardPieces = getBoardPieces(
                 parsed.board
             );
 
             await loadPieceImages(boardPieces);
 
-            // Draw header, board and footer.
+            // Draw the ORIGINAL database position.
             const drawing = drawBoard(
                 puzzle.fen,
                 puzzle.mate,
                 settings.light,
-                settings.dark
+                settings.dark,
+                maiaMove
             );
 
-            // PHASE 2:
-            // Load captured pieces only if their sidebar is enabled.
+            // Load and draw captured pieces.
             if (settings.takenPieces) {
 
                 const capturedPieces = getCapturedPieceList(
@@ -1068,15 +1260,10 @@
 
                 await loadPieceImages(capturedPieces);
 
-                // Draw captured pieces in the sidebar.
                 drawCapturedSidebar(captured);
             }
 
-            console.log(
-                "Loaded MateIn" + puzzle.mate,
-                puzzle.fen
-            );
-
+            // Finished.
             console.log(
                 "Board orientation:",
                 drawing.orientation
@@ -1087,7 +1274,13 @@
                 height: canvas.height
             });
 
-            // Everything is now drawn.
+            console.log("Predicted last move:", maiaMove);
+
+            console.log(
+                "Predicted move probability:",
+                (maiaMove.probability * 100).toFixed(4) + "%"
+            );
+
             window.CHESS_READY = true;
 
         } catch (error) {
@@ -1098,7 +1291,9 @@
 
             canvas.style.display = "none";
 
-            errorElement.textContent = error.message;
+            errorElement.textContent =
+                error.message || String(error);
+
             errorElement.style.display = "block";
         }
     }
