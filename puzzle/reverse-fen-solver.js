@@ -1499,6 +1499,7 @@
 
       if (candidates.length === 0) {
           console.warn("[Reverse FEN] No candidate moves found.");
+
           return {
               best: null,
               ranked: [],
@@ -1508,6 +1509,7 @@
       }
 
       const ranked = [];
+      const eloValues = makeEloRangeFromUserElo(elo);
 
       for (let i = 0; i < candidates.length; i++) {
           const candidate = candidates[i];
@@ -1518,7 +1520,19 @@
           );
 
           try {
-              const scored = await scoreCandidate(candidate, elo);
+              const scored = await scoreCandidate(
+                  candidate,
+                  eloValues,
+                  window.engine
+              );
+
+              if (!scored) {
+                  console.warn(
+                      `[Reverse FEN] No score returned for ${candidate.uci}`
+                  );
+                  continue;
+              }
+
               ranked.push(scored);
 
               console.log(
@@ -1526,6 +1540,7 @@
                   candidate.uci,
                   `Probability: ${scored.probability}`
               );
+
           } catch (error) {
               console.error(
                   `[Reverse FEN] Failed ${i + 1}/${candidates.length}:`,
@@ -1540,13 +1555,24 @@
       const best = ranked[0] || null;
 
       console.log("[Reverse FEN] Finished.");
+
       console.log(
           `[Reverse FEN] Successfully evaluated ${ranked.length}/${candidates.length} candidates.`
       );
 
       if (best) {
-          console.log("[Reverse FEN] Most likely last move:", best.san, best.uci);
-          console.log("[Reverse FEN] Probability:", best.probability);
+          console.log(
+              "[Reverse FEN] Most likely last move:",
+              best.san,
+              best.uci
+          );
+
+          console.log(
+              "[Reverse FEN] Probability:",
+              best.probability
+          );
+      } else {
+          console.error("[Reverse FEN] No candidates could be scored.");
       }
 
       return {
@@ -1570,6 +1596,7 @@
     findLikelyLastMove
   };
 
+  
   // ============================================================
   // START
   // ============================================================
