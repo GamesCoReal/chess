@@ -1480,42 +1480,74 @@
   // ============================================================
 
   async function findLikelyLastMove(fen, elo = 1000) {
-    assertDependencies();
+      console.log("[Reverse FEN] Started.");
+      console.log("[Reverse FEN] Target FEN:", fen);
+      console.log("[Reverse FEN] Elo:", elo);
 
-    if (!Number.isInteger(elo) || elo < 0) {
-      throw new Error("Elo must be a non-negative whole number.");
-    }
+      const candidates = reverseCandidates(fen);
 
-    const targetGame = makeChess(fen);
-
-    if (!targetGame) {
-      throw new Error("Invalid target FEN.");
-    }
-
-    const candidates = reverseCandidates(fen);
-
-    if (!candidates.length) {
-      throw new Error(
-        "No legal previous positions could be reconstructed."
+      console.log(
+          `[Reverse FEN] Generated ${candidates.length} candidate moves.`
       );
-    }
 
-    const ranked = await rankCandidates(
-      candidates,
-      [elo],
-      window.engine
-    );
+      if (candidates.length === 0) {
+          console.warn("[Reverse FEN] No candidate moves found.");
+          return {
+              best: null,
+              ranked: [],
+              candidateCount: 0,
+              elo
+          };
+      }
 
-    if (!ranked.length) {
-      throw new Error("Maia could not score the candidates.");
-    }
+      const ranked = [];
 
-    return {
-      best: ranked[0],
-      ranked,
-      candidateCount: candidates.length,
-      elo
-    };
+      for (let i = 0; i < candidates.length; i++) {
+          const candidate = candidates[i];
+
+          console.log(
+              `[Reverse FEN] Evaluating ${i + 1}/${candidates.length}:`,
+              candidate.uci
+          );
+
+          try {
+              const scored = await scoreCandidate(candidate, elo);
+              ranked.push(scored);
+
+              console.log(
+                  `[Reverse FEN] Completed ${i + 1}/${candidates.length}:`,
+                  candidate.uci,
+                  `Probability: ${scored.probability}`
+              );
+          } catch (error) {
+              console.error(
+                  `[Reverse FEN] Failed ${i + 1}/${candidates.length}:`,
+                  candidate.uci,
+                  error
+              );
+          }
+      }
+
+      ranked.sort((a, b) => b.probability - a.probability);
+
+      const best = ranked[0] || null;
+
+      console.log("[Reverse FEN] Finished.");
+      console.log(
+          `[Reverse FEN] Successfully evaluated ${ranked.length}/${candidates.length} candidates.`
+      );
+
+      if (best) {
+          console.log("[Reverse FEN] Most likely last move:", best.san, best.uci);
+          console.log("[Reverse FEN] Probability:", best.probability);
+      }
+
+      return {
+          best,
+          ranked,
+          candidateCount: candidates.length,
+          elo
+      };
   }
 
   window.ReverseFenSolver = {
