@@ -379,23 +379,29 @@
   // ============================================================
 
   function rightsOptions(targetRights) {
-    const options = [];
+      const options = [];
 
-    for (let mask = 0; mask < 16; mask++) {
-      let value = "";
+      // A target position with no castling rights can have
+      // originated from any previous combination of rights.
+      const required = targetRights === "-"
+          ? ""
+          : targetRights;
 
-      for (let i = 0; i < CASTLING_ORDER.length; i++) {
-        if (mask & (1 << i)) {
-          value += CASTLING_ORDER[i];
-        }
+      for (let mask = 0; mask < 16; mask++) {
+          let value = "";
+
+          for (let i = 0; i < CASTLING_ORDER.length; i++) {
+              if (mask & (1 << i)) {
+                  value += CASTLING_ORDER[i];
+              }
+          }
+
+          if ([...required].every(ch => value.includes(ch))) {
+              options.push(normalizeCastling(value));
+          }
       }
 
-      if ([...targetRights].every(ch => value.includes(ch))) {
-        options.push(normalizeCastling(value));
-      }
-    }
-
-    return options;
+      return options;
   }
 
   // ============================================================
@@ -1343,6 +1349,7 @@
         );
 
         const candidates = reverseCandidates(fen);
+        console.log("[Reverse FEN] Parsed target:", parseFen(fen));
 
         status.textContent =
           "Found " + candidates.length +
