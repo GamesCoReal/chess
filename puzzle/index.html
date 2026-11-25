@@ -237,7 +237,8 @@
 
             takenPieces: readBoolean("taken_pieces"),
             title: readBoolean("title"),
-            fenId: readBoolean("fen_id")
+            fenId: readBoolean("fen_id"),
+            notation: readBoolean("notation")
         };
     }
 
@@ -852,7 +853,7 @@
     // DRAW MAIN BOARD
     // ========================================================
 
-    function drawBoard(fen, mate, light, dark, lastMove = null) {
+    function drawBoard(fen, mate, light, dark, lastMove = null, notation = true) {
 
         const parsed = parseFenBoard(fen);
 
@@ -938,6 +939,43 @@
                     SQUARE_SIZE,
                     SQUARE_SIZE
                 );
+            }
+        }
+
+        // Board coordinates: files along the bottom, ranks along the left.
+        // These are edge labels only, never full square names such as "b2".
+        if (notation) {
+            ctx.font = "bold 12px Arial";
+            ctx.textBaseline = "alphabetic";
+
+            for (let displayRow = 0; displayRow < 8; displayRow++) {
+                for (let displayColumn = 0; displayColumn < 8; displayColumn++) {
+                    const squareX = displayColumn * SQUARE_SIZE;
+                    const squareY = HEADER_HEIGHT + displayRow * SQUARE_SIZE;
+
+                    const isLightSquare = (displayRow + displayColumn) % 2 === 0;
+                    ctx.fillStyle = isLightSquare ? "#6b5845" : "#f4e8d5";
+
+                    // Rank numbers appear only on the left edge.
+                    if (displayColumn === 0) {
+                        const rank = orientation === "black"
+                            ? displayRow + 1
+                            : 8 - displayRow;
+
+                        ctx.textAlign = "left";
+                        ctx.fillText(String(rank), squareX + 4, squareY + 14);
+                    }
+
+                    // File letters appear only along the bottom edge.
+                    if (displayRow === 7) {
+                        const file = String.fromCharCode(
+                            97 + (orientation === "black" ? 7 - displayColumn : displayColumn)
+                        );
+
+                        ctx.textAlign = "left";
+                        ctx.fillText(file, squareX + 4, squareY + SQUARE_SIZE - 4);
+                    }
+                }
             }
         }
 
@@ -1182,6 +1220,7 @@
                 takenPieces: settings.takenPieces,
                 title: settings.title,
                 fenId: settings.fenId,
+                notation: settings.notation,
                 elo: settings.elo
             });
 
@@ -1248,7 +1287,8 @@
                 puzzle.mate,
                 settings.light,
                 settings.dark,
-                maiaMove
+                maiaMove,
+                settings.notation
             );
 
             // Load and draw captured pieces.
