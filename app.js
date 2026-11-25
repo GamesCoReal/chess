@@ -137,15 +137,30 @@ function loadEloPlacementState() {
 }
 
 let placementState = loadEloPlacementState();
-const savedActiveMode = localStorage.getItem("chess_active_mode");
-let currentMode = savedActiveMode === "placement" && placementState
-  ? "placement"
-  : defaultMode === "puzzles" ? "puzzles" : "rated";
-if (currentMode === "placement" && placementState.active) {
-  MAIA_ELO = String(placementState.opponent);
+
+// A player without a saved placement record must complete placement before
+// entering ranked games. Create the record automatically; there is no menu button.
+if (!placementState) {
+  placementState = {
+    version: ELO_PLACEMENT_VERSION,
+    active: true,
+    complete: false,
+    decisiveGames: 0,
+    opponent: 1000,
+    estimatedElo: null,
+    lastResultMessage: "",
+  };
+  localStorage.setItem(ELO_PLACEMENT_KEY, JSON.stringify(placementState));
 }
 
-const hadPriorSession = !!localStorage.getItem("chess_active_mode"); // used once at startup below
+// Resume an unfinished placement automatically. Once placement is complete,
+// startup returns to the user's normal default mode.
+let currentMode = placementState.active
+  ? "placement"
+  : defaultMode === "puzzles" ? "puzzles" : "rated";
+if (currentMode === "placement") {
+  MAIA_ELO = String(placementState.opponent);
+}
 
 function updateModeBadge() {
   const el = document.getElementById("mode-badge");
@@ -3902,10 +3917,20 @@ function applyLoadedState(loaded) {
 
 function selectMode(mode) {
   if (mode === "placement") {
-    startEloPlacement();
+    if (placementState?.complete) {
+      selectMode("rated");
+    } else {
+      startEloPlacement();
+    }
     return;
   }
   if (mode === "unrated") mode = "rated";
+  // Ranked play is gated by Elo placement. The first ranked selection starts
+  // placement automatically, and an unfinished placement always resumes.
+  if (mode === "rated" && !placementState?.complete) {
+    startEloPlacement();
+    return;
+  }
   if (mode !== "rated" && mode !== "puzzles") return;
   document.querySelectorAll(".menu-item.open").forEach((item) => item.classList.remove("open"));
   if (document.querySelector(".container").classList.contains("openings-mode")) {
@@ -3995,7 +4020,8 @@ window.startEloPlacement = startEloPlacement;
 
 function newGameCurrentMode() {
   if (currentMode === "placement" && placementState?.complete) {
-    startEloPlacement();
+    // Placement is finished: the next game is a normal ranked game.
+    selectMode("rated");
     return;
   }
   resetForNewGame(currentMode);
