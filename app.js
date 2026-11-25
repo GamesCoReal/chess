@@ -907,6 +907,8 @@ let puzzleHintsUsed = 0;
 let puzzleRatingAtStart = puzzleRating;
 let currentPuzzleEntry = null;
 let puzzleInsightRun = 0;
+let puzzleReverseMove = null;
+let puzzleReverseRun = 0;
 let puzzleMoveAnalysisRun = 0;
 let puzzleTargetMoveMotifs = null;
 let studyEvaluationRun = 0;
@@ -1065,6 +1067,8 @@ async function loadNextPuzzle() {
   );
 
   puzzleInsightRun++;
+  puzzleReverseRun++;
+  puzzleReverseMove = null;
   puzzleTargetMoveMotifs = null;
   currentPuzzleEntry = {
     id: puzzle.id || puzzle.puzzleId || puzzle.fen,
@@ -1129,6 +1133,36 @@ async function loadNextPuzzle() {
   statusEl.textContent = `Puzzle Rating ${puzzleRating} — find the best move for ${puzzlePlayerColor === "w" ? "White" : "Black"}.`;
   statusEl.classList.remove("status-hidden");
   analyzeNextPuzzleMove();
+  analyzePuzzlePreviousMove();
+}
+
+async function analyzePuzzlePreviousMove() {
+  if (!inPuzzleMode || !puzzleGame || typeof window.ReverseFenSolver?.findLikelyLastMove !== "function") return;
+
+  const runId = ++puzzleReverseRun;
+  const targetFen = puzzleGame.fen();
+
+  try {
+    await waitForMaia();
+    if (runId !== puzzleReverseRun || !inPuzzleMode || !puzzleGame || puzzleGame.fen() !== targetFen) return;
+
+    const result = await window.ReverseFenSolver.findLikelyLastMove(
+      targetFen,
+      Math.max(0, Math.round(Number(puzzleRating) || 1000))
+    );
+
+    if (runId !== puzzleReverseRun || !inPuzzleMode || !puzzleGame || puzzleGame.fen() !== targetFen) return;
+
+    const move = result?.best?.move;
+    if (!move?.from || !move?.to) return;
+
+    puzzleReverseMove = { from: move.from, to: move.to };
+    renderBoard();
+  } catch (error) {
+    if (runId === puzzleReverseRun) {
+      console.warn("Could not identify the puzzle's previous move:", error);
+    }
+  }
 }
 
 function updatePuzzleActionButton() {
@@ -1317,6 +1351,8 @@ window.enterPuzzleMode = enterPuzzleMode;
 
 function exitPuzzleMode(resumeGame = true) {
   inPuzzleMode = false;
+  puzzleReverseRun++;
+  puzzleReverseMove = null;
   puzzleInsightRun++;
   puzzleMoveAnalysisRun++;
   studyEvaluationRun++;
@@ -1448,6 +1484,8 @@ async function onPuzzleSquareClick(sq) {
     return;
   }
 
+  puzzleReverseRun++;
+  puzzleReverseMove = null;
   lastMoveFrom = from;
   lastMoveTo = to;
   playGameSound(soundForMove(puzzleGame, moveResult));
@@ -4214,6 +4252,9 @@ function renderBoard() {
       }
       
       if (sq === lastMoveFrom || sq === lastMoveTo) cell.classList.add("last-move");
+      if (inPuzzleMode && puzzleReverseMove && (sq === puzzleReverseMove.from || sq === puzzleReverseMove.to)) {
+        cell.classList.add("reverse-fen-highlight");
+      }
       
       if (legalTargets.includes(sq)) {
         cell.classList.add("legal-target");
