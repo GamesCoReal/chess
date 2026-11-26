@@ -181,9 +181,17 @@ function updateModeBadge() {
 function updatePlacementStatus() {
   const el = document.getElementById("placement-status");
   if (!el) return;
-  const showing = currentMode === "placement" && placementState;
+
+  // Placement progress is only shown during a live placement game.
+  const showing =
+    currentMode === "placement" &&
+    !!placementState &&
+    !inReplayMode;
+
   el.classList.toggle("hidden", !showing);
+
   if (!showing) return;
+
   el.textContent = placementState.complete
     ? `Estimated Elo: ${placementState.estimatedElo} · Placement complete`
     : `Game ${placementState.decisiveGames + 1} of 4 · Opponent: ${placementState.opponent} Elo`;
@@ -3025,11 +3033,41 @@ function openPastGame(entry) {
     console.error("Past game has no PGN.");
     return;
   }
-  if (inPuzzleMode) exitPuzzleMode(false);
-  if (inReplayMode) exitReplay(false);
+  if (inPuzzleMode) {
+    exitPuzzleMode(false);
+  }
 
-  // Save the current real game so we can return to it.
-  replayReturnGame = game;
+  if (inReplayMode) {
+    // Stop analysis from the previously selected replay.
+    replayAnalysisRun++;
+    replayStockfishRun++;
+    replayMotifRun++;
+
+    window.stockfishEvaluator?.stop();
+    replayAnalyzing = false;
+
+    // Keep the original live game and board orientation saved.
+    // Do not call exitReplay() here: it restores live-game controls
+    // and can start a new game when the original game has ended.
+
+    // Keep the Flip button attached to the document before removing
+    // the old replay controls.
+    gameControlsEl.appendChild(
+      document.getElementById("flip-button")
+    );
+
+    replayControlsEl?.remove();
+    replayControlsEl = null;
+
+    if (replayAnalysisPanelEl) {
+      replayAnalysisPanelEl.remove();
+      replayAnalysisPanelEl = null;
+    }
+  } else {
+    // Save the live game only when entering review for the first time.
+    replayReturnGame = game;
+    replayReturnBoardFlipped = boardFlipped;
+  }
 
   // Create a completely separate game for replay.
   replayGame = new Chess();
@@ -3079,15 +3117,25 @@ function openPastGame(entry) {
   replayGame.reset();
   replayIndex = 0;
 
-  // Enter replay mode.
+  // Enter (or remain in) replay mode.
   inReplayMode = true;
+
   document.querySelector(".container")?.classList.add("review-mode");
-  document.getElementById("board-wrap").classList.add("replay-mode");
+
+  const boardWrap = document.getElementById("board-wrap");
+  boardWrap?.classList.add("replay-mode");
+
   clearTurnTags();
   statusEl.classList.add("status-hidden");
-  replayReturnBoardFlipped = boardFlipped;
-  boardFlipped = !boardFlipped;
-  document.getElementById("board-wrap").classList.toggle("flipped", boardFlipped);
+
+  // Always orient the reviewed game opposite the saved live-game view.
+  // Do not toggle repeatedly when switching between history games.
+  boardFlipped = !replayReturnBoardFlipped;
+
+  boardWrap?.classList.toggle("flipped", boardFlipped);
+
+  // Placement progress must never appear during replay.
+  document.getElementById("placement-status")?.classList.add("hidden");
 
   selectedSquare = null;
   lastMoveFrom = null;
@@ -3156,6 +3204,17 @@ async function analyzeReplayPlayedMoves(runId) {
 // ------------------------------------------------------------
 
 function createReplayControls() {
+
+  // Keep a reference to Flip before removing old replay controls.
+  const flipButton =
+    document.getElementById("flip-button") ||
+    replayControlsEl?.querySelector("#flip-button");
+
+  // Return Flip to normal controls before removing old replay controls.
+  if (flipButton && gameControlsEl) {
+    gameControlsEl.appendChild(flipButton);
+  }
+
   if (replayControlsEl) {
     replayControlsEl.remove();
   }
@@ -3209,7 +3268,12 @@ function createReplayControls() {
     document.body.appendChild(replayControlsEl);
   }
 
-  replayControlsEl.appendChild(document.getElementById("flip-button"));
+  // Add Flip to the replay controls.
+  if (flipButton) {
+    replayControlsEl.appendChild(flipButton);
+  } else {
+    console.error("Flip button was not found when entering replay.");
+  }
 
 document
   .getElementById("replay-exit")
@@ -3745,7 +3809,13 @@ function replayEnd() {
 // Exit replay
 // ------------------------------------------------------------
 
+
 function exitReplay(resumeGame = true) {
+  // Save the Flip button before removing replay controls.
+  const flipButton =
+    document.getElementById("flip-button") ||
+    replayControlsEl?.querySelector("#flip-button");
+
   // Invalidate all replay analysis currently running.
   replayAnalysisRun++;
   replayStockfishRun++;
@@ -3817,10 +3887,14 @@ function exitReplay(resumeGame = true) {
   document.getElementById("review-insights-panel")
     ?.replaceChildren();
 
-  // Restore normal game controls.
-  gameControlsEl.appendChild(
-    document.getElementById("flip-button")
-  );
+  // Return Flip to the normal game controls.
+  if (flipButton && gameControlsEl) {
+    flipButton.classList.remove("hidden");
+    flipButton.style.display = "";
+    gameControlsEl.appendChild(flipButton);
+  } else {
+    console.error("Flip button was not found when exiting replay.");
+  }
 
   gameControlsEl.classList.remove("hidden");
 
@@ -3845,6 +3919,7 @@ function exitReplay(resumeGame = true) {
     runMaiaTurn();
   }
 }
+
 
 // ------------------------------------------------------------
 // Make functions available globally

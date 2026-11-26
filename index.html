@@ -343,13 +343,45 @@ padding:12px 10px;border-radius:22px;cursor:pointer;-webkit-user-select:none;use
 .controls button:active{background:#4c4d51}
 .container.review-mode #game-controls{justify-content:flex-end;margin:4px auto 10px}
 .container.review-mode #game-controls #resign-button,
-.container.review-mode #game-controls #draw-button{display:none}
-.container.review-mode #game-controls #flip-button{flex:0 0 auto;min-width:76px}
-.replay-controls{width:min(100%,700px);gap:6px;margin:10px auto;flex-wrap:nowrap}
-.replay-controls button{flex:0 0 auto;min-width:42px;min-height:40px;padding:8px 12px;font-size:14px}
+.container.review-mode #game-controls #draw-button,
+.container.review-mode #game-controls #flip-button {
+  display: none;
+}
+.replay-controls {
+  width: min(100%, 700px);
+  gap: 6px;
+  margin: 10px auto;
+  flex-wrap: nowrap;
+}
+
+.replay-controls button {
+  flex: 0 0 auto;
+  min-width: 42px;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+/* Split all remaining horizontal space equally. */
 .replay-controls #replay-exit,
-.replay-controls #flip-button{flex:1 1 0;min-width:0;min-height:40px;padding:8px 6px}
-.replay-controls #replay-position{display:flex;flex-direction:column;justify-content:center;min-width:30px;color:#bfc0c3;font-size:12px;line-height:13px;font-variant-numeric:tabular-nums;text-align:center}
+.replay-controls #flip-button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 6px;
+}
+
+.replay-controls #replay-position {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 30px;
+  color: #bfc0c3;
+  font-size: 12px;
+  line-height: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
 .replay-position-current{font-weight:700}
 .replay-position-total{font-size:10px;font-weight:700;color:#888}
 .hidden{display:none}
