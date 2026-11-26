@@ -950,11 +950,21 @@ body {
     <div class="inner" id="move-list"></div>
   </div>
 
-  <div id="history-title" hidden></div>
-  <div class="history" id="history"></div>
+<div id="history-title" hidden></div>
+<div class="history" id="history"></div>
 
 </div>
 
+<!-- Hidden elements required by app.js -->
+<div hidden>
+  <input id="opening-search" type="text">
+  <button id="opening-back" type="button"></button>
+  <div id="variation-screen"></div>
+  <div id="openings-screen"></div>
+  <div id="openings-grid"></div>
+</div>
+
+<!-- Scripts -->
 <script src="./chess.min.js" defer></script>
 <script src="./engines/maia3/maia-tensor.js" defer></script>
 <script src="./engines/maia3/maia-engine.js" defer></script>
@@ -962,8 +972,8 @@ body {
 <script src="./engines/stockfish19/stockfish-evaluator.js?v=12" defer></script>
 <script src="./engines/sql/sql-wasm.js" defer></script>
 <script src="./data/puzzles-db.js?v=4" defer></script>
-<script src="./app.js?v=94" defer></script>
-<script src="review.js" defer></script>
 
+<script src="./app.js?v=94" defer></script>
+<script src="./review/review.js" defer></script>
 </body>
 </html>
