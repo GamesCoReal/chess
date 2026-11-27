@@ -40,8 +40,6 @@ let replayAnalysisRun = 0;
 let replayAnalysisPanelEl = null;
 let replayStockfishRun = 0;
 let replayPlayerColor = "w";
-let replayReviewElo = null;
-let replayReviewEloSource = "fallback";
 let replayCandidateLines = [];
 let replayRankedLines = [];
 let replayStockfishBestLine = null;
@@ -3037,16 +3035,19 @@ function openPastGame(entry) {
   replayGame = new Chess();
 
   try {
+    // Chess.js versions differ: load_pgn/loadPgn may return undefined
+    // on success. Do not treat a falsy return value as a PGN failure.
     if (typeof replayGame.load_pgn === "function") {
-      if (!replayGame.load_pgn(entry.pgn)) {
-        throw new Error("Chess.js could not load the PGN.");
-      }
+      replayGame.load_pgn(entry.pgn);
     } else if (typeof replayGame.loadPgn === "function") {
-      if (!replayGame.loadPgn(entry.pgn)) {
-        throw new Error("Chess.js could not load the PGN.");
-      }
+      replayGame.loadPgn(entry.pgn);
     } else {
       throw new Error("This Chess.js version has no PGN loader.");
+    }
+
+    const loadedMoves = replayGame.history({ verbose: true });
+    if (!Array.isArray(loadedMoves) || loadedMoves.length === 0) {
+      throw new Error("The PGN loaded but contains no readable moves.");
     }
   } catch (err) {
     console.error("Could not load saved game:", err);
@@ -3069,22 +3070,6 @@ function openPastGame(entry) {
   replayCandidateLines = [];
   replayRankedLines = [];
   replayPlayerColor = entry.playerColor === "b" ? "b" : entry.playerColor === "w" ? "w" : playerColor;
-  const whiteGameRating = Number(entry.whiteRating);
-  const blackGameRating = Number(entry.blackRating);
-  const hasWhiteGameRating = Number.isFinite(whiteGameRating) && whiteGameRating > 0;
-  const hasBlackGameRating = Number.isFinite(blackGameRating) && blackGameRating > 0;
-
-  if (hasWhiteGameRating && hasBlackGameRating) {
-    replayReviewElo = Math.round((whiteGameRating + blackGameRating) / 2);
-    replayReviewEloSource = "average of both players";
-  } else if (hasWhiteGameRating || hasBlackGameRating) {
-    replayReviewElo = hasWhiteGameRating ? whiteGameRating : blackGameRating;
-    replayReviewEloSource = "available player's rating (opponent rating unavailable)";
-  } else {
-    replayReviewElo = myRating;
-    replayReviewEloSource = "your current rating (both game ratings unavailable)";
-  }
-
   replayClockHistory = Array.isArray(entry.clockHistory) ? entry.clockHistory : [];
   replayOriginalClockHistory = replayClockHistory.slice();
   replayOriginalPgn = entry.pgn;
@@ -3097,8 +3082,9 @@ function openPastGame(entry) {
   replayGame.reset();
   replayIndex = 0;
 
-  // Enter replay mode.
+  // Enter replay mode and unlock the board only after a game is loaded.
   inReplayMode = true;
+  document.body.classList.remove("review-locked");
   document.querySelector(".container")?.classList.add("review-mode");
   document.getElementById("board-wrap").classList.add("replay-mode");
   clearTurnTags();
@@ -3395,12 +3381,10 @@ async function analyzeFullGame(pgn, playerSide = playerColor, onProgress = () =>
   const moves = analysisGame.history({ verbose: true });
   analysisGame.reset();
 
-  // Analyze both players at the average rating recorded for this game.
-  // If a Chess.com rating is missing, openPastGame() selects a documented fallback.
-  const reviewRating = Number.isFinite(replayReviewElo) && replayReviewElo > 0
-    ? replayReviewElo
-    : myRating;
-  const ratingFor = () => reviewRating;
+  // Snapshot the current ratings so a game analyzed over time stays consistent.
+  const userRating = myRating;
+  const maiaRating = parseInt(MAIA_ELO, 10) || userRating;
+  const ratingFor = (color) => color === playerSide ? userRating : maiaRating;
   const evaluateTurn = (gameAtPosition) => {
     const turn = gameAtPosition.turn();
     const opponent = turn === "w" ? "b" : "w";
@@ -3593,7 +3577,7 @@ function renderReplayAnalysisPanel(completed = replayAnalysis.length, total = re
   replayAnalysisPanelEl.innerHTML = `
     <div class="replay-analysis-heading">
       <strong>Full game analysis</strong>
-      <span>Maia review level: ${Number.isFinite(replayReviewElo) ? replayReviewElo : myRating} Elo · ${replayReviewEloSource}</span>
+      <span>Using your current rating: ${myRating}</span>
     </div>
     <div class="replay-analysis-summary">
       <span>You: ${userAccuracy === null ? "—" : `${userAccuracy}% accuracy`}</span>
@@ -3815,8 +3799,6 @@ function exitReplay(resumeGame = true) {
 
   replayIndex = 0;
   replayAnalysis = [];
-  replayReviewElo = null;
-  replayReviewEloSource = "fallback";
   replayCandidateLines = [];
   replayRankedLines = [];
 
@@ -4489,7 +4471,7 @@ function analyzeReplayPosition() {
 async function rankReplayCandidateLines(lines, fen, runId) {
   await waitForMaia();
   const ranked = [];
-  const rating = Number.isFinite(replayReviewElo) && replayReviewElo > 0 ? replayReviewElo : myRating;
+  const rating = myRating;
   const evaluationByFen = new Map();
 
   for (let index = 0; index < lines.length; index++) {
