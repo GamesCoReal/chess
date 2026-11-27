@@ -1,4 +1,3 @@
-
 "use strict";
 
 /* =========================================================
@@ -286,22 +285,18 @@ function openReviewGame(game) {
   const white = game.white?.username || "White";
   const black = game.black?.username || "Black";
 
-  const bottomUsername = bottomNameInput.value
-    .trim()
-    .toLowerCase();
+  const topUsername = topNameInput.value.trim().toLowerCase();
+  const bottomUsername = bottomNameInput.value.trim().toLowerCase();
 
   /*
-    openPastGame() expects the color of the player
-    being reviewed.
-
-    The player entered in the bottom name field
-    determines which color is placed at the bottom.
+    With two usernames, the bottom field is the player
+    placed at the bottom of the replay board.
+    With one username, that player is placed at the bottom
+    regardless of which input field contains the username.
   */
 
-  const playerColor =
-    black.toLowerCase() === bottomUsername
-      ? "b"
-      : "w";
+  const reviewedUsername = bottomUsername || topUsername;
+  const playerColor = black.toLowerCase() === reviewedUsername ? "b" : "w";
 
   const entry = {
     pgn: game.pgn,
@@ -332,7 +327,7 @@ function openReviewGame(game) {
    FILTER MATCHING GAMES
    ========================================================= */
 
-function findMatchingGames(games, firstUsername, secondUsername) {
+function findMatchingGames(games, firstUsername, secondUsername = "") {
   const first = firstUsername.toLowerCase();
   const second = secondUsername.toLowerCase();
 
@@ -340,6 +335,12 @@ function findMatchingGames(games, firstUsername, secondUsername) {
     const white = game.white?.username?.toLowerCase();
     const black = game.black?.username?.toLowerCase();
 
+    // One username: every game involving that player.
+    if (!second) {
+      return white === first || black === first;
+    }
+
+    // Two usernames: only games played head-to-head.
     return (
       (white === first && black === second) ||
       (white === second && black === first)
@@ -351,7 +352,7 @@ function findMatchingGames(games, firstUsername, secondUsername) {
    DISPLAY RESULTS
    ========================================================= */
 
-function displayGames(games) {
+function displayGames(games, emptyMessage = "No games found.") {
   historyElement.replaceChildren();
 
   if (historyTitle) {
@@ -363,8 +364,7 @@ function displayGames(games) {
     const empty = document.createElement("div");
 
     empty.className = "history-empty";
-    empty.textContent =
-      "No games found between these two players.";
+    empty.textContent = emptyMessage;
 
     historyElement.appendChild(empty);
 
@@ -398,22 +398,28 @@ async function searchGames() {
   const firstUsername = topNameInput.value.trim();
   const secondUsername = bottomNameInput.value.trim();
 
-  if (!firstUsername || !secondUsername) {
-    setSearchStatus("Enter both Chess.com usernames.");
+  if (!firstUsername && !secondUsername) {
+    historyElement.replaceChildren();
+    if (historyTitle) historyTitle.hidden = true;
+    setSearchStatus("Enter at least one Chess.com username.");
     return;
   }
 
   if (
-    firstUsername.toLowerCase() ===
-    secondUsername.toLowerCase()
+    firstUsername &&
+    secondUsername &&
+    firstUsername.toLowerCase() === secondUsername.toLowerCase()
   ) {
-    setSearchStatus("Enter two different usernames.");
+    setSearchStatus("Enter two different usernames, or leave one field blank.");
     return;
   }
 
+  // If only the bottom field is filled, search that player.
+  const searchedUsername = firstUsername || secondUsername;
+  const opponentUsername = firstUsername && secondUsername ? secondUsername : "";
+
   searchInProgress = true;
   searchButton.disabled = true;
-
   historyElement.replaceChildren();
 
   if (historyTitle) {
@@ -421,53 +427,52 @@ async function searchGames() {
     historyTitle.textContent = "Chess.com Games";
   }
 
-  setSearchStatus(
-    `Retrieving games for ${firstUsername}...`
-  );
+  setSearchStatus(`Retrieving games for ${searchedUsername}...`);
 
   try {
-    /*
-      Only one player's archives are needed.
-      Every game involving the second player
-      will be found by filtering these archives.
-    */
-
-    const games = await fetchPlayerGames(firstUsername);
-
-    setSearchStatus("Searching for games between both players...");
+    // Chess.com exposes a player's public games through their archives.
+    // One archive download is enough; head-to-head mode filters those games.
+    const games = await fetchPlayerGames(searchedUsername);
+    setSearchStatus(
+      opponentUsername
+        ? `Finding games between ${searchedUsername} and ${opponentUsername}...`
+        : `Organizing games for ${searchedUsername}...`
+    );
 
     const matchingGames = findMatchingGames(
       games,
-      firstUsername,
-      secondUsername
+      searchedUsername,
+      opponentUsername
     );
 
-    displayGames(matchingGames);
+    const emptyMessage = opponentUsername
+      ? `No games found between ${searchedUsername} and ${opponentUsername}.`
+      : `No public games found for ${searchedUsername}.`;
+
+    displayGames(matchingGames, emptyMessage);
 
     if (!matchingGames.length) {
+      setSearchStatus(emptyMessage);
+    } else if (opponentUsername) {
       setSearchStatus(
-        `No games found between ${firstUsername} and ${secondUsername}.`
+        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}.`
       );
     } else {
       setSearchStatus(
-        `Found ${matchingGames.length} games between ${firstUsername} and ${secondUsername}.`
+        `Found ${matchingGames.length} public games for ${searchedUsername}.`
       );
     }
-
   } catch (error) {
     console.error("Chess.com search failed:", error);
-
     historyElement.replaceChildren();
 
     const empty = document.createElement("div");
     empty.className = "history-empty";
     empty.textContent =
-      "Could not retrieve Chess.com games. Check the usernames and browser console.";
-
+      "Could not retrieve Chess.com games. Check the username and browser console.";
     historyElement.appendChild(empty);
 
-    setSearchStatus(error.message);
-
+    setSearchStatus(error.message || "Chess.com search failed.");
   } finally {
     searchInProgress = false;
     searchButton.disabled = false;
@@ -478,16 +483,16 @@ async function searchGames() {
    EVENT LISTENERS
    ========================================================= */
 
-searchButton.addEventListener("click", searchGames);
+if (searchButton) {
+  searchButton.addEventListener("click", searchGames);
+}
 
-topNameInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    searchGames();
-  }
-});
+for (const input of [topNameInput, bottomNameInput]) {
+  if (!input) continue;
 
-bottomNameInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    searchGames();
-  }
-});
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      searchGames();
+    }
+  });
+}
