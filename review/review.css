@@ -822,3 +822,56 @@ nav,
 .dropdown-menu {
   display: none !important;
 }
+
+
+/* Review page: hide the replay exit control and center the three results. */
+.replay-controls #replay-exit,
+#replay-exit {
+  display: none !important;
+}
+
+.history {
+  width: min(100%, 700px);
+  margin-left: auto;
+  margin-right: auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-content: center;
+}
+
+@media (max-width: 520px) {
+  .history {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+}
+
+@media (max-width: 360px) {
+  .history {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+/* Review page: keep replay navigation, but never show Exit Replay. */
+#replay-controls #replay-exit,
+.replay-controls #replay-exit {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Results are centered and flow in rows of exactly three cards. */
+#history {
+  width: min(100%, 700px);
+  margin: 10px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-content: center;
+  justify-items: stretch;
+  gap: 6px;
+}
+
+#history > .history-card {
+  width: 100%;
+  min-width: 0;
+}

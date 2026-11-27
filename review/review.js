@@ -1,3 +1,4 @@
+
 "use strict";
 
 /* =========================================================
@@ -163,6 +164,55 @@ function getPlayerRating(player) {
   return "Rating —";
 }
 
+function parseClockTime(value) {
+  if (!value) return null;
+
+  const parts = value.split(":").map(Number);
+  if (!parts.length || parts.some((part) => !Number.isFinite(part))) {
+    return null;
+  }
+
+  let seconds = 0;
+  for (const part of parts) {
+    seconds = seconds * 60 + part;
+  }
+  return seconds;
+}
+
+function getInitialClockSeconds(game) {
+  const base = String(game.time_control || "").split("+")[0];
+  const seconds = Number(base);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : 600;
+}
+
+function extractClockHistory(game) {
+  const pgn = game.pgn || "";
+  const clockMatches = [...pgn.matchAll(/\[%clk\s+([0-9:.]+)\]/gi)];
+
+  if (!clockMatches.length) {
+    return [];
+  }
+
+  let white = getInitialClockSeconds(game);
+  let black = getInitialClockSeconds(game);
+  const history = [];
+
+  clockMatches.forEach((match, index) => {
+    const seconds = parseClockTime(match[1]);
+    if (seconds === null) return;
+
+    if (index % 2 === 0) {
+      white = seconds;
+    } else {
+      black = seconds;
+    }
+
+    history[index] = { white, black };
+  });
+
+  return history;
+}
+
 /* =========================================================
    GAME CARD
    ========================================================= */
@@ -294,14 +344,13 @@ function openReviewGame(game) {
     With one username, that player is placed at the bottom
     regardless of which input field contains the username.
   */
-
   const reviewedUsername = bottomUsername || topUsername;
   const playerColor = black.toLowerCase() === reviewedUsername ? "b" : "w";
 
   const entry = {
     pgn: game.pgn,
     playerColor,
-    clockHistory: [],
+    clockHistory: extractClockHistory(game),
     whiteName: white,
     blackName: black,
     whiteRating: game.white?.rating,
@@ -375,6 +424,7 @@ function displayGames(games, emptyMessage = "No games found.") {
     (a, b) => (b.end_time || 0) - (a.end_time || 0)
   );
 
+  // Keep the review page compact: show only the three newest games.
   const fragment = document.createDocumentFragment();
 
   for (const game of games) {
@@ -455,11 +505,11 @@ async function searchGames() {
       setSearchStatus(emptyMessage);
     } else if (opponentUsername) {
       setSearchStatus(
-        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}.`
+        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}. Showing the 3 newest.`
       );
     } else {
       setSearchStatus(
-        `Found ${matchingGames.length} public games for ${searchedUsername}.`
+        `Found ${matchingGames.length} public games for ${searchedUsername}. Showing the 3 newest.`
       );
     }
   } catch (error) {
