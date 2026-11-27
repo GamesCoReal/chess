@@ -5,6 +5,9 @@
    CHESS.COM REVIEW
    ========================================================= */
 
+// The review board is inert until a valid Chess.com game is opened.
+document.body.classList.add("review-locked");
+
 const searchButton = document.getElementById("review-search-button");
 const topNameInput = document.getElementById("review-top-name");
 const bottomNameInput = document.getElementById("review-bottom-name");
@@ -424,7 +427,7 @@ function displayGames(games, emptyMessage = "No games found.") {
     (a, b) => (b.end_time || 0) - (a.end_time || 0)
   );
 
-  // Render every matching game; CSS places three cards in each centered row.
+  // Keep the review page compact: show only the three newest games.
   const fragment = document.createDocumentFragment();
 
   for (const game of games) {
@@ -505,11 +508,11 @@ async function searchGames() {
       setSearchStatus(emptyMessage);
     } else if (opponentUsername) {
       setSearchStatus(
-        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}.`
+        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}. Showing the 3 newest.`
       );
     } else {
       setSearchStatus(
-        `Found ${matchingGames.length} public games for ${searchedUsername}.`
+        `Found ${matchingGames.length} public games for ${searchedUsername}. Showing the 3 newest.`
       );
     }
   } catch (error) {

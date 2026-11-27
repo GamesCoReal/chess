@@ -877,68 +877,14 @@ nav,
 }
 
 
-/* Review navigation: one centered row, with a horizontal move counter. */
-.review-mode .replay-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: nowrap;
-  width: 100%;
-  max-width: 700px;
-  gap: 8px;
-  margin: 12px auto;
+/* Keep the initial review board completely locked until a game is opened. */
+body.review-locked #board,
+body.review-locked #replay-eval-bar {
+  pointer-events: none !important;
+  cursor: not-allowed;
 }
 
-.review-mode .replay-controls #replay-start,
-.review-mode .replay-controls #replay-previous,
-.review-mode .replay-controls #replay-next,
-.review-mode .replay-controls #replay-end {
-  flex: 0 0 42px;
-  width: 42px;
-  min-width: 42px;
-  height: 40px;
-  padding: 6px;
-}
-
-.review-mode .replay-controls #replay-position {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  min-width: 76px;
-  gap: 5px;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.review-mode .replay-position-current,
-.review-mode .replay-position-total {
-  font-size: 14px;
-  color: #fff;
-}
-
-.review-mode .replay-position-current::after {
-  content: "/";
-  margin-left: 5px;
-  color: #888;
-  font-weight: 400;
-}
-
-.review-mode .replay-controls #replay-exit,
-.review-mode .replay-controls #flip-button {
-  display: none !important;
-}
-
-@media (max-width: 360px) {
-  .review-mode .replay-controls {
-    gap: 5px;
-  }
-  .review-mode .replay-controls #replay-start,
-  .review-mode .replay-controls #replay-previous,
-  .review-mode .replay-controls #replay-next,
-  .review-mode .replay-controls #replay-end {
-    flex-basis: 38px;
-    width: 38px;
-    min-width: 38px;
-  }
+body.review-locked #board {
+  user-select: none;
+  -webkit-user-select: none;
 }
