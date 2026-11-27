@@ -424,7 +424,7 @@ function displayGames(games, emptyMessage = "No games found.") {
     (a, b) => (b.end_time || 0) - (a.end_time || 0)
   );
 
-  // Keep the review page compact: show only the three newest games.
+  // Render every matching game; CSS places three cards in each centered row.
   const fragment = document.createDocumentFragment();
 
   for (const game of games) {
@@ -505,11 +505,11 @@ async function searchGames() {
       setSearchStatus(emptyMessage);
     } else if (opponentUsername) {
       setSearchStatus(
-        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}. Showing the 3 newest.`
+        `Found ${matchingGames.length} games between ${searchedUsername} and ${opponentUsername}.`
       );
     } else {
       setSearchStatus(
-        `Found ${matchingGames.length} public games for ${searchedUsername}. Showing the 3 newest.`
+        `Found ${matchingGames.length} public games for ${searchedUsername}.`
       );
     }
   } catch (error) {
